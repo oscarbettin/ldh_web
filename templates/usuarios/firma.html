@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Mi Firma Digital{% endblock %}
+
+{% block extra_head %}
+<style>
+    .firma-preview {
+        max-width: 320px;
+        border: 1px dashed #ced4da;
+        border-radius: 8px;
+        padding: 16px;
+        background: #f8f9fa;
+    }
+    .firma-preview img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h3">
+                <i class="bi bi-pen"></i> Mi Firma Digital
+            </h1>
+            <p class="text-muted mb-0">
+                Subí tu firma manuscrita en formato digital. Se utilizará automáticamente cuando finalices y firmes un informe.
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-upload"></i> Cargar nueva firma</h5>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('usuarios.firma') }}" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="firma" class="form-label">Selecciona una imagen (PNG o JPG)</label>
+                            <input class="form-control" type="file" id="firma" name="firma" accept="image/png, image/jpeg" required>
+                            <div class="form-text">
+                                Recomendamos fondo blanco, firma centrada y buena resolución (mínimo 400x200 px).
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-cloud-arrow-up"></i> Subir firma
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mt-4 mt-lg-0">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-card-image"></i> Firma actual</h5>
+                </div>
+                <div class="card-body">
+                    {% if firma %}
+                        <div class="firma-preview mb-3">
+                            <img src="{{ url_for('static', filename=firma.archivo) }}" alt="Firma digital">
+                        </div>
+                        <p class="text-muted">
+                            Última actualización: {{ firma.fecha_subida.strftime('%d/%m/%Y %H:%M') }}
+                        </p>
+                        <form method="POST" action="{{ url_for('usuarios.eliminar_firma') }}">
+                            <button type="submit" class="btn btn-outline-danger" onclick="return confirm('¿Eliminar firma actual?');">
+                                <i class="bi bi-trash"></i> Eliminar firma
+                            </button>
+                        </form>
+                    {% else %}
+                        <p class="text-muted">
+                            Aún no registraste una firma. Subí una imagen utilizando el formulario para habilitar la firma automática de informes.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

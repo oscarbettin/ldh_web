@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ prestador.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="bi bi-person-badge-fill"></i> {{ prestador.nombre_completo }}
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('prestadores.editar', id=prestador.prestador_id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            <a href="{{ url_for('prestadores.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Datos Personales -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Datos Personales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Apellido:</strong></div>
+                        <div class="col-md-8">{{ prestador.apellido }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Nombre:</strong></div>
+                        <div class="col-md-8">{{ prestador.nombre }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Código:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.codigo %}
+                                {{ prestador.codigo }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Documento:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.tipo_documento and prestador.numero_documento %}
+                                {{ prestador.tipo_documento }} {{ prestador.numero_documento }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>CUIT:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.cuit %}
+                                {{ prestador.cuit }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Datos Profesionales -->
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-award"></i> Datos Profesionales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Especialidad:</strong></div>
+                        <div class="col-md-8">
+                            <span class="badge bg-info">{{ prestador.nombre_especialidad }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Matrícula:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.numero_matricula %}
+                                {{ prestador.tipo_matricula if prestador.tipo_matricula else '' }} {{ prestador.numero_matricula }}
+                                {% if prestador.fecha_matricula %}
+                                    ({{ prestador.fecha_matricula.strftime('%d/%m/%Y') }})
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Domicilio -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Domicilio</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Dirección:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.direccion %}
+                                {{ prestador.direccion }}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Localidad:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.localidad %}
+                                {{ prestador.localidad }}
+                                {% if prestador.provincia %}
+                                    , {{ prestador.provincia }}
+                                {% endif %}
+                                {% if prestador.codigo_postal %}
+                                    ({{ prestador.codigo_postal }})
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacto -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-telephone"></i> Contacto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Teléfono:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.telefono %}
+                                {{ prestador.telefono }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Email:</strong></div>
+                        <div class="col-md-8">
+                            {% if prestador.email %}
+                                {{ prestador.email }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Protocolos del prestador -->
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-folder-fill"></i> Protocolos Solicitados</h5>
+                </div>
+                <div class="card-body">
+                    {% if prestador.protocolos %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th>
+                                    <th>Tipo</th>
+                                    <th>Paciente</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for protocolo in prestador.protocolos %}
+                                <tr>
+                                    <td><strong>{{ protocolo.numero_protocolo }}</strong></td>
+                                    <td>{{ protocolo.tipo_estudio }}</td>
+                                    <td>{{ protocolo.afiliado.nombre_completo }}</td>
+                                    <td>{{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'warning' if protocolo.estado == 'PENDIENTE' else 'success' }}">
+                                            {{ protocolo.estado }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">
+                        No hay protocolos solicitados por este prestador
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Estado -->
+            <div class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Estado del Registro</h6>
+                    {% if prestador.activo %}
+                    <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-check-circle"></i> Activo
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-x-circle"></i> Inactivo
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Información del registro -->
+            <div class="card mb-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-clock-history"></i> Registro
+                    </h6>
+                    <p class="card-text text-sm mb-0">
+                        <strong>Fecha registro:</strong><br>
+                        {{ prestador.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Acciones -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-gear"></i> Acciones
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('prestadores.editar', id=prestador.prestador_id) }}" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Editar Datos
+                        </a>
+                        <a href="{{ url_for('prestadores.toggle_activo', id=prestador.prestador_id) }}" 
+                           class="btn btn-secondary"
+                           onclick="return confirm('¿Está seguro de {{ 'desactivar' if prestador.activo else 'activar' }} este prestador?')">
+                            <i class="bi bi-toggle-{{ 'on' if prestador.activo else 'off' }}"></i>
+                            {{ 'Desactivar' if prestador.activo else 'Activar' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

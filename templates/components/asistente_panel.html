@@ -1,0 +1,996 @@
+{# Panel lateral del Asistente Inteligente #}
+<div id="asistente-panel" class="asistente-panel" style="display: none;">
+    <div class="asistente-header">
+        <h5>
+            <i class="bi bi-robot"></i> Asistente Inteligente
+        </h5>
+        <button type="button" class="btn-close btn-close-white" onclick="cerrarAsistente()"></button>
+    </div>
+    
+    <div class="asistente-tabs">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item" data-context="auth">
+                <a class="nav-link active" data-bs-toggle="tab" href="#tab-chat">
+                    <i class="bi bi-chat-dots-fill"></i> Chat
+                </a>
+            </li>
+            <li class="nav-item" data-context="auth">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-buscar">
+                    <i class="bi bi-search"></i> Buscar
+                </a>
+            </li>
+            <li class="nav-item" data-context="auth">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-plantillas">
+                    <i class="bi bi-file-text"></i> Plantillas
+                </a>
+            </li>
+            <li class="nav-item" data-context="auth">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-frecuentes">
+                    <i class="bi bi-star"></i> Frecuentes
+                </a>
+            </li>
+            <li class="nav-item" data-context="any">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-mensajes">
+                    <i class="bi bi-chat-dots"></i> Mensajes
+                </a>
+            </li>
+            <li class="nav-item" data-context="login">
+                <a class="nav-link" data-bs-toggle="tab" href="#tab-login">
+                    <i class="bi bi-question-circle"></i> Ayuda login
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="asistente-body tab-content">
+        {# TAB: CHAT CONVERSACIONAL #}
+        {% include 'components/asistente_chat.html' %}
+        
+        {# TAB: BUSCAR CASOS #}
+        <div id="tab-buscar" class="tab-pane fade" data-context="auth" style="margin-top: 0 !important; padding-top: 0 !important;">
+            <div class="px-3 pb-3" style="padding-top: 0 !important; margin-top: 0 !important;">
+                <div class="mb-3">
+                    <label class="form-label">Buscar casos similares</label>
+                    <input type="text" 
+                           id="asistente-buscar-input" 
+                           class="form-control form-control-sm" 
+                           placeholder="Escribe palabras clave...">
+                    <small class="text-muted">Mín. 3 caracteres</small>
+                </div>
+                
+                <div class="mb-3">
+                    <select id="asistente-tipo-estudio" class="form-select form-select-sm">
+                        <option value="">Todos los tipos</option>
+                        <option value="BIOPSIA">Biopsias</option>
+                        <option value="CITOLOGIA">Citologías</option>
+                        <option value="PAP">PAP</option>
+                    </select>
+                </div>
+                
+                <button type="button" class="btn btn-primary btn-sm w-100" onclick="buscarCasosSimilares()">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2" id="asistente-aplicar-prestador" style="display: none;" onclick="aplicarBusquedaListado()">
+                    <i class="bi bi-funnel"></i> Aplicar término al listado
+                </button>
+                
+                <div id="asistente-resultados" class="mt-3"></div>
+            </div>
+        </div>
+        
+        {# TAB: PLANTILLAS #}
+        <div id="tab-plantillas" class="tab-pane fade" data-context="auth" style="margin-top: 0 !important; padding-top: 0 !important;">
+            <div class="px-3 pb-3" style="padding-top: 0 !important; margin-top: 0 !important;">
+                <div class="mb-3">
+                    <select id="asistente-plantillas-tipo" class="form-select form-select-sm" onchange="cargarPlantillas()">
+                        <option value="">Selecciona tipo...</option>
+                        <option value="PAP">Plantillas PAP</option>
+                    </select>
+                </div>
+                
+                <div id="asistente-plantillas-lista"></div>
+            </div>
+        </div>
+        
+        {# TAB: FRECUENTES #}
+        <div id="tab-frecuentes" class="tab-pane fade" data-context="auth" style="margin-top: 0 !important; padding-top: 0 !important;">
+            <div class="px-3 pb-3" style="padding-top: 0 !important; margin-top: 0 !important;">
+                <div class="mb-3">
+                    <label class="form-label">Tipo de estudio</label>
+                    <select id="asistente-frecuentes-tipo" class="form-select form-select-sm" onchange="cargarDiagnosticosFrecuentes()">
+                        <option value="">Selecciona...</option>
+                        <option value="BIOPSIA">Biopsias</option>
+                        <option value="PAP">PAP</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Categoría (opcional)</label>
+                    <select id="asistente-frecuentes-categoria" class="form-select form-select-sm" onchange="cargarDiagnosticosFrecuentes()">
+                        <option value="">Todas las categorías</option>
+                    </select>
+                </div>
+                
+                <div id="asistente-frecuentes-lista"></div>
+            </div>
+        </div>
+        
+        {# TAB: MENSAJES #}
+        <div id="tab-mensajes" class="tab-pane fade" data-context="any" style="margin-top: 0 !important; padding-top: 0 !important;">
+            {# Avatar RIVE #}
+            <div id="chat-avatar-container-mensajes" class="text-center px-3 py-3" style="background: #f8f9fa; border-bottom: 1px solid #dee2e6; display: flex; justify-content: center; align-items: center; padding-top: 0 !important; margin-top: 0 !important; margin-bottom: 0 !important;">
+                <canvas id="chat-avatar-rive-mensajes" style="max-width: 270px; max-height: 270px; width: auto; height: auto; background: transparent; background-color: transparent; display: block; object-fit: contain !important;"></canvas>
+            </div>
+            <div class="px-3 pb-3" style="padding-top: 0 !important; margin-top: 0 !important;">
+                <div class="mb-2">
+                    <label class="form-label">Enviar mensaje al laboratorio</label>
+                    <select id="asistente-mensaje-tema" class="form-select form-select-sm">
+                        <option value="Consulta">Consulta general</option>
+                        <option value="Soporte">Soporte técnico</option>
+                        <option value="Sugerencia">Sugerencia</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">Selecciona el tipo de mensaje y escríbelo.</small>
+                </div>
+                <div class="mb-3">
+                    <textarea id="asistente-mensaje-texto" class="form-control form-control-sm" rows="4" placeholder="Escribe tu mensaje..."></textarea>
+                </div>
+                <button type="button" class="btn btn-success btn-sm w-100" onclick="enviarMensajeAsistente()">
+                    <i class="bi bi-send"></i> Enviar mensaje
+                </button>
+                <div id="asistente-mensaje-estado" class="mt-2 small"></div>
+            </div>
+        </div>
+        
+        {# TAB: LOGIN #}
+        <div id="tab-login" class="tab-pane fade" data-context="login" style="margin-top: 0 !important; padding-top: 0 !important;">
+            <div class="px-3 pb-3" style="padding-top: 0 !important; margin-top: 0 !important;">
+                <h6 class="fw-bold">¿Sos prestador y aún no tenés usuario?</h6>
+                <p class="small text-muted">Ingresá tu DNI para verificar si ya estás registrado en nuestra base y te indicaremos cómo continuar.</p>
+                <div class="mb-2">
+                    <input type="text" id="asistente-login-dni" class="form-control form-control-sm" placeholder="DNI sin puntos">
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="verificarPrestadorLogin()">
+                    <i class="bi bi-search"></i> Verificar prestador
+                </button>
+                <div id="asistente-login-verificacion" class="mt-2 small"></div>
+                <hr>
+                <h6 class="fw-bold">¿Olvidaste tu usuario o contraseña?</h6>
+                <p class="small text-muted mb-2">Selecciona el tipo de mensaje y escríbelo. Completá tus datos y enviaremos la consulta al equipo de soporte para que te contacte.</p>
+                <div class="mb-2">
+                    <input type="text" id="asistente-login-nombre" class="form-control form-control-sm" placeholder="Nombre y apellido">
+                </div>
+                <div class="mb-2">
+                    <input type="email" id="asistente-login-email" class="form-control form-control-sm" placeholder="Correo electrónico">
+                </div>
+                <div class="mb-3">
+                    <textarea id="asistente-login-mensaje" class="form-control form-control-sm" rows="3" placeholder="Describe tu consulta..."></textarea>
+                </div>
+                <button type="button" class="btn btn-success btn-sm w-100" onclick="enviarMensajeAsistente()">
+                    <i class="bi bi-envelope"></i> Enviar solicitud
+                </button>
+                <div id="asistente-login-estado" class="mt-2 small"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="asistente-footer">
+        <small class="text-muted">
+            <i class="bi bi-database"></i> 
+            <span id="asistente-stats">15,520 casos • 75 plantillas</span>
+        </small>
+    </div>
+</div>
+
+{# Botón flotante para abrir el asistente #}
+<button id="btn-abrir-asistente" class="btn-abrir-asistente">
+    <canvas id="btn-asistente-avatar-rive" style="display: none;" onclick="abrirAsistente()"></canvas>
+    <i class="bi bi-robot btn-asistente-icono-fallback" style="display: none;"></i>
+</button>
+
+{# Estilos del asistente #}
+<style>
+.asistente-panel {
+    position: fixed;
+    right: -400px;
+    top: 0;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+    z-index: 1050;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.asistente-panel.show {
+    right: 0;
+}
+
+.asistente-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.asistente-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.asistente-tabs {
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.asistente-tabs .nav-tabs {
+    border-bottom: none;
+    padding: 0;
+    margin: 0;
+}
+
+.asistente-tabs .nav-link {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border: none;
+    color: #666;
+}
+
+.asistente-tabs .nav-link.active {
+    background: white;
+    color: #667eea;
+    border-bottom: 2px solid #667eea;
+}
+
+.asistente-body.tab-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: white;
+    min-height: 0;
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+}
+
+.asistente-tabs + .asistente-body {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.asistente-body .tab-pane,
+.asistente-body .tab-pane.fade {
+    display: block;
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+.asistente-body .tab-pane.show,
+.asistente-body .tab-pane.active {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.asistente-body .tab-pane > div:first-child,
+.asistente-body .tab-pane > *:first-child {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+.asistente-footer {
+    padding: 10px 20px;
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    text-align: center;
+}
+
+.btn-abrir-asistente {
+    position: fixed !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    width: 312px;
+    height: 312px;
+    border-radius: 50%;
+    background: transparent !important;
+    color: white;
+    border: none !important;
+    font-size: 1.5rem;
+    box-shadow: none !important;
+    cursor: default;
+    z-index: 1040;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    padding: 0;
+}
+
+#btn-asistente-avatar-rive {
+    width: 312px !important;
+    height: 312px !important;
+    max-width: 312px !important;
+    max-height: 312px !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* El canvas recibe eventos de mouse (hover/click) para la state machine y para abrir el asistente */
+    pointer-events: auto;
+    margin: 0;
+    padding: 0;
+    z-index: 2;
+    object-fit: contain !important;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.btn-asistente-icono-fallback {
+    display: none;
+    z-index: 1;
+    font-size: 4rem;
+    color: #667eea;
+}
+
+.btn-abrir-asistente.hidden {
+    display: none;
+}
+
+.caso-resultado {
+    background: #f8f9fa;
+    border-left: 3px solid #667eea;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.caso-resultado:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
+}
+
+.plantilla-item {
+    background: #f8f9fa;
+    border-left: 3px solid #28a745;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plantilla-item:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
+}
+
+.diagnostico-frecuente {
+    background: #f8f9fa;
+    border-left: 3px solid #ffc107;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.diagnostico-frecuente:hover {
+    background: #e9ecef;
+    transform: translateX(3px);
+}
+</style>
+
+{# Scripts del asistente #}
+<script>
+// Prevenir declaración duplicada de variables
+if (typeof asistenteAbierto === 'undefined') {
+    var asistenteAbierto = false;
+}
+const ASISTENTE_CONTEXT = window.ASISTENTE_CONTEXT || (window.ASISTENTE_AUTH ? 'general' : 'login');
+
+function configurarAsistentePorContexto() {
+    const context = ASISTENTE_CONTEXT;
+    const esLogin = context === 'login' && window.ASISTENTE_AUTH !== true;
+    const esPrestador = context === 'prestador';
+
+    document.querySelectorAll('#asistente-panel .nav-item').forEach(item => {
+        const navContext = item.getAttribute('data-context') || 'any';
+        let visible = navContext === 'any';
+        if (!visible && navContext === 'auth' && window.ASISTENTE_AUTH) visible = true;
+        if (!visible && navContext === 'login' && esLogin) visible = true;
+        if (!visible && navContext === 'prestador' && esPrestador) visible = true;
+        if (!visible) {
+            item.style.display = 'none';
+        } else {
+            item.style.display = '';
+        }
+    });
+
+    document.querySelectorAll('#asistente-panel .tab-pane').forEach(pane => {
+        const paneContext = pane.getAttribute('data-context') || 'any';
+        let visible = paneContext === 'any';
+        if (!visible && paneContext === 'auth' && window.ASISTENTE_AUTH) visible = true;
+        if (!visible && paneContext === 'login' && esLogin) visible = true;
+        if (!visible && paneContext === 'prestador' && esPrestador) visible = true;
+        if (!visible) {
+            pane.classList.remove('show', 'active');
+        }
+    });
+
+    let defaultTab = '#tab-chat';
+    if (esLogin) {
+        defaultTab = '#tab-login';
+    } else if (window.ASISTENTE_AUTH) {
+        defaultTab = '#tab-chat';
+    }
+
+    const triggerEl = document.querySelector(`#asistente-panel .nav-link[href="${defaultTab}"]`);
+    if (triggerEl) {
+        const tab = new bootstrap.Tab(triggerEl);
+        tab.show();
+    }
+
+    const aplicador = document.getElementById('asistente-aplicar-prestador');
+    if (aplicador) {
+        aplicador.style.display = esPrestador ? 'block' : 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', configurarAsistentePorContexto);
+
+function abrirAsistente() {
+    document.getElementById('asistente-panel').classList.add('show');
+    document.getElementById('asistente-panel').style.display = 'flex';
+    document.getElementById('btn-abrir-asistente').classList.add('hidden');
+    asistenteAbierto = true;
+    if (window.ASISTENTE_AUTH) {
+        cargarEstadisticas();
+    }
+    
+    // Activar input "Escuchando" en RIVE cuando se abre el panel
+    if (typeof activarInputEscuchando === 'function') {
+        setTimeout(() => {
+            activarInputEscuchando(true);
+        }, 300); // Pequeño delay para que el panel termine de abrirse
+    }
+    
+    // Inicializar RIVE en el panel después de que se abra (solo si no está inicializado)
+    setTimeout(() => {
+        if (typeof inicializarRIVE === 'function') {
+            // Verificar si ya está inicializado antes de llamar
+            if (typeof riveInicializado !== 'undefined' && riveInicializado === true) {
+                console.log('✅ RIVE ya está inicializado, no es necesario reinicializar desde abrirAsistente');
+                return;
+            }
+            if (typeof inicializandoRIVE !== 'undefined' && inicializandoRIVE === true) {
+                console.log('⚠️ RIVE ya se está inicializando, esperando a que termine');
+                return;
+            }
+            console.log('🔍 Llamando a inicializarRIVE desde abrirAsistente...');
+            inicializarRIVE();
+        }
+    }, 500);
+    
+    // NO activar automáticamente ningún tab - dejar que el HTML defina el tab por defecto
+    // El tab "Chat" tiene la clase "active" por defecto en el HTML
+    
+    // Mostrar mensaje inicial a través de RIVE cuando se abre el panel
+    // Diferentes mensajes según el contexto (interno vs externo)
+    if (typeof activarInputMensaje === 'function') {
+        setTimeout(() => {
+            let mensajeInicial = '';
+            const esUsuarioInterno = window.ASISTENTE_AUTH === true;
+            
+            if (esUsuarioInterno) {
+                // Mensajes para usuarios internos según su rol
+                const rolNombre = typeof window.USUARIO_ROL === 'string' ? window.USUARIO_ROL.toLowerCase() : '';
+                const esMedico = typeof window.USUARIO_ES_MEDICO === 'boolean' ? window.USUARIO_ES_MEDICO : false;
+                
+                if (esMedico || rolNombre.includes('medico') || rolNombre.includes('patologo')) {
+                    mensajeInicial = '¿En qué puedo ayudarte hoy? Puedes preguntarme sobre protocolos, buscar casos similares, o solicitar ayuda con diagnósticos.';
+                } else if (rolNombre.includes('administrador') || rolNombre.includes('admin')) {
+                    mensajeInicial = '¿Cómo puedo asistirte? Puedo ayudarte con análisis, reportes o gestión del sistema.';
+                } else {
+                    // Para técnicos, secretarias, etc.
+                    mensajeInicial = 'Hola, ¿qué necesitas? Puedo ayudarte a buscar protocolos, generar reportes o resolver dudas sobre el sistema.';
+                }
+            } else {
+                // Mensaje para usuarios externos (login)
+                mensajeInicial = 'Selecciona el tipo de mensaje y escríbelo.';
+            }
+            
+            if (mensajeInicial) {
+                console.log('📢 Mostrando mensaje inicial en RIVE:', mensajeInicial);
+                // Forzar mostrar el mensaje aunque el panel esté abierto
+                activarInputMensaje(true, mensajeInicial, true);
+                // Desactivar después de 5 segundos
+                setTimeout(() => {
+                    activarInputMensaje(false);
+                }, 5000);
+            }
+        }, 1500); // Delay para que RIVE esté listo
+    }
+}
+
+function cerrarAsistente() {
+    document.getElementById('asistente-panel').classList.remove('show');
+    setTimeout(() => {
+        document.getElementById('asistente-panel').style.display = 'none';
+    }, 300);
+    document.getElementById('btn-abrir-asistente').classList.remove('hidden');
+    asistenteAbierto = false;
+    
+    // Desactivar input "Escuchando" en RIVE cuando se cierra el panel
+    if (typeof activarInputEscuchando === 'function') {
+        setTimeout(() => {
+            activarInputEscuchando(false);
+        }, 300); // Esperar a que el panel termine de cerrarse
+    }
+    
+    // Desactivar input "Mensaje" cuando se cierra el panel
+    if (typeof activarInputMensaje === 'function') {
+        setTimeout(() => {
+            activarInputMensaje(false);
+        }, 300); // Esperar a que el panel termine de cerrarse
+    }
+}
+
+function mostrarEstado(destinoId, tipo, mensaje) {
+    const destino = document.getElementById(destinoId);
+    if (!destino) return;
+    const clases = {
+        success: 'text-success',
+        info: 'text-info',
+        warning: 'text-warning',
+        danger: 'text-danger'
+    };
+    destino.className = `mt-2 small ${clases[tipo] || ''}`;
+    destino.style.whiteSpace = 'pre-line';
+    destino.textContent = mensaje;
+}
+
+function aplicarBusquedaListado() {
+    const campoBuscar = document.querySelector('[data-prestador="buscar"]');
+    if (!campoBuscar) {
+        mostrarEstado('asistente-resultados', 'warning', 'No se encontró el listado para aplicar la búsqueda.');
+        return;
+    }
+    const termino = document.getElementById('asistente-buscar-input').value.trim();
+    if (termino) {
+        campoBuscar.value = termino;
+    }
+    const form = campoBuscar.closest('form');
+    if (form) {
+        form.submit();
+    }
+}
+
+function enviarMensajeAsistente() {
+    console.log('🔘 Botón de envío presionado');
+    
+    // Determinar qué tab está activo
+    const tabMensajes = document.getElementById('tab-mensajes');
+    const tabLogin = document.getElementById('tab-login');
+    const esTabMensajes = tabMensajes && (tabMensajes.classList.contains('active') || tabMensajes.classList.contains('show'));
+    const esTabLogin = tabLogin && (tabLogin.classList.contains('active') || tabLogin.classList.contains('show'));
+    
+    console.log('🔍 Tabs:', {
+        tabMensajesActivo: esTabMensajes,
+        tabLoginActivo: esTabLogin,
+        ASISTENTE_CONTEXT: typeof ASISTENTE_CONTEXT !== 'undefined' ? ASISTENTE_CONTEXT : 'no definido',
+        ASISTENTE_AUTH: window.ASISTENTE_AUTH
+    });
+    
+    // Si estamos en el tab de login y no estamos autenticados, usar el formulario de login
+    if (esTabLogin && window.ASISTENTE_AUTH !== true) {
+        const nombreInput = document.getElementById('asistente-login-nombre');
+        const emailInput = document.getElementById('asistente-login-email');
+        const dniInput = document.getElementById('asistente-login-dni');
+        const mensajeInput = document.getElementById('asistente-login-mensaje');
+        
+        if (!nombreInput || !emailInput || !mensajeInput) {
+            console.error('❌ No se encontraron los campos del formulario de login');
+            mostrarEstado('asistente-login-estado', 'danger', 'Error: No se encontraron los campos del formulario.');
+            return;
+        }
+        
+        const nombre = nombreInput.value.trim();
+        const email = emailInput.value.trim();
+        const dni = dniInput ? dniInput.value.trim() : '';
+        const mensaje = mensajeInput.value.trim();
+        
+        if (!email || !mensaje) {
+            mostrarEstado('asistente-login-estado', 'warning', 'Necesitamos al menos un correo y un mensaje.');
+            return;
+        }
+        
+        console.log('📤 Enviando mensaje desde tab Login:', { nombre, email, dni, mensaje });
+        fetch('/asistente/login/buscar-usuario', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email })
+        }).then(r => r.json()).then(data => {
+            if (data.success && data.mensaje) {
+                mostrarEstado('asistente-login-estado', 'info', data.mensaje);
+            }
+        }).finally(() => {
+            fetch('/asistente/mensaje-login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nombre, email, dni, mensaje })
+            }).then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.json();
+            }).then(data => {
+                if (data.success) {
+                    // Desactivar input ERROR si estaba activo
+                    if (typeof activarInputError === 'function') {
+                        activarInputError(false);
+                    }
+                    
+                    const mensajeExitoLogin = 'El equipo del laboratorio recibirá tu mensaje.\nMuchas Gracias';
+                    document.getElementById('asistente-login-mensaje').value = '';
+                    
+                    // Mostrar mensaje de confirmación a través de RIVE (forzar que se muestre aunque el panel esté abierto)
+                    if (typeof activarInputMensaje === 'function') {
+                        setTimeout(() => {
+                            // Llamar directamente sin verificar si el panel está abierto (es un mensaje del panel)
+                            activarInputMensaje(true, mensajeExitoLogin, true); // true = forzar mostrar
+                            // Desactivar después de 5 segundos
+                            setTimeout(() => {
+                                activarInputMensaje(false);
+                                // Limpiar el mensaje del estado del formulario también
+                                mostrarEstado('asistente-login-estado', '', '');
+                            }, 5000);
+                        }, 300);
+                    }
+                    
+                    // Mostrar mensaje temporal en el estado del formulario (desaparecerá después de 5 segundos)
+                    mostrarEstado('asistente-login-estado', 'success', mensajeExitoLogin);
+                } else {
+                    const mensajeError = data.error || 'No se pudo enviar.';
+                    mostrarEstado('asistente-login-estado', 'danger', mensajeError);
+                    
+                    // Activar input ERROR en RIVE
+                    if (typeof activarInputError === 'function') {
+                        setTimeout(() => {
+                            activarInputError(true, mensajeError);
+                        }, 300);
+                    }
+                }
+            }).catch(error => {
+                console.error('❌ Error al enviar mensaje desde login:', error);
+                let mensajeError = 'Error al enviar el mensaje.';
+                
+                // Si el error es de parsing JSON, el servidor devolvió HTML
+                if (error.message && error.message.includes('Unexpected token')) {
+                    mensajeError = 'Error de conexión con el servidor. Por favor, verifica tu conexión e intenta nuevamente.';
+                }
+                
+                mostrarEstado('asistente-login-estado', 'danger', mensajeError);
+                
+                // Activar input ERROR en RIVE
+                if (typeof activarInputError === 'function') {
+                    setTimeout(() => {
+                        activarInputError(true, mensajeError);
+                    }, 300);
+                }
+            });
+        });
+        return;
+    }
+
+    // Si estamos en el tab de mensajes, usar el formulario de mensajes
+    if (esTabMensajes) {
+        const textoInput = document.getElementById('asistente-mensaje-texto');
+        if (!textoInput) {
+            console.error('❌ No se encontró el campo de texto del mensaje');
+            mostrarEstado('asistente-mensaje-estado', 'danger', 'Error: No se encontró el campo de mensaje.');
+            return;
+        }
+        
+        const texto = textoInput.value.trim();
+    if (!texto) {
+        mostrarEstado('asistente-mensaje-estado', 'warning', 'Escribe un mensaje antes de enviar.');
+        return;
+    }
+        
+        const temaSelect = document.getElementById('asistente-mensaje-tema');
+        if (!temaSelect) {
+            console.error('❌ No se encontró el selector de tema');
+            mostrarEstado('asistente-mensaje-estado', 'danger', 'Error: No se encontró el selector de tema.');
+            return;
+        }
+        
+        const tema = temaSelect.value;
+        const context = typeof ASISTENTE_CONTEXT !== 'undefined' ? ASISTENTE_CONTEXT : (window.ASISTENTE_AUTH ? 'general' : 'login');
+        
+        // Mostrar estado de "enviando..."
+        mostrarEstado('asistente-mensaje-estado', 'info', 'Enviando mensaje...');
+        
+        console.log('📤 Enviando mensaje desde tab Mensajes:', { tema, mensaje: texto, contexto: context });
+        
+    fetch('/asistente/mensaje', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ tema, mensaje: texto, contexto: context })
+        }).then(r => {
+            console.log('📥 Respuesta del servidor:', r.status, r.statusText);
+            if (!r.ok) {
+                // Si es un error 400, intentar parsear el JSON para obtener el mensaje de error
+                if (r.status === 400) {
+                    return r.json().then(data => {
+                        throw new Error(data.error || 'El mensaje es demasiado corto. Por favor, escribe al menos 5 caracteres.');
+                    }).catch(() => {
+                        throw new Error('El mensaje es demasiado corto. Por favor, escribe al menos 5 caracteres.');
+                    });
+                }
+                throw new Error(`HTTP error! status: ${r.status}`);
+            }
+            return r.json();
+        }).then(data => {
+            console.log('✅ Datos recibidos:', data);
+        if (data.success) {
+                // Desactivar input ERROR si estaba activo
+                if (typeof activarInputError === 'function') {
+                    activarInputError(false);
+                }
+                
+                const mensajeExito = 'El equipo del laboratorio recibirá tu mensaje.\nMuchas Gracias';
+            document.getElementById('asistente-mensaje-texto').value = '';
+                
+                // Mostrar mensaje de confirmación a través de RIVE (forzar que se muestre aunque el panel esté abierto)
+                if (typeof activarInputMensaje === 'function') {
+                    setTimeout(() => {
+                        console.log('📢 Mostrando mensaje de confirmación en RIVE:', mensajeExito);
+                        // Llamar directamente sin verificar si el panel está abierto (es un mensaje del panel)
+                        activarInputMensaje(true, mensajeExito, true); // true = forzar mostrar
+                        // Desactivar después de 5 segundos
+                        setTimeout(() => {
+                            activarInputMensaje(false);
+                            // Limpiar el mensaje del estado del formulario también
+                            mostrarEstado('asistente-mensaje-estado', '', '');
+                        }, 5000);
+                    }, 300);
+                }
+                
+                // Mostrar mensaje temporal en el estado del formulario (desaparecerá después de 5 segundos)
+                mostrarEstado('asistente-mensaje-estado', 'success', mensajeExito);
+        } else {
+                const mensajeError = data.error || 'No se pudo enviar el mensaje.';
+                mostrarEstado('asistente-mensaje-estado', 'danger', mensajeError);
+                
+                // Activar input ERROR en RIVE
+                if (typeof activarInputError === 'function') {
+                    setTimeout(() => {
+                        activarInputError(true, mensajeError);
+                    }, 300);
+                }
+            }
+        }).catch(error => {
+            console.error('❌ Error al enviar mensaje:', error);
+            // Usar el mensaje del error si está disponible, de lo contrario usar un mensaje genérico
+            let mensajeError = error.message || 'Error al enviar el mensaje. Por favor, intenta nuevamente.';
+            
+            // Si el error es de parsing JSON, el servidor devolvió HTML
+            if (error.message && error.message.includes('Unexpected token')) {
+                mensajeError = 'Error de conexión con el servidor. Por favor, verifica tu conexión e intenta nuevamente.';
+        }
+            // Si el mensaje del error ya contiene información útil (como "demasiado corto"), usarlo directamente
+            // No necesitamos verificar si incluye "400" porque el mensaje ya fue establecido en el then anterior
+            
+            console.log('📢 Mensaje de error a mostrar:', mensajeError);
+            mostrarEstado('asistente-mensaje-estado', 'danger', mensajeError);
+            
+            // Activar input ERROR en RIVE con el mensaje real del error
+            if (typeof activarInputError === 'function') {
+                setTimeout(() => {
+                    console.log('📢 Activando input ERROR en RIVE con mensaje:', mensajeError);
+                    activarInputError(true, mensajeError);
+                }, 300);
+            }
+        });
+        return;
+    }
+    
+    // Si no estamos en ningún tab reconocido, mostrar error
+    console.warn('⚠️ No se pudo determinar el tab activo o no hay formulario disponible');
+    mostrarEstado('asistente-mensaje-estado', 'warning', 'Por favor, asegúrate de estar en el tab correcto antes de enviar.');
+}
+
+function verificarPrestadorLogin() {
+    const dni = (document.getElementById('asistente-login-dni').value || '').trim();
+    if (!dni) {
+        mostrarEstado('asistente-login-verificacion', 'warning', 'Ingresá un DNI para verificar.');
+        return;
+    }
+    mostrarEstado('asistente-login-verificacion', 'info', 'Verificando prestador...');
+    fetch('/asistente/login/verificar-prestador', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ documento: dni })
+    }).then(r => r.json()).then(data => {
+        if (data.success && data.encontrado) {
+            mostrarEstado('asistente-login-verificacion', 'success', `Encontramos a ${data.nombre}. Podés solicitar tu usuario con el formulario inferior.`);
+        } else {
+            mostrarEstado('asistente-login-verificacion', 'info', data.message || 'No encontramos un prestador con ese DNI. Comunicate con el laboratorio.');
+        }
+    }).catch(() => mostrarEstado('asistente-login-verificacion', 'danger', 'No se pudo verificar en este momento.'));
+}
+
+function buscarCasosSimilares() {
+    const termino = document.getElementById('asistente-buscar-input').value.trim();
+    const tipoEstudio = document.getElementById('asistente-tipo-estudio').value;
+    const resultadosDiv = document.getElementById('asistente-resultados');
+    
+    if (termino.length < 3) {
+        resultadosDiv.innerHTML = '<div class="alert alert-warning alert-sm">Escribe al menos 3 caracteres</div>';
+        return;
+    }
+    
+    resultadosDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div> Buscando...</div>';
+    
+    fetch('/asistente/buscar-casos', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            termino: termino,
+            tipo_estudio: tipoEstudio,
+            limite: 10
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.casos.length > 0) {
+            let html = `<small class="text-muted">${data.total} caso(s) encontrado(s)</small><hr>`;
+            data.casos.forEach(caso => {
+                html += `
+                    <div class="caso-resultado" onclick="verCasoDetalle(${caso.caso_id})">
+                        <strong class="text-primary">${caso.protocolo}</strong>
+                        <span class="badge bg-secondary ms-2">${caso.tipo}</span>
+                        <br><small class="text-muted">${caso.categoria || ''}</small>
+                        <p class="mb-1 mt-2"><strong>Descripción:</strong><br>${caso.descripcion_preview || ''}</p>
+                        <p class="mb-0"><strong>Diagnóstico:</strong><br>${caso.diagnostico_preview || ''}</p>
+                    </div>
+                `;
+            });
+            resultadosDiv.innerHTML = html;
+        } else {
+            resultadosDiv.innerHTML = '<div class="alert alert-info">No se encontraron casos similares</div>';
+        }
+    })
+    .catch(err => {
+        resultadosDiv.innerHTML = '<div class="alert alert-danger">Error en la búsqueda</div>';
+    });
+}
+
+function verCasoDetalle(casoId) {
+    alert('Funcionalidad de ver caso completo - próximamente');
+}
+
+function cargarPlantillas() {
+    const tipo = document.getElementById('asistente-plantillas-tipo').value;
+    const listaDiv = document.getElementById('asistente-plantillas-lista');
+    
+    if (!tipo) {
+        listaDiv.innerHTML = '';
+        return;
+    }
+    
+    listaDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+    
+    fetch(`/asistente/plantillas/${tipo}`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            let html = '';
+            for (const [seccion, plantillas] of Object.entries(data.plantillas)) {
+                html += `<h6 class="mt-3">${seccion.replace(/_/g, ' ')}</h6>`;
+                plantillas.forEach(p => {
+                    html += `
+                        <div class="plantilla-item" onclick="usarPlantilla(${p.id}, '${p.texto.replace(/'/g, "\\'")}')">
+                            <small>${p.texto.substring(0, 80)}${p.texto.length > 80 ? '...' : ''}</small>
+                            <br><small class="text-muted">Usada ${p.veces_usado} veces</small>
+                        </div>
+                    `;
+                });
+            }
+            listaDiv.innerHTML = html;
+        }
+    });
+}
+
+function usarPlantilla(id, texto) {
+    navigator.clipboard.writeText(texto).then(() => {
+        fetch(`/asistente/usar-plantilla/${id}`, {method: 'POST'});
+        alert('✓ Plantilla copiada al portapapeles');
+    });
+}
+
+function cargarDiagnosticosFrecuentes() {
+    const tipo = document.getElementById('asistente-frecuentes-tipo').value;
+    const categoria = document.getElementById('asistente-frecuentes-categoria').value;
+    const listaDiv = document.getElementById('asistente-frecuentes-lista');
+    
+    if (!tipo) {
+        listaDiv.innerHTML = '';
+        return;
+    }
+    
+    listaDiv.innerHTML = '<div class="text-center"><div class="spinner-border spinner-border-sm"></div></div>';
+    
+    let url = `/asistente/top-diagnosticos/${tipo}`;
+    if (categoria) url += `?categoria=${categoria}`;
+    
+    fetch(url)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success && data.diagnosticos.length > 0) {
+            let html = '';
+            data.diagnosticos.forEach((d, i) => {
+                html += `
+                    <div class="diagnostico-frecuente" onclick="copiarTexto('${d.diagnostico_completo.replace(/'/g, "\\'")}')">
+                        <small><strong>#${i+1}</strong> (${d.frecuencia} casos)</small>
+                        <p class="mb-0 mt-1">${d.diagnostico}</p>
+                    </div>
+                `;
+            });
+            listaDiv.innerHTML = html;
+        } else {
+            listaDiv.innerHTML = '<div class="alert alert-info">No hay datos</div>';
+        }
+    });
+}
+
+function copiarTexto(texto) {
+    navigator.clipboard.writeText(texto).then(() => {
+        alert('✓ Texto copiado al portapapeles');
+    });
+}
+
+function cargarEstadisticas() {
+    fetch('/asistente/estadisticas')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.estadisticas;
+                const texto = `${stats.total_casos} casos • ${stats.plantillas} plantillas`;
+                document.getElementById('asistente-stats').textContent = texto;
+            }
+        });
+}
+</script>
+
+{# Script del chat conversacional con RIVE #}
+{# El script se carga desde login.html cuando estamos en login, o desde aquí en otras páginas #}
+{% if not request.endpoint or request.endpoint != 'auth.login' %}
+<script>
+if (typeof window.ASISTENTE_CHAT_LOADED === 'undefined') {
+    const script = document.createElement('script');
+    script.src = "{{ url_for('static', filename='js/asistente_chat.js') }}";
+    script.onload = function() {
+        console.log('✅ Script asistente_chat.js cargado desde asistente_panel');
+    };
+    document.head.appendChild(script);
+} else {
+    console.log('✅ Script asistente_chat.js ya estaba cargado');
+}
+</script>
+{% endif %}
+

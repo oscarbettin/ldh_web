@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+
+{% block title %}Protocolos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-folder-fill"></i> Protocolos</h1>
+            <p class="text-muted">Gestión de todos los protocolos del laboratorio</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('protocolos.nuevo') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nuevo Protocolo
+            </a>
+        </div>
+    </div>
+    
+    <!-- Estadísticas rápidas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total</h6>
+                            <h2 class="mb-0">{{ stats.total }}</h2>
+                        </div>
+                        <i class="bi bi-folder" style="font-size: 2rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Pendientes</h6>
+                            <h2 class="mb-0">{{ stats.pendientes }}</h2>
+                        </div>
+                        <i class="bi bi-clock" style="font-size: 2rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">En Proceso</h6>
+                            <h2 class="mb-0">{{ stats.en_proceso }}</h2>
+                        </div>
+                        <i class="bi bi-gear" style="font-size: 2rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Completados</h6>
+                            <h2 class="mb-0">{{ stats.completados }}</h2>
+                        </div>
+                        <i class="bi bi-check-circle" style="font-size: 2rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtros y búsqueda -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('protocolos.index') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="buscar" class="form-label">Buscar</label>
+                        <input type="text" 
+                               name="buscar" 
+                               id="buscar"
+                               class="form-control" 
+                               placeholder="Número, paciente o prestador..." 
+                               value="{{ buscar }}">
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="tipo" class="form-label">Tipo de Estudio</label>
+                        <select name="tipo" id="tipo" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="BIOPSIA" {{ 'selected' if tipo == 'BIOPSIA' else '' }}>Biopsia</option>
+                            <option value="CITOLOGÍA" {{ 'selected' if tipo == 'CITOLOGÍA' else '' }}>Citología</option>
+                            <option value="PAP" {{ 'selected' if tipo == 'PAP' else '' }}>PAP</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="estado" class="form-label">Estado</label>
+                        <select name="estado" id="estado" class="form-select">
+                            <option value="">Todos</option>
+                            <option value="PENDIENTE" {{ 'selected' if estado == 'PENDIENTE' else '' }}>Pendiente</option>
+                            <option value="EN_PROCESO" {{ 'selected' if estado == 'EN_PROCESO' else '' }}>En Proceso</option>
+                            <option value="COMPLETADO" {{ 'selected' if estado == 'COMPLETADO' else '' }}>Completado</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if buscar or tipo or estado %}
+                <div class="mt-3">
+                    <a href="{{ url_for('protocolos.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle"></i> Limpiar Filtros
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+    
+    <!-- Lista de protocolos -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="bi bi-list-ul"></i> Lista de Protocolos
+                <span class="badge bg-secondary ms-2">{{ protocolos.total }} protocolo(s)</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if protocolos.items %}
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="110">Protocolo</th>
+                            <th width="90">Tipo</th>
+                            <th width="220">Paciente</th>
+                            <th width="220">Prestador</th>
+                            <th width="110">F. Ingreso</th>
+                            <th width="190">Informado por</th>
+                            <th width="110">Estado</th>
+                            <th width="70">Días</th>
+                            <th width="120">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for protocolo in protocolos.items %}
+                        <tr class="clickable-row" data-url="{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}" style="cursor: pointer;">
+                            <td>
+                                <strong class="text-primary">{{ protocolo.numero_protocolo }}</strong>
+                            </td>
+                            <td>
+                                {% if protocolo.tipo_estudio_normalizado == 'BIOPSIA' %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-file-medical"></i> Biopsia
+                                </span>
+                                {% elif protocolo.tipo_estudio_normalizado == 'CITOLOGIA' %}
+                                <span class="badge bg-info">
+                                    <i class="bi bi-file-text"></i> Citología
+                                </span>
+                                {% elif protocolo.tipo_estudio_normalizado == 'PAP' %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-clipboard2-pulse"></i> PAP
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ protocolo.afiliado.nombre_completo }}</strong>
+                                    {% if protocolo.afiliado.numero_afiliado %}
+                                        <br><small class="text-muted">Nº {{ protocolo.afiliado.numero_afiliado }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if protocolo.prestador %}
+                                    {{ protocolo.prestador.nombre_completo }}
+                                    <br><small class="text-muted">{{ protocolo.prestador.nombre_especialidad }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ protocolo.fecha_ingreso | fecha_formato }}
+                            </td>
+                            <td>
+                                {% if protocolo.usuario_informe %}
+                                    <strong>{{ protocolo.usuario_informe.nombre_completo }}</strong>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if protocolo.estado_normalizado == 'PENDIENTE' %}
+                                    <span class="badge bg-warning">Pendiente</span>
+                                {% elif protocolo.estado_normalizado == 'EN_PROCESO' %}
+                                    <span class="badge bg-info">En Proceso</span>
+                                {% elif protocolo.estado_normalizado == 'COMPLETADO' %}
+                                    <span class="badge bg-success">Completado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if protocolo.estado_normalizado in ['PENDIENTE', 'EN_PROCESO'] %}
+                                    {% set dias = protocolo.dias_pendiente %}
+                                    {% if dias > 7 %}
+                                        <span class="badge bg-danger">{{ dias }}d</span>
+                                    {% elif dias > 3 %}
+                                        <span class="badge bg-warning">{{ dias }}d</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ dias }}d</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}" 
+                                       class="btn btn-secondary" 
+                                       title="Ver">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if protocolo.estado_normalizado == 'PENDIENTE' %}
+                                    <a href="{{ url_for('protocolos.editar', id=protocolo.protocolo_id) }}" 
+                                       class="btn btn-warning" 
+                                       title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if protocolo.estado_normalizado == 'COMPLETADO' %}
+                                    <a href="{{ url_for('plantillas_dinamicas.preview_plantilla', protocolo_id=protocolo.protocolo_id) }}" 
+                                       class="btn btn-info"
+                                       title="Ver/Imprimir Informe">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-folder-x" style="font-size: 3rem; color: #ccc;"></i>
+                <h5 class="mt-3 text-muted">No se encontraron protocolos</h5>
+                <p class="text-muted">No hay protocolos que coincidan con los criterios de búsqueda.</p>
+                <a href="{{ url_for('protocolos.nuevo') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Crear Primer Protocolo
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if protocolos.pages > 1 %}
+        <div class="card-footer">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if protocolos.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('protocolos.index', page=protocolos.prev_num, buscar=buscar, tipo=tipo, estado=estado) }}">
+                            <i class="bi bi-chevron-left"></i> Anterior
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in protocolos.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num == protocolos.page %}
+                            <li class="page-item active">
+                                <a class="page-link" href="#">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('protocolos.index', page=page_num, buscar=buscar, tipo=tipo, estado=estado) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">...</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if protocolos.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('protocolos.index', page=protocolos.next_num, buscar=buscar, tipo=tipo, estado=estado) }}">
+                            Siguiente <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Hacer filas clickeables
+    const clickableRows = document.querySelectorAll('.clickable-row');
+    
+    clickableRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            // No hacer click si se hace click en un botón o enlace
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.closest('button') || e.target.closest('a')) {
+                return;
+            }
+            
+            const url = this.dataset.url;
+            if (url) {
+                window.location.href = url;
+            }
+        });
+        
+        // Efecto hover
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f8f9fa';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+</script>
+
+{% endblock %}

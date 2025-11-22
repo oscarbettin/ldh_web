@@ -1,0 +1,581 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if protocolo else 'Nuevo' }} Protocolo{% endblock %}
+
+{% block extra_head %}
+<style>
+    #paciente_resultados .list-group-item {
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    
+    #paciente_resultados .list-group-item:hover {
+        border-left-color: #0d6efd;
+        background-color: #f8f9fa;
+        transform: translateX(3px);
+    }
+    
+    #paciente_resultados {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 0.25rem;
+    }
+    
+    .border-2 {
+        border-width: 2px !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>
+                <i class="bi bi-{{ 'pencil' if protocolo else 'plus-circle' }}"></i>
+                {{ 'Editar' if protocolo else 'Nuevo' }} Protocolo
+            </h1>
+            {% if protocolo %}
+                <p class="text-muted">Protocolo: {{ protocolo.numero_protocolo }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    {% set es_medico = rol_es_medico(current_user.rol.nombre if current_user.rol else '') %}
+                    {% if es_medico is undefined %}
+                        {% set es_medico = false %}
+                    {% endif %}
+                    <form id="form-protocolo" method="POST" action="{{ url_for('protocolos.crear') if not protocolo else url_for('protocolos.actualizar', id=protocolo.protocolo_id) }}">
+                        <input type="hidden" name="accion" id="accion-guardado" value="guardar">
+                        <!-- Tipo de Estudio -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-folder"></i> Tipo de Estudio
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tipo_estudio" class="form-label">Tipo de Estudio *</label>
+                                {% if protocolo %}
+                                    <input type="text" 
+                                           class="form-control" 
+                                           value="{{ protocolo.tipo_estudio }}" 
+                                           disabled>
+                                    <input type="hidden" name="tipo_estudio" value="{{ protocolo.tipo_estudio }}">
+                                {% else %}
+                                    <select class="form-select" id="tipo_estudio" name="tipo_estudio" required>
+                                        <option value="">Seleccione...</option>
+                                        <option value="BIOPSIA" {{ 'selected' if tipo_predefinido == 'BIOPSIA' else '' }}>Biopsia</option>
+                                        <option value="CITOLOGÍA" {{ 'selected' if tipo_predefinido == 'CITOLOGÍA' else '' }}>Citología</option>
+                                        <option value="PAP" {{ 'selected' if tipo_predefinido == 'PAP' else '' }}>PAP</option>
+                                    </select>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="tipo_analisis_id" class="form-label">Tipo de Análisis</label>
+                                <select class="form-select" id="tipo_analisis_id" name="tipo_analisis_id">
+                                    <option value="">Seleccione...</option>
+                                    {% for tipo in tipos_analisis %}
+                                    <option value="{{ tipo.tipo_analisis_id }}" 
+                                            {{ 'selected' if protocolo and protocolo.tipo_analisis_id == tipo.tipo_analisis_id else '' }}>
+                                        {{ tipo.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Paciente -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-person"></i> Paciente
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="buscar_paciente" class="form-label">Buscar Paciente *</label>
+                                {% if protocolo %}
+                                    <input type="text" 
+                                           class="form-control" 
+                                           value="{{ protocolo.afiliado.nombre_completo }}" 
+                                           disabled>
+                                    <input type="hidden" name="afiliado_id" value="{{ protocolo.afiliado_id }}">
+                                {% else %}
+                                    <div class="position-relative">
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="buscar_paciente" 
+                                               placeholder="Escriba nombre, apellido o número de afiliado..."
+                                               autocomplete="off">
+                                        <input type="hidden" id="afiliado_id" name="afiliado_id" required>
+                                        <div id="paciente_resultados" class="list-group position-absolute w-100" style="z-index: 1000; max-height: 300px; overflow-y: auto; display: none;"></div>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Escriba al menos 2 caracteres para buscar
+                                    </small>
+                                    <div id="paciente_seleccionado" class="mt-2" style="display: none;">
+                                        <div class="alert alert-success mb-0">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <i class="bi bi-check-circle"></i> 
+                                                    <strong>Paciente seleccionado:</strong>
+                                                    <span id="paciente_nombre"></span>
+                                                    <br>
+                                                    <small id="paciente_info"></small>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="limpiarPaciente()">
+                                                    <i class="bi bi-x"></i> Cambiar
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Prestador y Obra Social -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-briefcase"></i> Prestador y Obra Social
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="prestador_id" class="form-label">Prestador</label>
+                                <select class="form-select" id="prestador_id" name="prestador_id">
+                                    <option value="">Seleccione...</option>
+                                    {% for prestador in prestadores %}
+                                    <option value="{{ prestador.prestador_id }}" 
+                                            {{ 'selected' if protocolo and protocolo.prestador_id == prestador.prestador_id else '' }}>
+                                        {{ prestador.nombre_completo }} - {{ prestador.nombre_especialidad }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="obra_social_id" class="form-label">
+                                    Obra Social 
+                                    <span id="os_auto_badge" class="badge bg-info" style="display: none;">
+                                        <i class="bi bi-magic"></i> Auto
+                                    </span>
+                                </label>
+                                <select class="form-select" id="obra_social_id" name="obra_social_id">
+                                    <style>
+                                        /* Estilos para OS inactivas (seleccionables pero marcadas) */
+                                        select option {
+                                            padding: 8px 12px;
+                                        }
+                                        select option[data-inactive="true"] {
+                                            background-color: #fff3cd;
+                                            color: #856404;
+                                            font-weight: 500;
+                                        }
+                                        select option[data-inactive="true"]:hover {
+                                            background-color: #ffeaa7;
+                                        }
+                                    </style>
+                                    <option value="">Seleccione...</option>
+                                    {% for os in obras_sociales %}
+                                    <option value="{{ os.obra_social_id }}" 
+                                            {{ 'selected' if protocolo and protocolo.obra_social_id == os.obra_social_id else '' }}
+                                            {% if not os.activo %}data-inactive="true"{% endif %}>
+                                        {{ os.nombre }} ({{ os.codigo }})
+                                        {% if not os.activo %} - INACTIVA{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Se carga automáticamente al seleccionar paciente
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Datos Clínicos -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-clipboard-data"></i> Datos Clínicos
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="datos_clinicos" class="form-label">Datos Clínicos</label>
+                                <textarea class="form-control" 
+                                          id="datos_clinicos" 
+                                          name="datos_clinicos" 
+                                          rows="4" 
+                                          placeholder="Ingrese los datos clínicos relevantes...">{{ protocolo.datos_clinicos if protocolo else '' }}</textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('protocolos.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> {{ 'Actualizar' if protocolo else 'Crear' }} Protocolo
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i> Información
+                    </h6>
+                    <p class="card-text text-sm">
+                        <strong>Campos obligatorios:</strong><br>
+                        • Tipo de estudio<br>
+                        • Paciente
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Numeración automática:</strong><br>
+                        El sistema genera automáticamente el número de protocolo según el tipo y año.
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Estados del protocolo:</strong><br>
+                        • <span class="badge bg-warning">Pendiente</span> - Recién creado<br>
+                        • <span class="badge bg-info">En Proceso</span> - En análisis<br>
+                        • <span class="badge bg-success">Completado</span> - Informe listo
+                    </p>
+                    
+                    {% if protocolo %}
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Datos del protocolo:</strong><br>
+                        • Número: {{ protocolo.numero_protocolo }}<br>
+                        • Creado: {{ protocolo.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}<br>
+                        • Estado: 
+                        {% if protocolo.estado == 'PENDIENTE' %}
+                            <span class="badge bg-warning">Pendiente</span>
+                        {% elif protocolo.estado == 'EN_PROCESO' %}
+                            <span class="badge bg-info">En Proceso</span>
+                        {% elif protocolo.estado == 'COMPLETADO' %}
+                            <span class="badge bg-success">Completado</span>
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if not protocolo %}
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-lightning"></i> Acceso Rápido
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('protocolos.nuevo', tipo='BIOPSIA') }}" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-file-medical"></i> Nueva Biopsia
+                        </a>
+                        <a href="{{ url_for('protocolos.nuevo', tipo='CITOLOGÍA') }}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-file-text"></i> Nueva Citología
+                        </a>
+                        <a href="{{ url_for('protocolos.nuevo', tipo='PAP') }}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-clipboard2-pulse"></i> Nuevo PAP
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal guardar -->
+<div class="modal fade" id="modal-guardar-protocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGuardarProtocoloLabel">
+                    <i class="bi bi-question-circle"></i> ¿Cómo desea guardar?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>Seleccione una opción para continuar.</p>
+                <ul class="small text-muted mb-0">
+                    <li><strong>Guardar:</strong> mantiene el protocolo en su estado actual.</li>
+                    <li><strong>Guardar y completar:</strong> marca el protocolo como completado y registrará su firma.</li>
+                </ul>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="btn-guardar-solo">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                    {% if es_medico %}
+                    <button type="button" class="btn btn-success" id="btn-guardar-completar">
+                        <i class="bi bi-check2-circle"></i> Guardar y completar
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo médicos pueden completar el protocolo.">
+                        <i class="bi bi-check2-circle"></i> Guardar y completar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Búsqueda de pacientes
+let busquedaTimeout = null;
+const buscarPacienteInput = document.getElementById('buscar_paciente');
+const resultadosDiv = document.getElementById('paciente_resultados');
+const afiliadoIdInput = document.getElementById('afiliado_id');
+const pacienteSeleccionadoDiv = document.getElementById('paciente_seleccionado');
+const obraSocialSelect = document.getElementById('obra_social_id');
+
+if (buscarPacienteInput) {
+    buscarPacienteInput.addEventListener('input', function() {
+        const termino = this.value.trim();
+        
+        // Limpiar timeout anterior
+        if (busquedaTimeout) {
+            clearTimeout(busquedaTimeout);
+        }
+        
+        // Ocultar resultados si el término es muy corto
+        if (termino.length < 2) {
+            resultadosDiv.style.display = 'none';
+            resultadosDiv.innerHTML = '';
+            return;
+        }
+        
+        // Buscar después de 300ms de pausa en la escritura
+        busquedaTimeout = setTimeout(function() {
+            buscarPacientes(termino);
+        }, 300);
+    });
+    
+    // Cerrar resultados al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!buscarPacienteInput.contains(e.target) && !resultadosDiv.contains(e.target)) {
+            resultadosDiv.style.display = 'none';
+        }
+    });
+}
+
+function buscarPacientes(termino) {
+    fetch(`/pacientes/buscar-json?q=${encodeURIComponent(termino)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length === 0) {
+                resultadosDiv.innerHTML = '<div class="list-group-item text-muted">No se encontraron pacientes</div>';
+                resultadosDiv.style.display = 'block';
+                return;
+            }
+            
+            let html = '';
+            data.forEach(paciente => {
+                const edad = paciente.edad ? ` (${paciente.edad} años)` : '';
+                const numero = paciente.numero_afiliado ? `Nº ${paciente.numero_afiliado}` : 'Sin número';
+                const obraSocial = paciente.obra_social || 'Sin obra social';
+                
+                html += `
+                    <a href="javascript:void(0)" 
+                       class="list-group-item list-group-item-action" 
+                       onclick="seleccionarPaciente(${paciente.afiliado_id}, '${paciente.nombre_completo}', '${numero}', ${paciente.obra_social_id || 'null'}, '${obraSocial}'${edad ? `, '${edad}'` : ''})">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">${paciente.nombre_completo}${edad}</h6>
+                            <small class="text-muted">${numero}</small>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-building"></i> ${obraSocial}
+                        </small>
+                    </a>
+                `;
+            });
+            
+            resultadosDiv.innerHTML = html;
+            resultadosDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error buscando pacientes:', error);
+            resultadosDiv.innerHTML = '<div class="list-group-item text-danger">Error al buscar pacientes</div>';
+            resultadosDiv.style.display = 'block';
+        });
+}
+
+function seleccionarPaciente(id, nombre, numero, obraSocialId, obraSocialNombre, edad = '') {
+    // Guardar ID del paciente
+    afiliadoIdInput.value = id;
+    
+    // Ocultar búsqueda y resultados
+    buscarPacienteInput.style.display = 'none';
+    resultadosDiv.style.display = 'none';
+    
+    // Mostrar paciente seleccionado
+    document.getElementById('paciente_nombre').textContent = nombre;
+    document.getElementById('paciente_info').innerHTML = `${numero}${edad ? ' • ' + edad : ''}`;
+    pacienteSeleccionadoDiv.style.display = 'block';
+    
+    // Cargar obra social automáticamente
+    if (obraSocialId && obraSocialSelect) {
+        obraSocialSelect.value = obraSocialId;
+        
+        // Mostrar badge de autocarga
+        const badge = document.getElementById('os_auto_badge');
+        if (badge) {
+            badge.style.display = 'inline-block';
+            setTimeout(() => {
+                badge.style.display = 'none';
+            }, 3000);
+        }
+        
+        // Destacar el select brevemente
+        obraSocialSelect.classList.add('border-success', 'border-2');
+        setTimeout(() => {
+            obraSocialSelect.classList.remove('border-success', 'border-2');
+        }, 2000);
+    }
+}
+
+function limpiarPaciente() {
+    // Limpiar campos
+    afiliadoIdInput.value = '';
+    buscarPacienteInput.value = '';
+    buscarPacienteInput.style.display = 'block';
+    pacienteSeleccionadoDiv.style.display = 'none';
+    
+    // Focus en el buscador
+    buscarPacienteInput.focus();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoPredefinido = '{{ tipo_predefinido }}';
+    if (tipoPredefinido) {
+        const tipoSelect = document.getElementById('tipo_estudio');
+        if (tipoSelect) {
+            tipoSelect.value = tipoPredefinido;
+        }
+    }
+
+    const form = document.getElementById('form-protocolo');
+    const accionInput = document.getElementById('accion-guardado');
+    const modalElemento = document.getElementById('modal-guardar-protocolo');
+    const btnGuardarSolo = document.getElementById('btn-guardar-solo');
+    const btnGuardarCompletar = document.getElementById('btn-guardar-completar');
+    const esMedico = {{ es_medico | default(false) | tojson }};
+
+    let modalGuardar = null;
+    if (modalElemento) {
+        modalGuardar = new bootstrap.Modal(modalElemento);
+    }
+
+    function validarFormulario() {
+        const tipoEstudio = document.getElementById('tipo_estudio');
+        const afiliado = document.getElementById('afiliado_id');
+
+        if (tipoEstudio && !tipoEstudio.value) {
+            alert('Por favor seleccione un tipo de estudio.');
+            tipoEstudio.focus();
+            return false;
+        }
+
+        if (afiliado && !afiliado.value) {
+            alert('Por favor seleccione un paciente.');
+            if (buscarPacienteInput) {
+                buscarPacienteInput.focus();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    function enviarFormulario(accion) {
+        if (!form || !accionInput) return;
+        accionInput.value = accion;
+        form.submit();
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validarFormulario()) {
+                e.preventDefault();
+                return;
+            }
+            e.preventDefault();
+            accionInput.value = 'guardar';
+            if (modalGuardar) {
+                modalGuardar.show();
+            } else {
+                enviarFormulario('guardar');
+            }
+        });
+    }
+
+    if (btnGuardarSolo) {
+        btnGuardarSolo.addEventListener('click', function() {
+            if (!validarFormulario()) return;
+            if (modalGuardar) {
+                modalGuardar.hide();
+                setTimeout(() => enviarFormulario('guardar'), 60);
+            } else {
+                enviarFormulario('guardar');
+            }
+        });
+    }
+
+    if (btnGuardarCompletar && esMedico) {
+        btnGuardarCompletar.addEventListener('click', function() {
+            if (!validarFormulario()) return;
+            if (modalGuardar) {
+                modalGuardar.hide();
+                setTimeout(() => enviarFormulario('guardar_completar'), 60);
+            } else {
+                enviarFormulario('guardar_completar');
+            }
+        });
+    } else if (btnGuardarCompletar && !esMedico) {
+        btnGuardarCompletar.addEventListener('click', function() {
+            alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,524 @@
+{% extends 'base.html' %}
+
+{% block title %}Iniciar Sesión{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <!-- Fondo de imagen -->
+    <div class="background-image"></div>
+    
+    <!-- Overlay con transparencia -->
+    <div class="background-overlay"></div>
+    
+    <!-- Formulario de login -->
+    <div class="login-card">
+        <div class="login-header">
+            <img src="{{ url_for('static', filename='img/logo_blanco.png') }}" 
+                 alt="Logo LDH" 
+                 class="login-logo">
+        </div>
+        
+        <div class="login-body">
+            <h2 class="login-welcome">Bienvenido</h2>
+            <p class="login-description">Ingresa tus credenciales para acceder al sistema</p>
+            
+            <form method="POST" action="{{ url_for('auth.login') }}" class="login-form">
+                <div class="form-group">
+                    <label for="username" class="form-label">Usuario</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="bi bi-person"></i></span>
+                        <input type="text" 
+                               class="form-control" 
+                               id="username" 
+                               name="username" 
+                               placeholder="Ingresa tu usuario"
+                               required 
+                               autofocus>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-icon"><i class="bi bi-lock"></i></span>
+                        <input type="password" 
+                               class="form-control" 
+                               id="password" 
+                               name="password" 
+                               placeholder="Ingresa tu contraseña"
+                               required>
+                    </div>
+                </div>
+                
+                <div class="form-check-group">
+                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
+                    <label class="form-check-label" for="remember">
+                        Recordarme
+                    </label>
+                </div>
+                
+                <button type="submit" class="btn-login">
+                    <span>Iniciar Sesión</span>
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+        
+        <div class="login-footer">
+            <small>
+                © 2025 - Versión Web desarrollada por el Dr. Oscar R. Bettin
+            </small>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        overflow-x: hidden;
+    }
+
+    .login-container {
+        position: relative;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .background-image {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url('{{ url_for("static", filename="img/fondo-2.png") }}');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        z-index: -2;
+    }
+
+    .background-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: -1;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 450px;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(5px);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        z-index: 10;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .login-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+        pointer-events: none;
+        z-index: -1;
+    }
+
+    .login-header {
+        text-align: center;
+        padding: 40px 40px 20px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.2);
+    }
+
+    .login-logo {
+        height: 80px;
+        margin-bottom: 15px;
+    }
+
+    .login-card h1 {
+        color: #ffffff;
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 5px 0;
+    }
+
+    .login-subtitle {
+        color: rgba(255,255,255,0.8);
+        font-size: 14px;
+        margin: 0;
+    }
+
+    .login-body {
+        padding: 30px 40px;
+        flex-grow: 1;
+        background: rgba(0,0,0,0.1);
+    }
+
+    .login-welcome {
+        font-size: 32px;
+        font-weight: 700;
+        color: #ffffff;
+        text-align: center;
+        margin: 0 0 10px 0;
+    }
+
+    .login-description {
+        color: rgba(255,255,255,0.9);
+        text-align: center;
+        margin-bottom: 30px;
+        font-size: 16px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .input-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 15px;
+        color: rgba(51, 51, 51, 0.7);
+        z-index: 2;
+        font-size: 16px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(3px);
+        color: #333333;
+    }
+
+    .form-control::placeholder {
+        color: rgba(51, 51, 51, 0.6);
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #3498db;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        transform: translateY(-1px);
+        backdrop-filter: blur(5px);
+    }
+
+    .form-check-group {
+        display: flex;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+    .form-check-input {
+        margin-right: 10px;
+        accent-color: #3498db;
+    }
+
+    .form-check-label {
+        color: rgba(255,255,255,0.9);
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 15px;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-login:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(52, 152, 219, 0.4);
+        background: linear-gradient(135deg, #2980b9 0%, #1f4e79 100%);
+    }
+
+    .btn-login:active {
+        transform: translateY(-1px);
+    }
+
+    .login-footer {
+        padding: 20px 40px;
+        text-align: center;
+        border-top: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.2);
+        color: rgba(255,255,255,0.8);
+        font-size: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .login-container {
+            padding: 10px;
+        }
+        
+        .login-card {
+            max-width: 100%;
+            border-radius: 15px;
+        }
+        
+        .login-header {
+            padding: 30px 20px 15px;
+        }
+        
+        .login-body {
+            padding: 20px;
+        }
+        
+        .login-footer {
+            padding: 15px 20px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .login-welcome {
+            font-size: 28px;
+        }
+        
+        .login-description {
+            font-size: 14px;
+        }
+        
+        .form-control {
+            padding: 12px 12px 12px 40px;
+            font-size: 14px;
+        }
+        
+        .btn-login {
+            padding: 12px;
+            font-size: 14px;
+        }
+    }
+
+    /* Animaciones suaves */
+    .login-card {
+        animation: slideInUp 0.6s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Efecto glassmorphism sutil */
+    .form-control:focus {
+        backdrop-filter: blur(5px);
+    }
+</style>
+
+<script>
+// Detectar errores de login y activar input "Sin Permiso" en RIVE
+document.addEventListener('DOMContentLoaded', function() {
+    function verificarYActivarInput() {
+        // Verificar si hay mensajes flash de error
+        const alertas = document.querySelectorAll('.alert-danger, .alert-warning');
+        let hayError = false;
+        let alertaError = null;
+        
+        alertas.forEach(function(alerta) {
+            const texto = alerta.textContent || alerta.innerText;
+            if (texto.includes('incorrecta') || 
+                texto.includes('no encontrado') || 
+                texto.includes('inactivo') ||
+                texto.includes('contraseña')) {
+                hayError = true;
+                alertaError = alerta;
+            }
+        });
+        
+        // También verificar en el formulario si hay errores
+        const form = document.querySelector('.login-form');
+        if (form) {
+            const inputs = form.querySelectorAll('input');
+            inputs.forEach(function(input) {
+                if (input.classList.contains('is-invalid')) {
+                    hayError = true;
+                }
+            });
+        }
+        
+        // Activar input "Sin Permiso" si hay error
+        if (hayError && typeof activarInputSinPermiso === 'function') {
+            console.log('🔒 Error de login detectado, activando input "Sin Permiso"');
+            activarInputSinPermiso(true, 0); // Pasar 0 como reintento inicial
+            
+            // Detectar cuando se cierra el mensaje de error
+            if (alertaError) {
+                // Observar cuando se cierra el alert
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            // Verificar si el alert ya no está visible
+                            if (!alertaError.classList.contains('show') && 
+                                alertaError.style.display === 'none' || 
+                                !document.body.contains(alertaError)) {
+                                console.log('✅ Mensaje de error cerrado, desactivando input "Sin Permiso"');
+                                activarInputSinPermiso(false, 0); // Pasar 0 como reintento inicial
+                                observer.disconnect(); // Dejar de observar
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(alertaError, {
+                    attributes: true,
+                    attributeFilter: ['class', 'style']
+                });
+                
+                // También detectar cuando se hace click en el botón de cerrar
+                const btnCerrar = alertaError.querySelector('.btn-close');
+                if (btnCerrar) {
+                    btnCerrar.addEventListener('click', function() {
+                        setTimeout(function() {
+                            console.log('✅ Mensaje de error cerrado (botón), desactivando input "Sin Permiso"');
+                            activarInputSinPermiso(false, 0); // Pasar 0 como reintento inicial
+                        }, 100);
+                    });
+                }
+            }
+        } else if (!hayError && typeof activarInputSinPermiso === 'function') {
+            // Si no hay error, desactivar
+            activarInputSinPermiso(false, 0); // Pasar 0 como reintento inicial
+        }
+    }
+    
+    // Esperar a que RIVE se cargue (solo una vez, no múltiples veces)
+    let verificado = false;
+    setTimeout(function() {
+        if (!verificado) {
+            verificarYActivarInput();
+            verificado = true;
+        }
+    }, 2000); // Esperar 2 segundos para que RIVE esté completamente listo
+    
+    // Detectar cuando el formulario se envía con error (POST fallido)
+    const form = document.querySelector('.login-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // El formulario se envía, pero si hay error, Flask renderiza de nuevo la página
+            // Por lo tanto, el código de arriba detectará el error
+        });
+    }
+});
+
+// Variable para evitar múltiples llamadas simultáneas
+let activandoSinPermiso = false;
+
+// Función para activar input Sin_Permiso cuando RIVE esté listo
+function intentarActivarSinPermiso() {
+    // Verificar que el canvas exista antes de intentar
+    const canvas = document.getElementById('btn-asistente-avatar-rive');
+    if (!canvas) {
+        console.log('⚠️ Canvas para botón RIVE no encontrado en login. Puede ser normal si el botón no está visible.');
+        return; // Salir temprano si no hay canvas
+    }
+    
+    // Evitar múltiples llamadas simultáneas
+    if (activandoSinPermiso) {
+        return;
+    }
+    
+    // Verificar si hay errores de login
+    const alertas = document.querySelectorAll('.alert-danger, .alert-warning');
+    let hayError = false;
+    
+    alertas.forEach(function(alerta) {
+        const texto = alerta.textContent || alerta.innerText;
+        if (texto.includes('incorrecta') || 
+            texto.includes('no encontrado') || 
+            texto.includes('inactivo') ||
+            texto.includes('contraseña')) {
+            hayError = true;
+        }
+    });
+    
+    if (hayError && typeof activarInputSinPermiso === 'function') {
+        activandoSinPermiso = true;
+        console.log('🔒 Error de login detectado, intentando activar input "Sin Permiso" (una sola vez)');
+        // Solo llamar una vez, no múltiples veces, pasando 0 como reintento inicial
+        setTimeout(() => {
+            activarInputSinPermiso(true, 0);
+            activandoSinPermiso = false;
+        }, 2000); // Esperar 2 segundos para que RIVE esté completamente listo
+    } else if (!hayError && typeof activarInputSinPermiso === 'function') {
+        activarInputSinPermiso(false, 0); // Pasar 0 como reintento inicial
+    }
+}
+
+// No cargar el script si ya está cargado (evitar duplicados)
+// Verificar si el script ya está en el DOM o si la función ya existe
+const scriptYaCargado = document.querySelector('script[src*="asistente_chat.js"]') || typeof activarInputSinPermiso !== 'undefined';
+
+if (!scriptYaCargado) {
+    const script = document.createElement('script');
+    script.src = "{{ url_for('static', filename='js/asistente_chat.js') }}";
+    script.onload = function() {
+        console.log('✅ Script asistente_chat.js cargado en login');
+        // Esperar a que RIVE se inicialice completamente (más tiempo después de la recarga)
+        setTimeout(intentarActivarSinPermiso, 3000);
+        // También intentar después de más tiempo por si acaso
+        setTimeout(intentarActivarSinPermiso, 6000);
+    };
+    document.head.appendChild(script);
+} else {
+    // Si ya está cargado, esperar más tiempo para que RIVE se inicialice
+    console.log('✅ Script asistente_chat.js ya estaba cargado, esperando inicialización de RIVE...');
+    setTimeout(intentarActivarSinPermiso, 3000);
+    // También intentar después de más tiempo por si acaso
+    setTimeout(intentarActivarSinPermiso, 6000);
+}
+</script>
+{% endblock %}
+

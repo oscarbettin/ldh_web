@@ -1,0 +1,634 @@
+<!-- Modal para Selección de Plantillas Categorizadas -->
+<div class="modal fade" id="modalPlantillas" tabindex="-1" aria-labelledby="modalPlantillasLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalPlantillasLabel">
+                    <i class="bi bi-collection"></i> Selector de Plantillas PAP
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Barra de búsqueda -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="buscarPlantillas" 
+                                   placeholder="Buscar plantilla por texto...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary" id="btnExpandirTodo">
+                                <i class="bi bi-arrows-expand"></i> Expandir Todo
+                            </button>
+                            <button class="btn btn-outline-secondary" id="btnColapsarTodo">
+                                <i class="bi bi-arrows-collapse"></i> Colapsar Todo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resultados de búsqueda -->
+                <div id="resultadosBusqueda" class="d-none">
+                    <h6 class="text-muted mb-3">
+                        <i class="bi bi-search"></i> Resultados de búsqueda
+                    </h6>
+                    <div id="listaResultados" class="list-group mb-4"></div>
+                    <hr>
+                </div>
+
+                <!-- Categorías de plantillas -->
+                <div id="categoriasPlantillas">
+                    {% for categoria, datos in categorias.items() %}
+                    <div class="card mb-3 categoria-card" data-categoria="{{ categoria }}">
+                        <div class="card-header bg-{{ datos.color }} bg-opacity-10 border-{{ datos.color }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 text-{{ datos.color }}">
+                                    <i class="bi {{ datos.icono }}"></i> 
+                                    <strong>{{ categoria }} - {{ datos.nombre }}</strong>
+                                    <small class="text-muted ms-2">
+                                        ({{ datos.secciones|length }} sección{{ 'es' if datos.secciones|length != 1 else '' }})
+                                    </small>
+                                </h6>
+                                <button class="btn btn-sm btn-outline-{{ datos.color }}" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse{{ categoria }}" 
+                                        aria-expanded="false">
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="collapse" id="collapse{{ categoria }}">
+                            <div class="card-body">
+                                {% for seccion in datos.secciones %}
+                                <div class="mb-4 seccion-container" data-seccion-id="{{ seccion.seccion_id }}">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="text-dark mb-0">
+                                            <i class="bi bi-file-text"></i> 
+                                            {{ seccion.codigo }} - {{ seccion.nombre }}
+                                        </h6>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary btn-seleccionar-todas" 
+                                                    data-seccion-id="{{ seccion.seccion_id }}">
+                                                <i class="bi bi-check-square"></i> Todas
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary btn-deseleccionar-todas" 
+                                                    data-seccion-id="{{ seccion.seccion_id }}">
+                                                <i class="bi bi-square"></i> Ninguna
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if seccion.descripcion %}
+                                    <p class="text-muted small mb-3">{{ seccion.descripcion }}</p>
+                                    {% endif %}
+                                    
+                                    <div class="row" id="lineas-{{ seccion.seccion_id }}">
+                                        <div class="col-12 text-center">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                                <span class="visually-hidden">Cargando...</span>
+                                            </div>
+                                            <small class="text-muted ms-2">Cargando plantillas...</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <div>
+                        <span class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            Plantillas seleccionadas: <span id="contadorSeleccionadas" class="badge bg-primary">0</span>
+                        </span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-warning" onclick="console.log('🔴 BOTÓN CLICKEADO'); alert('Botón clickeado - verificando funciones'); console.log('cargarTodasLasSecciones:', typeof cargarTodasLasSecciones); if(typeof cargarTodasLasSecciones === 'function') { cargarTodasLasSecciones(); } else { alert('Función no encontrada'); }">
+                            <i class="bi bi-arrow-clockwise"></i> Cargar Todas
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnVistaPrevia">
+                            <i class="bi bi-eye"></i> Vista Previa
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btnAplicarPlantillas">
+                            <i class="bi bi-check-circle"></i> Aplicar Plantillas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Vista Previa -->
+<div class="modal fade" id="modalVistaPrevia" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-eye"></i> Vista Previa de Plantillas
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="contenidoVistaPrevia" class="border p-3 bg-light">
+                    <!-- Contenido generado dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarAplicar">
+                    <i class="bi bi-check-circle"></i> Aplicar Plantillas
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variables globales
+    let plantillasSeleccionadas = new Set();
+    
+    // Inicializar funcionalidades
+    initBusqueda();
+    initControlesCategoria();
+    initContadores();
+    initBotonesAccion();
+    
+    function initBusqueda() {
+        const inputBusqueda = document.getElementById('buscarPlantillas');
+        const resultadosDiv = document.getElementById('resultadosBusqueda');
+        const listaResultados = document.getElementById('listaResultados');
+        const categoriasDiv = document.getElementById('categoriasPlantillas');
+        
+        let timeoutId;
+        inputBusqueda.addEventListener('input', function() {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                const termino = this.value.trim();
+                
+                if (termino.length >= 2) {
+                    buscarPlantillas(termino);
+                    resultadosDiv.classList.remove('d-none');
+                    categoriasDiv.classList.add('d-none');
+                } else {
+                    resultadosDiv.classList.add('d-none');
+                    categoriasDiv.classList.remove('d-none');
+                }
+            }, 300);
+        });
+    }
+    
+    function buscarPlantillas(termino) {
+        fetch(`/selector_plantillas/buscar_plantillas?q=${encodeURIComponent(termino)}`)
+            .then(response => response.json())
+            .then(data => {
+                mostrarResultadosBusqueda(data.resultados);
+            })
+            .catch(error => console.error('Error en búsqueda:', error));
+    }
+    
+    function mostrarResultadosBusqueda(resultados) {
+        const listaResultados = document.getElementById('listaResultados');
+        
+        if (resultados.length === 0) {
+            listaResultados.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No se encontraron plantillas que coincidan con "${document.getElementById('buscarPlantillas').value}"
+                </div>
+            `;
+            return;
+        }
+        
+        listaResultados.innerHTML = resultados.map(resultado => `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="form-check flex-grow-1">
+                    <input class="form-check-input" type="checkbox" value="${resultado.linea_id}" 
+                           id="resultado_${resultado.linea_id}" data-texto="${resultado.texto}">
+                    <label class="form-check-label" for="resultado_${resultado.linea_id}">
+                        <strong>${resultado.seccion.codigo} - ${resultado.seccion.nombre}</strong><br>
+                        <small class="text-muted">${resultado.texto}</small>
+                    </label>
+                </div>
+                <span class="badge bg-${getCategoriaColor(resultado.seccion.categoria)}">
+                    ${resultado.seccion.categoria}
+                </span>
+            </div>
+        `).join('');
+        
+        // Agregar event listeners a los checkboxes de resultados
+        listaResultados.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', actualizarContador);
+        });
+    }
+    
+    function initControlesCategoria() {
+        // Botones expandir/colapsar todo
+        document.getElementById('btnExpandirTodo').addEventListener('click', function() {
+            document.querySelectorAll('.collapse').forEach(collapse => {
+                new bootstrap.Collapse(collapse, { show: true });
+            });
+        });
+        
+        document.getElementById('btnColapsarTodo').addEventListener('click', function() {
+            document.querySelectorAll('.collapse').forEach(collapse => {
+                new bootstrap.Collapse(collapse, { hide: true });
+            });
+        });
+        
+        // Cargar líneas cuando se expande una categoría
+        document.querySelectorAll('.collapse').forEach(collapse => {
+            collapse.addEventListener('shown.bs.collapse', function() {
+                const seccionId = this.querySelector('[data-seccion-id]').dataset.seccionId;
+                cargarLineasSeccion(seccionId);
+            });
+        });
+        
+        // Botones seleccionar/deseleccionar todas por sección
+        document.querySelectorAll('.btn-seleccionar-todas').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const seccionId = this.dataset.seccionId;
+                const checkboxes = document.querySelectorAll(`[data-seccion-id="${seccionId}"] input[type="checkbox"]`);
+                checkboxes.forEach(cb => {
+                    cb.checked = true;
+                    plantillasSeleccionadas.add(cb.value);
+                });
+                actualizarContador();
+            });
+        });
+        
+        document.querySelectorAll('.btn-deseleccionar-todas').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const seccionId = this.dataset.seccionId;
+                const checkboxes = document.querySelectorAll(`[data-seccion-id="${seccionId}"] input[type="checkbox"]`);
+                checkboxes.forEach(cb => {
+                    cb.checked = false;
+                    plantillasSeleccionadas.delete(cb.value);
+                });
+                actualizarContador();
+            });
+        });
+        
+        // Event listeners para checkboxes individuales
+        document.querySelectorAll('.plantilla-item input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', actualizarContador);
+        });
+    }
+    
+    function initContadores() {
+        // Inicializar contador
+        actualizarContador();
+    }
+    
+    function actualizarContador() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+        const contador = document.getElementById('contadorSeleccionadas');
+        
+        // Actualizar Set de seleccionadas
+        plantillasSeleccionadas.clear();
+        checkboxes.forEach(cb => plantillasSeleccionadas.add(cb.value));
+        
+        contador.textContent = plantillasSeleccionadas.size;
+        
+        // Habilitar/deshabilitar botones según selección
+        const btnVistaPrevia = document.getElementById('btnVistaPrevia');
+        const btnAplicar = document.getElementById('btnAplicarPlantillas');
+        
+        const tieneSeleccion = plantillasSeleccionadas.size > 0;
+        btnVistaPrevia.disabled = !tieneSeleccion;
+        btnAplicar.disabled = !tieneSeleccion;
+    }
+    
+    function initBotonesAccion() {
+        // Botón Vista Previa
+        document.getElementById('btnVistaPrevia').addEventListener('click', mostrarVistaPrevia);
+        
+        // Botón Aplicar Plantillas
+        document.getElementById('btnAplicarPlantillas').addEventListener('click', aplicarPlantillas);
+        
+        // Botón Confirmar desde Vista Previa
+        document.getElementById('btnConfirmarAplicar').addEventListener('click', function() {
+            aplicarPlantillas();
+            bootstrap.Modal.getInstance(document.getElementById('modalVistaPrevia')).hide();
+        });
+    }
+    
+    function mostrarVistaPrevia() {
+        const textos = [];
+        
+        plantillasSeleccionadas.forEach(lineaId => {
+            const checkbox = document.querySelector(`input[value="${lineaId}"]`);
+            if (checkbox) {
+                textos.push(checkbox.dataset.texto);
+            }
+        });
+        
+        const contenido = document.getElementById('contenidoVistaPrevia');
+        contenido.innerHTML = textos.map(texto => `
+            <div class="mb-2 p-2 border-start border-3 border-primary bg-white">
+                ${texto}
+            </div>
+        `).join('');
+        
+        // Mostrar modal de vista previa
+        const modalVistaPrevia = new bootstrap.Modal(document.getElementById('modalVistaPrevia'));
+        modalVistaPrevia.show();
+    }
+    
+    function aplicarPlantillas() {
+        const plantillas = [];
+        
+        plantillasSeleccionadas.forEach(lineaId => {
+            const checkbox = document.querySelector(`input[value="${lineaId}"]`);
+            if (checkbox) {
+                plantillas.push({
+                    linea_id: lineaId,
+                    texto: checkbox.dataset.texto
+                });
+            }
+        });
+        
+        // Integrar con el editor principal
+        if (window.aplicarPlantillasSeleccionadas) {
+            window.aplicarPlantillasSeleccionadas(plantillas);
+        } else {
+            console.log('Plantillas a aplicar:', plantillas);
+        }
+        
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalPlantillas')).hide();
+        
+        // Mostrar mensaje de éxito
+        mostrarNotificacion('success', 'Plantillas aplicadas correctamente', plantillas.length);
+    }
+    
+    function mostrarNotificacion(tipo, mensaje, cantidad) {
+        // Crear notificación toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${tipo} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle"></i> ${mensaje}: ${cantidad} plantilla${cantidad !== 1 ? 's' : ''}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Agregar al contenedor de toasts (crear si no existe)
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Mostrar toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remover después de mostrar
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+    
+    // Hacer la función global para debugging
+    window.cargarLineasSeccion = function(seccionId) {
+        console.log('🔍 cargarLineasSeccion llamada para sección:', seccionId);
+        const contenedor = document.getElementById(`lineas-${seccionId}`);
+        
+        if (!contenedor) {
+            console.error('❌ No se encontró el contenedor para sección:', seccionId);
+            return;
+        }
+        
+        console.log('📦 Contenedor encontrado:', contenedor);
+        
+        // Solo cargar si no se ha cargado antes
+        if (contenedor.dataset.cargado === 'true') {
+            console.log('✅ Ya cargado, saltando...');
+            return;
+        }
+        
+        console.log('🌐 Haciendo petición a:', `/selector_plantillas/obtener_lineas_seccion/${seccionId}`);
+        fetch(`/selector_plantillas/obtener_lineas_seccion/${seccionId}`)
+            .then(response => {
+                console.log('📡 Respuesta recibida:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('📦 Datos recibidos:', data);
+                if (data.lineas && data.lineas.length > 0) {
+                    console.log(`✅ Cargando ${data.lineas.length} líneas para sección ${seccionId}`);
+                    const htmlGenerado = data.lineas.map(linea => `
+                        <div class="col-md-6 col-lg-4 mb-2">
+                            <div class="form-check plantilla-item" data-linea-id="${linea.linea_id}">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       value="${linea.linea_id}" 
+                                       id="plantilla_${linea.linea_id}"
+                                       data-texto="${linea.texto}">
+                                <label class="form-check-label" for="plantilla_${linea.linea_id}">
+                                    <small class="text-dark">${linea.texto.length > 80 ? linea.texto.substring(0, 80) + '...' : linea.texto}</small>
+                                </label>
+                            </div>
+                        </div>
+                    `).join('');
+                    
+                    console.log('🎨 HTML generado:', htmlGenerado);
+                    contenedor.innerHTML = htmlGenerado;
+                    
+                    // VERIFICAR INMEDIATAMENTE DESPUÉS DE INSERTAR
+                    console.log('🔍 VERIFICACIÓN INMEDIATA:');
+                    console.log('   - InnerHTML length:', contenedor.innerHTML.length);
+                    console.log('   - Checkboxes encontrados:', contenedor.querySelectorAll('input[type="checkbox"]').length);
+                    console.log('   - Primer checkbox:', contenedor.querySelector('input[type="checkbox"]'));
+                    console.log('   - Contenedor visible:', contenedor.offsetParent !== null);
+                    console.log('   - Contenedor height:', contenedor.offsetHeight);
+                    console.log('   - Contenedor display:', window.getComputedStyle(contenedor).display);
+                    console.log('   - Contenedor visibility:', window.getComputedStyle(contenedor).visibility);
+                    console.log('   - Contenedor opacity:', window.getComputedStyle(contenedor).opacity);
+                    console.log('   - Contenedor parent:', contenedor.parentElement);
+                    console.log('   - Contenedor parent display:', contenedor.parentElement ? window.getComputedStyle(contenedor.parentElement).display : 'NO PARENT');
+                    
+                    // Verificar que el HTML se mantenga
+                    setTimeout(() => {
+                        console.log('🔍 Verificando HTML después de 100ms:');
+                        console.log('   - InnerHTML length:', contenedor.innerHTML.length);
+                        console.log('   - Contiene "Cargando":', contenedor.innerHTML.includes('Cargando'));
+                        console.log('   - Contiene checkboxes:', contenedor.querySelectorAll('input[type="checkbox"]').length);
+                    }, 100);
+                    
+                    // Verificar visibilidad del contenedor
+                    console.log('👁️ Contenedor después de insertar HTML:');
+                    console.log('   - Visible:', contenedor.offsetParent !== null);
+                    console.log('   - Display:', window.getComputedStyle(contenedor).display);
+                    console.log('   - Visibility:', window.getComputedStyle(contenedor).visibility);
+                    console.log('   - Height:', contenedor.offsetHeight);
+                    console.log('   - InnerHTML length:', contenedor.innerHTML.length);
+                    
+                       // Agregar event listeners a los nuevos checkboxes
+                       contenedor.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                           checkbox.addEventListener('change', function() {
+                               console.log('Checkbox cambiado:', this.checked);
+                               // TODO: Implementar actualizarContador
+                           });
+                       });
+                       
+                       // FORZAR EXPANSIÓN DE LA SECCIÓN
+                       const collapseElement = document.getElementById(`collapse${seccionId}`);
+                       if (collapseElement) {
+                           console.log(`🔓 FORZANDO expansión de sección ${seccionId}...`);
+                           collapseElement.classList.add('show');
+                           collapseElement.style.display = 'block';
+                           collapseElement.style.height = 'auto';
+                           collapseElement.style.overflow = 'visible';
+                       }
+                       
+                       contenedor.dataset.cargado = 'true';
+                } else {
+                    contenedor.innerHTML = `
+                        <div class="col-12 text-center text-muted py-3">
+                            <i class="bi bi-info-circle"></i>
+                            <p class="mb-0">No hay plantillas disponibles para esta sección</p>
+                        </div>
+                    `;
+                    contenedor.dataset.cargado = 'true';
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando líneas:', error);
+                contenedor.innerHTML = `
+                    <div class="col-12 text-center text-danger py-3">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <p class="mb-0">Error cargando plantillas</p>
+                    </div>
+                `;
+                // NO marcar como cargado si hay error
+                contenedor.dataset.cargado = 'false';
+            });
+    }
+    
+    // Función para forzar recarga de secciones problemáticas
+    window.forzarRecargaSecciones = function() {
+        console.log('🔄 Forzando recarga de secciones problemáticas...');
+        
+        // Limpiar estado de carga de todas las secciones
+        document.querySelectorAll('[id^="lineas-"]').forEach(contenedor => {
+            contenedor.dataset.cargado = 'false';
+            contenedor.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Cargando plantillas...</div>';
+        });
+        
+        // Cargar TODAS las secciones automáticamente
+        console.log('🚀 Cargando todas las secciones automáticamente...');
+        for (let i = 1; i <= 6; i++) {
+            console.log(`📦 Cargando sección ${i} automáticamente`);
+            cargarLineasSeccion(i);
+        }
+        
+        console.log('✅ Estado de carga limpiado y todas las secciones cargadas');
+    }
+    
+    // Variable para evitar bucles infinitos
+    let modalCargado = false;
+    
+    // Función para cargar automáticamente todas las secciones
+    window.cargarTodasLasSecciones = function() {
+        if (modalCargado) {
+            console.log('⚠️ Modal ya cargado, saltando...');
+            return;
+        }
+        
+        console.log('🎯 Cargando todas las secciones automáticamente...');
+        modalCargado = true;
+        
+        // LIMPIAR ESTADO DE TODAS LAS SECCIONES
+        for (let i = 1; i <= 6; i++) {
+            const contenedor = document.getElementById(`lineas-${i}`);
+            if (contenedor) {
+                contenedor.dataset.cargado = 'false';
+                contenedor.innerHTML = '<div class="col-12 text-center"><div class="spinner-border spinner-border-sm" role="status"></div> Cargando plantillas...</div>';
+            }
+        }
+        
+        // Cargar TODAS las secciones automáticamente
+        setTimeout(() => {
+            console.log('🔄 Cargando todas las secciones...');
+            for (let i = 1; i <= 6; i++) {
+                console.log(`📦 Cargando sección ${i}`);
+                cargarLineasSeccion(i);
+                
+                // FORZAR EXPANSIÓN DE LA SECCIÓN
+                const collapseElement = document.getElementById(`collapse${i}`);
+                if (collapseElement) {
+                    console.log(`🔓 Expandiendo sección ${i}...`);
+                    collapseElement.classList.add('show');
+                    collapseElement.style.display = 'block';
+                }
+            }
+        }, 100);
+    }
+    
+    // Configurar carga automática de todas las secciones
+    try {
+        // FUNCIÓN PARA CARGAR TODAS LAS SECCIONES
+        function cargarTodasLasSeccionesAutomaticamente() {
+            // CARGAR TODAS LAS SECCIONES INMEDIATAMENTE AL CARGAR LA PÁGINA
+            setTimeout(() => {
+                for (let i = 1; i <= 6; i++) {
+                    cargarLineasSeccion(i);
+                }
+            }, 500);
+            
+            // Detectar cuando se expanden las categorías usando eventos de Bootstrap
+            document.querySelectorAll('.collapse').forEach((collapse, index) => {
+                collapse.addEventListener('shown.bs.collapse', function() {
+                    const seccionId = this.id.replace('collapse', '');
+                    // Las secciones ya deberían estar cargadas
+                });
+            });
+        }
+        
+        // EJECUTAR INMEDIATAMENTE SI EL DOM YA ESTÁ LISTO
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', cargarTodasLasSeccionesAutomaticamente);
+        } else {
+            cargarTodasLasSeccionesAutomaticamente();
+        }
+    } catch (error) {
+        console.error('Error en carga automática:', error);
+    }
+    
+    function getCategoriaColor(categoria) {
+        const colores = {
+            'T': 'primary',
+            'H': 'success', 
+            'A': 'warning',
+            'I': 'danger'
+        };
+        return colores[categoria] || 'secondary';
+    }
+});
+</script>

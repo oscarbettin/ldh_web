@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Editor Citología - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.editor-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.left-panel {
+    width: 100%;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+    padding: 16px;
+}
+
+.content-area {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+    padding: 16px;
+}
+
+.seccion-activa {
+    background: #eaf4ff;
+    border-left: 3px solid #90caf9;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.texto-generado {
+    margin-top: 20px;
+}
+
+.texto-generado h6 {
+    margin-bottom: 10px;
+}
+
+#texto-final {
+    background: #fff;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    min-height: 200px;
+    max-height: 60vh;
+    overflow: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    white-space: pre-wrap;
+}
+
+.editor-seccion {
+    width: 100%;
+    min-height: 120px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.paper-type-selector {
+    background: #fff;
+    padding: 16px;
+    border-radius: 8px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.paper-type-selector label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #555;
+}
+
+.paper-options {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.paper-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.paper-option input[type="radio"] {
+    margin: 0;
+}
+
+.main-layout {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <div class="row g-3">
+        <!-- Panel Izquierdo -->
+        <div class="col-md-3">
+            <div class="left-panel">
+                <div class="mb-2">
+                    <h6 class="mb-2"><i class="bi bi-file-text"></i> Editor Citologías</h6>
+                    <div><strong>Protocolo:</strong> {{ protocolo.numero_protocolo }}</div>
+                    <div><strong>Paciente:</strong> {{ protocolo.afiliado.nombre_completo }}</div>
+                    <div><strong>Fecha:</strong> {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else '' }}</div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+                        <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+                        <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+                    </div>
+                </div>
+                <div id="lista-secciones">
+                    {% for seccion in secciones %}
+                    <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="cargarSeccion({{ seccion.seccion_id }})" id="btn-seccion-{{ seccion.seccion_id }}">
+                        <i class="bi bi-list-ul"></i> {{ seccion.nombre }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Contenido -->
+        <div class="col-md-9">
+            <div class="content-area">
+                <div id="seccion-actual" class="seccion-activa">
+                    <h5><i class="bi bi-file-text"></i> Selecciona una sección</h5>
+                    <p class="text-muted">Elige una sección del panel izquierdo para comenzar</p>
+                </div>
+                <div class="texto-generado">
+                    <h6><i class="bi bi-file-text"></i> Texto Generado</h6>
+                    <div id="texto-final">Selecciona secciones y edita el contenido para generar el texto...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Guardar -->
+    <div class="modal fade" id="modalGuardarProtocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalGuardarProtocoloLabel">
+                        <i class="bi bi-question-circle"></i> ¿Qué desea hacer?
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Seleccione una opción para el protocolo actual.</p>
+                    <ul class="small text-muted mb-0">
+                        <li><strong>Guardar:</strong> guarda la sección actual y mantiene el protocolo en su estado actual.</li>
+                        <li><strong>Guardar y completar:</strong> guarda la sección y marca el protocolo como completado.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="btn-guardar-solo">
+                            <i class="bi bi-save"></i> Guardar
+                        </button>
+                        {% if es_medico %}
+                        <button type="button" class="btn btn-success" id="btn-guardar-completar">
+                            <i class="bi bi-check2-circle"></i> Guardar y completar
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo los médicos pueden completar el protocolo.">
+                            <i class="bi bi-check2-circle"></i> Guardar y completar
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const secciones = {{ secciones|tojson }};
+let seccionActual = null;
+let contenidoActual = {}; // { seccionId: [lineas] }
+const esMedico = {{ es_medico | default(false) | tojson }};
+let modalGuardar = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar primera sección por defecto
+    if(secciones.length > 0) {
+        cargarSeccion(secciones[0].seccion_id);
+    }
+    // Cargar contenido previo guardado
+    cargarContenidoPrevio();
+
+    const modalElemento = document.getElementById('modalGuardarProtocolo');
+    if (modalElemento && typeof bootstrap !== 'undefined') {
+        modalGuardar = new bootstrap.Modal(modalElemento);
+    }
+
+    const btnGuardarSolo = document.getElementById('btn-guardar-solo');
+    if (btnGuardarSolo) {
+        btnGuardarSolo.addEventListener('click', function() {
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarSeccion('guardar');
+        });
+    }
+
+    const btnGuardarCompletar = document.getElementById('btn-guardar-completar');
+    if (btnGuardarCompletar) {
+        btnGuardarCompletar.addEventListener('click', function() {
+            if (!esMedico) {
+                alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+                return;
+            }
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarSeccion('completar');
+        });
+    }
+});
+
+function getSeccionById(id) {
+    return secciones.find(s => s.seccion_id === id);
+}
+
+function resolverClaveCitologia(seccion) {
+    if (!seccion || !seccion.codigo) return '';
+    return String(seccion.codigo).toUpperCase();
+}
+
+function cargarSeccion(seccionId) {
+    seccionActual = seccionId;
+    const info = getSeccionById(seccionId);
+    
+    // Actualizar botones activos
+    document.querySelectorAll('#lista-secciones button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.getElementById(`btn-seccion-${seccionId}`).classList.add('active');
+    
+    // Mostrar editor de sección
+    const wrap = document.getElementById('seccion-actual');
+    const textoActual = (contenidoActual[seccionId] || []).join('\n');
+    
+    wrap.innerHTML = `
+        <div class="seccion-activa">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0"><i class="bi bi-list-ul"></i> ${info.nombre}</h5>
+                <button class="btn btn-outline-secondary btn-sm" onclick="toggleEditor(${seccionId})">
+                    <i class="bi bi-pencil-square"></i> Editar sección
+                </button>
+            </div>
+            <div id="editor-wrap-${seccionId}" style="display:none" class="mt-2">
+                <textarea id="editor-${seccionId}" class="form-control editor-seccion" oninput="sincronizar(${seccionId})">${textoActual}</textarea>
+                <div class="mt-2 d-flex gap-2">
+                    <button class="btn btn-success btn-sm" onclick="guardarSeccion()">
+                        <i class="bi bi-save"></i> Guardar Sección
+                    </button>
+                </div>
+            </div>
+        </div>`;
+    
+    actualizarTexto();
+}
+
+function toggleEditor(id) {
+    const w = document.getElementById(`editor-wrap-${id}`);
+    if(!w) return;
+    const v = w.style.display !== 'none';
+    w.style.display = v ? 'none' : 'block';
+    const ed = document.getElementById(`editor-${id}`);
+    if(ed && !v) {
+        const arr = contenidoActual[id] || [];
+        ed.value = arr.join('\n');
+    }
+}
+
+function sincronizar(id) {
+    const ed = document.getElementById(`editor-${id}`);
+    if(!ed) return;
+    const arr = ed.value.split(/\r?\n/).map(t => t.trim()).filter(t => t.length > 0);
+    contenidoActual[id] = arr;
+    actualizarTexto();
+}
+
+function cargarContenidoPrevio() {
+    const protocoloId = {{ protocolo.protocolo_id }};
+    fetch(`/plantillas-dinamicas/api/editor-moderno/cargar/${protocoloId}`)
+        .then(r => r.json())
+        .then(data => {
+            if(!data.success || !data.contenido) return;
+            
+            contenidoActual = {};
+            secciones.forEach(s => {
+                const clave = resolverClaveCitologia(s);
+                const txt = data.contenido[clave] || '';
+                if(txt) {
+                    const arr = String(txt).split(/\r?\n/).map(t => t.trim()).filter(t => t.length > 0);
+                    if(arr.length > 0) contenidoActual[s.seccion_id] = arr;
+                }
+            });
+            
+            // Si hay una sección activa, actualizar
+            if(seccionActual) {
+                cargarSeccion(seccionActual);
+            }
+            actualizarTexto();
+        })
+        .catch(err => console.error('Error cargando contenido:', err));
+}
+
+function guardarSeccion(accion = 'guardar') {
+    if(!seccionActual) {
+        alert('Seleccione una sección para guardar.');
+        return;
+    }
+    if(accion === 'completar' && !esMedico) {
+        alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+        return;
+    }
+
+    const info = getSeccionById(seccionActual);
+    const clave = resolverClaveCitologia(info);
+    const lineas = (contenidoActual[seccionActual] || []);
+    
+    fetch('/plantillas-dinamicas/api/editor-v2/guardar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            protocolo_id: {{ protocolo.protocolo_id }},
+            seccion: clave,
+            lineas: lineas
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data && data.success) {
+            actualizarTexto();
+            if(accion === 'completar' && esMedico) {
+                marcarProtocoloCompletado();
+            } else {
+            alert('Sección guardada');
+            }
+        } else {
+            alert('Error al guardar');
+        }
+    });
+}
+
+function actualizarTexto() {
+    const tf = document.getElementById('texto-final');
+    let texto = `PROTOCOLO: {{ protocolo.numero_protocolo }}\n`;
+    texto += `PACIENTE: {{ protocolo.afiliado.nombre_completo }}\n`;
+    texto += `FECHA: {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else '' }}\n\n`;
+    
+    const orden = secciones.map(s => s.seccion_id);
+    orden.forEach(id => {
+        const arr = contenidoActual[id] || [];
+        if(arr.length) {
+            const s = getSeccionById(id);
+            texto += `${s.nombre}:\n`;
+            arr.forEach(l => texto += `${l}\n`);
+            texto += '\n';
+        }
+    });
+    tf.textContent = texto;
+}
+
+function guardarTodo() {
+    abrirModalGuardar();
+}
+
+function abrirModalGuardar() {
+    if(!seccionActual) {
+        alert('Seleccione una sección para guardar.');
+        return;
+    }
+    if(!modalGuardar && typeof bootstrap !== 'undefined') {
+        const modalElemento = document.getElementById('modalGuardarProtocolo');
+        if(modalElemento) {
+            modalGuardar = new bootstrap.Modal(modalElemento);
+        }
+    }
+    if(modalGuardar) {
+        modalGuardar.show();
+    } else {
+        guardarSeccion('guardar');
+    }
+}
+
+function marcarProtocoloCompletado() {
+    const formData = new URLSearchParams();
+    formData.append('estado', 'COMPLETADO');
+
+    fetch(`/protocolos/{{ protocolo.protocolo_id }}/cambiar-estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+    })
+    .then(() => {
+        alert('Protocolo guardado y completado correctamente.');
+    })
+    .catch(error => {
+        console.error('Error marcando protocolo como completado:', error);
+        alert('Se guardó la sección, pero hubo un error al completar el protocolo.');
+    });
+}
+
+function verPreview() {
+    window.open(`/plantillas-dinamicas/preview-plantilla/{{ protocolo.protocolo_id }}`, '_blank');
+}
+
+function exportarTexto() {
+    const texto = document.getElementById('texto-final').textContent;
+    const blob = new Blob([texto], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `CITOLOGIA_{{ protocolo.numero_protocolo }}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
+

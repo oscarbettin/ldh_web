@@ -1,0 +1,94 @@
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flask
+instance/
+.webassets-cache
+
+# Base de datos
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads y archivos temporales
+static/uploads/*
+!static/uploads/.gitkeep
+static/pdf/*
+!static/pdf/.gitkeep
+X_*
+
+# Backups (ignorar todo el directorio)
+backups/
+
+# Archivos antiguos y temporales (scripts de migración, etc.)
+archivos antiguos/
+
+# Bitácoras (opcional - si prefieres guardarlas, comenta esta línea)
+bitacoras/
+
+# Documentación en docs (mantener docs/ESQUEMA_BASE_DATOS.md y otros importantes)
+docs/BITACORA*.md
+
+# Directorio LDH_Web anidado (duplicado/sobrante)
+LDH_Web/
+
+# Documentación vacía
+documentacion/
+
+# Entorno
+.env
+.flaskenv
+
+# Migraciones
+migrations/versions/*.pyc
+
+# Archivos del proyecto (temporales y de depuración)
+*.mmap
+*.mmap~
+~$*
+*.cdr
+*.rev
+X_*
+
+# Archivos de texto temporales (excepto requirements.txt y README)
+*.txt
+!requirements.txt
+!README.txt
+

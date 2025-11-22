@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-people-fill"></i> Gestión de Usuarios</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('admin.usuarios_nuevo') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus"></i> Nuevo Usuario
+            </a>
+            <a href="{{ url_for('admin.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <!-- Buscador -->
+    <div class="row mb-3 g-2">
+        <div class="col-md-5">
+            <form method="GET" action="{{ url_for('admin.usuarios') }}" class="input-group">
+                <input type="text" 
+                       name="buscar" 
+                       class="form-control" 
+                       placeholder="Buscar por usuario, nombre o email..."
+                       value="{{ buscar }}"
+                       autofocus>
+                <input type="hidden" name="rol_id" value="{{ rol_filtro }}">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                {% if buscar %}
+                <a href="{{ url_for('admin.usuarios') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-4">
+            <form method="GET" action="{{ url_for('admin.usuarios') }}" class="d-flex gap-2">
+                <input type="hidden" name="buscar" value="{{ buscar }}">
+                <select name="rol_id" class="form-select" onchange="this.form.submit()">
+                    <option value="" {{ 'selected' if not rol_filtro else '' }}>Todos los roles</option>
+                    <option value="no_prestador" {{ 'selected' if rol_filtro == 'no_prestador' else '' }}>Todos excepto Prestadores</option>
+                    {% for rol in roles %}
+                    <option value="{{ rol.rol_id }}" {{ 'selected' if rol_filtro_id == rol.rol_id else '' }}>
+                        {{ rol.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if rol_filtro %}
+                <a class="btn btn-outline-secondary" href="{{ url_for('admin.usuarios', buscar=buscar) }}" title="Quitar filtro de rol">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-3 text-end">
+            <span class="text-muted">Total: {{ usuarios.total }} usuario(s)</span>
+        </div>
+    </div>
+    
+    <!-- Tabla de usuarios -->
+    <div class="card">
+        <div class="card-body">
+            {% if usuarios.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Nombre Completo</th>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Último Acceso</th>
+                            <th>Estado</th>
+                            <th width="120">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios.items %}
+                        {% if usuario.rol.nombre != 'OSCAR' or current_user.rol.nombre == 'OSCAR' %}
+                        <tr>
+                            <td>
+                                <strong>{{ usuario.username }}</strong>
+                                {% if usuario.usuario_id == current_user.usuario_id %}
+                                    <span class="badge bg-info">Tú</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ usuario.nombre_completo }}</td>
+                            <td>{{ usuario.email }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'danger' if usuario.rol.nombre == 'OSCAR' else 'primary' }}">
+                                    {{ usuario.rol.nombre }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if usuario.ultimo_acceso %}
+                                    {{ usuario.ultimo_acceso.strftime('%d/%m/%Y %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Nunca</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if usuario.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('admin.usuarios_editar', id=usuario.usuario_id) }}" 
+                                       class="btn btn-warning" 
+                                       title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% if usuario.usuario_id != current_user.usuario_id and usuario.rol.nombre != 'OSCAR' %}
+                                    <a href="{{ url_for('admin.usuarios_toggle', id=usuario.usuario_id) }}" 
+                                       class="btn btn-secondary" 
+                                       title="{{ 'Desactivar' if usuario.activo else 'Activar' }}"
+                                       onclick="return confirm('¿Está seguro?')">
+                                        <i class="bi bi-toggle-{{ 'on' if usuario.activo else 'off' }}"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            {% if usuarios.pages > 1 %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if usuarios.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.usuarios', page=usuarios.prev_num, buscar=buscar) }}">
+                            Anterior
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in usuarios.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == usuarios.page %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('admin.usuarios', page=page_num, buscar=buscar) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if usuarios.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin.usuarios', page=usuarios.next_num, buscar=buscar) }}">
+                            Siguiente
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+                <p class="text-muted mt-3">
+                    {% if buscar %}
+                        No se encontraron usuarios con el criterio "{{ buscar }}"
+                    {% else %}
+                        No hay usuarios registrados
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

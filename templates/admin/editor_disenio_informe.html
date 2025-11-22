@@ -1,0 +1,729 @@
+{% extends 'base.html' %}
+
+{% block title %}Editor de Diseño - {{ disenio.nombre }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .editor-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 20px;
+        height: calc(100vh - 120px);
+    }
+
+    .editor-panel {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: calc(100vh - 120px);
+    }
+
+    .preview-panel {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: calc(100vh - 120px);
+    }
+
+    .config-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .config-section:last-child {
+        border-bottom: none;
+    }
+
+    .config-section h6 {
+        color: #007bff;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+
+    .config-group {
+        margin-bottom: 15px;
+    }
+
+    .config-group label {
+        font-size: 0.9rem;
+        color: #495057;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .config-group input[type="number"],
+    .config-group input[type="text"],
+    .config-group input[type="color"],
+    .config-group select {
+        width: 100%;
+        padding: 6px 10px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+
+    .config-group input[type="checkbox"] {
+        margin-right: 8px;
+    }
+
+    .preview-frame {
+        width: 100%;
+        min-height: 600px;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        background: white;
+        padding: 20px;
+        transform-origin: top left;
+    }
+
+    @media print {
+        .editor-panel, .toolbar {
+            display: none !important;
+        }
+    }
+
+    .input-group-inline {
+        display: flex;
+        gap: 10px;
+    }
+
+    .input-group-inline > div {
+        flex: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <div>
+                <h1>
+                    <i class="bi bi-palette"></i> Editor de Diseño: {{ disenio.nombre }}
+                </h1>
+                <p class="text-muted mb-0">
+                    Tipo: {{ disenio.tipo_estudio }} • 
+                    {% if disenio.es_default %}
+                    <span class="badge bg-primary">Diseño Predeterminado</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="guardarDisenio()">
+                    <i class="bi bi-save"></i> Guardar
+                </button>
+                <a href="{{ url_for('admin.disenios_informes') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="editor-container">
+        <!-- Panel de Edición -->
+        <div class="editor-panel">
+            <form id="formDisenio">
+                <!-- Información General -->
+                <div class="config-section">
+                    <h6><i class="bi bi-info-circle"></i> Información General</h6>
+                    <div class="config-group">
+                        <label>Nombre del Diseño</label>
+                        <input type="text" id="nombre" name="nombre" value="{{ disenio.nombre }}" class="form-control">
+                    </div>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="es_default" name="es_default" {{ 'checked' if disenio.es_default else '' }}>
+                            Diseño predeterminado para {{ disenio.tipo_estudio }}
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Márgenes -->
+                <div class="config-section">
+                    <h6><i class="bi bi-border"></i> Márgenes (mm)</h6>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Superior</label>
+                            <input type="number" id="margen_superior" value="{{ configuracion.margenes.superior }}" min="0" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Inferior</label>
+                            <input type="number" id="margen_inferior" value="{{ configuracion.margenes.inferior }}" min="0" step="1">
+                        </div>
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Izquierdo</label>
+                            <input type="number" id="margen_izquierdo" value="{{ configuracion.margenes.izquierdo }}" min="0" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Derecho</label>
+                            <input type="number" id="margen_derecho" value="{{ configuracion.margenes.derecho }}" min="0" step="1">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Espacio para Membrete (mm)</label>
+                        <input type="number" id="espacio_membrete" value="{{ configuracion.espacio_membrete }}" min="0" step="1">
+                        <small class="text-muted">0 = papel común, mayor a 0 = membretado</small>
+                    </div>
+                </div>
+
+                <!-- Header -->
+                <div class="config-section">
+                    <h6><i class="bi bi-header"></i> Encabezado</h6>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="mostrar_logo" {{ 'checked' if configuracion.header.mostrar_logo else '' }}>
+                            Mostrar logo
+                        </label>
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Ancho Logo (px)</label>
+                            <input type="number" id="logo_ancho" value="{{ configuracion.header.logo_ancho }}" min="0" step="10">
+                        </div>
+                        <div class="config-group">
+                            <label>Alto Logo (px)</label>
+                            <input type="number" id="logo_alto" value="{{ configuracion.header.logo_alto }}" min="0" step="10">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Posición Logo</label>
+                        <select id="logo_posicion">
+                            <option value="izquierda" {{ 'selected' if configuracion.header.logo_posicion == 'izquierda' else '' }}>Izquierda</option>
+                            <option value="centro" {{ 'selected' if configuracion.header.logo_posicion == 'centro' else '' }}>Centro</option>
+                            <option value="derecha" {{ 'selected' if configuracion.header.logo_posicion == 'derecha' else '' }}>Derecha</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label>Margen Derecho Logo (px)</label>
+                        <input type="number" id="logo_margen_derecho" value="{{ configuracion.header.logo_margen_derecho }}" min="0" step="1">
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <div class="config-group">
+                        <label>Texto del Laboratorio</label>
+                        <input type="text" id="laboratorio_nombre" value="{{ configuracion.header.get('laboratorio_nombre', 'LABORATORIO DE DIAGNÓSTICO HISTOPATOLÓGICO') }}" class="form-control" placeholder="Nombre del laboratorio">
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Fuente Laboratorio</label>
+                            <select id="laboratorio_fuente">
+                                <option value="Arial" {{ 'selected' if configuracion.header.get('laboratorio_fuente', 'Arial') == 'Arial' else '' }}>Arial</option>
+                                <option value="Times New Roman" {{ 'selected' if configuracion.header.get('laboratorio_fuente', 'Arial') == 'Times New Roman' else '' }}>Times New Roman</option>
+                                <option value="Helvetica" {{ 'selected' if configuracion.header.get('laboratorio_fuente', 'Arial') == 'Helvetica' else '' }}>Helvetica</option>
+                                <option value="Courier New" {{ 'selected' if configuracion.header.get('laboratorio_fuente', 'Arial') == 'Courier New' else '' }}>Courier New</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label>Tamaño Laboratorio</label>
+                            <input type="number" id="laboratorio_tamano" value="{{ configuracion.header.get('laboratorio_tamano', 24) }}" min="8" max="48" step="1">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Color Laboratorio</label>
+                        <input type="color" id="laboratorio_color" value="{{ configuracion.header.get('laboratorio_color', '#007bff') }}">
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Tamaño Título</label>
+                            <input type="number" id="titulo_tamano" value="{{ configuracion.header.titulo_tamano }}" min="8" max="36" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Fuente Título</label>
+                            <select id="titulo_fuente">
+                                <option value="Arial" {{ 'selected' if configuracion.header.get('titulo_fuente', 'Arial') == 'Arial' else '' }}>Arial</option>
+                                <option value="Times New Roman" {{ 'selected' if configuracion.header.get('titulo_fuente', 'Arial') == 'Times New Roman' else '' }}>Times New Roman</option>
+                                <option value="Helvetica" {{ 'selected' if configuracion.header.get('titulo_fuente', 'Arial') == 'Helvetica' else '' }}>Helvetica</option>
+                                <option value="Courier New" {{ 'selected' if configuracion.header.get('titulo_fuente', 'Arial') == 'Courier New' else '' }}>Courier New</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Color Título</label>
+                        <input type="color" id="titulo_color" value="{{ configuracion.header.get('titulo_color', '#333') }}">
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Tamaño Subtítulo</label>
+                            <input type="number" id="subtitulo_tamano" value="{{ configuracion.header.subtitulo_tamano }}" min="8" max="24" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Fuente Subtítulo</label>
+                            <select id="subtitulo_fuente">
+                                <option value="Arial" {{ 'selected' if configuracion.header.get('subtitulo_fuente', 'Arial') == 'Arial' else '' }}>Arial</option>
+                                <option value="Times New Roman" {{ 'selected' if configuracion.header.get('subtitulo_fuente', 'Arial') == 'Times New Roman' else '' }}>Times New Roman</option>
+                                <option value="Helvetica" {{ 'selected' if configuracion.header.get('subtitulo_fuente', 'Arial') == 'Helvetica' else '' }}>Helvetica</option>
+                                <option value="Courier New" {{ 'selected' if configuracion.header.get('subtitulo_fuente', 'Arial') == 'Courier New' else '' }}>Courier New</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Color Subtítulo</label>
+                        <input type="color" id="subtitulo_color" value="{{ configuracion.header.get('subtitulo_color', '#666') }}">
+                    </div>
+                    <div class="config-group">
+                        <label>Alineación Título</label>
+                        <select id="titulo_alineacion">
+                            <option value="izquierda" {{ 'selected' if configuracion.header.titulo_alineacion == 'izquierda' else '' }}>Izquierda</option>
+                            <option value="centro" {{ 'selected' if configuracion.header.titulo_alineacion == 'centro' else '' }}>Centro</option>
+                            <option value="derecha" {{ 'selected' if configuracion.header.titulo_alineacion == 'derecha' else '' }}>Derecha</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label>Padding Inferior (px)</label>
+                        <input type="number" id="header_padding_inferior" value="{{ configuracion.header.padding_inferior }}" min="0" step="1">
+                    </div>
+                </div>
+
+                <!-- Datos del Protocolo -->
+                <div class="config-section">
+                    <h6><i class="bi bi-table"></i> Datos del Protocolo</h6>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="mostrar_datos_protocolo" {{ 'checked' if configuracion.datos_protocolo.mostrar else '' }}>
+                            Mostrar datos del protocolo
+                        </label>
+                    </div>
+                    <div class="config-group">
+                        <label>Número de Columnas</label>
+                        <input type="number" id="columnas_protocolo" value="{{ configuracion.datos_protocolo.columnas }}" min="1" max="4" step="1">
+                    </div>
+                    <div class="config-group">
+                        <label>Espaciado entre Columnas (px)</label>
+                        <input type="number" id="espaciado_protocolo" value="{{ configuracion.datos_protocolo.espaciado }}" min="0" step="1">
+                    </div>
+                    <div class="config-group">
+                        <label>Padding (px)</label>
+                        <input type="number" id="padding_protocolo" value="{{ configuracion.datos_protocolo.padding }}" min="0" step="1">
+                    </div>
+                    <div class="config-group">
+                        <label>Color de Fondo</label>
+                        <input type="color" id="fondo_protocolo" value="{{ configuracion.datos_protocolo.fondo }}">
+                    </div>
+                    <div class="config-group">
+                        <label>Margen Inferior (px)</label>
+                        <input type="number" id="margen_inferior_protocolo" value="{{ configuracion.datos_protocolo.margen_inferior }}" min="0" step="1">
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <h6 style="font-size: 0.95rem; color: #666; margin-bottom: 10px;">Etiquetas de Campos</h6>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Label "Protocolo"</label>
+                            <input type="text" id="label_protocolo" value="{{ configuracion.datos_protocolo.get('label_protocolo', 'Protocolo:') }}" class="form-control">
+                        </div>
+                        <div class="config-group">
+                            <label>Label "Fecha"</label>
+                            <input type="text" id="label_fecha" value="{{ configuracion.datos_protocolo.get('label_fecha', 'Fecha:') }}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Label "Paciente"</label>
+                            <input type="text" id="label_paciente" value="{{ configuracion.datos_protocolo.get('label_paciente', 'Paciente:') }}" class="form-control">
+                        </div>
+                        <div class="config-group">
+                            <label>Label "DNI"</label>
+                            <input type="text" id="label_dni" value="{{ configuracion.datos_protocolo.get('label_dni', 'DNI:') }}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Label "Edad"</label>
+                            <input type="text" id="label_edad" value="{{ configuracion.datos_protocolo.get('label_edad', 'Edad:') }}" class="form-control">
+                        </div>
+                        <div class="config-group">
+                            <label>Label "Obra Social"</label>
+                            <input type="text" id="label_obra_social" value="{{ configuracion.datos_protocolo.get('label_obra_social', 'Obra Social:') }}" class="form-control">
+                        </div>
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Label "Médico"</label>
+                            <input type="text" id="label_medico" value="{{ configuracion.datos_protocolo.get('label_medico', 'Médico:') }}" class="form-control">
+                        </div>
+                        <div class="config-group">
+                            <label>Label "Especialidad"</label>
+                            <input type="text" id="label_especialidad" value="{{ configuracion.datos_protocolo.get('label_especialidad', 'Especialidad:') }}" class="form-control">
+                        </div>
+                    </div>
+                    <hr style="margin: 15px 0;">
+                    <h6 style="font-size: 0.95rem; color: #666; margin-bottom: 10px;">Títulos de Grupos</h6>
+                    <div class="config-group">
+                        <label>Título Grupo "Protocolo y Fecha"</label>
+                        <input type="text" id="titulo_grupo_protocolo" value="{{ configuracion.datos_protocolo.get('titulo_grupo_protocolo', 'PROTOCOLO Y FECHA') }}" class="form-control">
+                    </div>
+                    <div class="config-group">
+                        <label>Título Grupo "Datos del Paciente"</label>
+                        <input type="text" id="titulo_grupo_paciente" value="{{ configuracion.datos_protocolo.get('titulo_grupo_paciente', 'DATOS DEL PACIENTE') }}" class="form-control">
+                    </div>
+                    <div class="config-group">
+                        <label>Título Grupo "Datos del Médico"</label>
+                        <input type="text" id="titulo_grupo_medico" value="{{ configuracion.datos_protocolo.get('titulo_grupo_medico', 'DATOS DEL MÉDICO') }}" class="form-control">
+                    </div>
+                </div>
+
+                <!-- Secciones -->
+                <div class="config-section">
+                    <h6><i class="bi bi-list"></i> Secciones</h6>
+                    <div class="config-group">
+                        <label>Espacio entre Secciones (px)</label>
+                        <input type="number" id="espacio_secciones" value="{{ configuracion.secciones.espacio_entre }}" min="0" step="1">
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Tamaño Título Sección</label>
+                            <input type="number" id="titulo_seccion_tamano" value="{{ configuracion.secciones.titulo_tamano }}" min="8" max="24" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Fuente Título Sección</label>
+                            <select id="titulo_seccion_fuente">
+                                <option value="Arial" {{ 'selected' if configuracion.secciones.get('titulo_fuente', 'Arial') == 'Arial' else '' }}>Arial</option>
+                                <option value="Times New Roman" {{ 'selected' if configuracion.secciones.get('titulo_fuente', 'Arial') == 'Times New Roman' else '' }}>Times New Roman</option>
+                                <option value="Helvetica" {{ 'selected' if configuracion.secciones.get('titulo_fuente', 'Arial') == 'Helvetica' else '' }}>Helvetica</option>
+                                <option value="Courier New" {{ 'selected' if configuracion.secciones.get('titulo_fuente', 'Arial') == 'Courier New' else '' }}>Courier New</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="titulo_seccion_negrita" {{ 'checked' if configuracion.secciones.titulo_negrita else '' }}>
+                            Título en negrita
+                        </label>
+                    </div>
+                    <div class="config-group">
+                        <label>Color Título Sección</label>
+                        <input type="color" id="titulo_seccion_color" value="{{ configuracion.secciones.titulo_color }}">
+                    </div>
+                    <div class="input-group-inline">
+                        <div class="config-group">
+                            <label>Tamaño Contenido</label>
+                            <input type="number" id="contenido_tamano" value="{{ configuracion.secciones.contenido_tamano }}" min="8" max="24" step="1">
+                        </div>
+                        <div class="config-group">
+                            <label>Fuente Contenido</label>
+                            <select id="contenido_fuente">
+                                <option value="Arial" {{ 'selected' if configuracion.secciones.get('contenido_fuente', 'Arial') == 'Arial' else '' }}>Arial</option>
+                                <option value="Times New Roman" {{ 'selected' if configuracion.secciones.get('contenido_fuente', 'Arial') == 'Times New Roman' else '' }}>Times New Roman</option>
+                                <option value="Helvetica" {{ 'selected' if configuracion.secciones.get('contenido_fuente', 'Arial') == 'Helvetica' else '' }}>Helvetica</option>
+                                <option value="Courier New" {{ 'selected' if configuracion.secciones.get('contenido_fuente', 'Arial') == 'Courier New' else '' }}>Courier New</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <label>Color Contenido</label>
+                        <input type="color" id="contenido_color" value="{{ configuracion.secciones.get('contenido_color', '#333') }}">
+                    </div>
+                    <div class="config-group">
+                        <label>Altura de Línea</label>
+                        <input type="number" id="line_height" value="{{ configuracion.secciones.line_height }}" min="1" max="3" step="0.1">
+                    </div>
+                    <div class="config-group">
+                        <label>Margen Inferior (px)</label>
+                        <input type="number" id="margen_inferior_seccion" value="{{ configuracion.secciones.margen_inferior }}" min="0" step="1">
+                    </div>
+                </div>
+
+                <!-- Textos Personalizados -->
+                <div class="config-section">
+                    <h6><i class="bi bi-text-paragraph"></i> Textos Personalizados</h6>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="mostrar_firma" {{ 'checked' if configuracion.get('textos_personalizados', {}).get('mostrar_firma', True) else '' }}>
+                            Mostrar firma al final
+                        </label>
+                    </div>
+                    <div class="config-group">
+                        <label>Texto de Firma</label>
+                        <textarea id="texto_firma" class="form-control" rows="3" placeholder="Dr. [Nombre del Médico]&#10;Médico Patólogo&#10;MP: [Número de Matrícula]">{{ configuracion.get('textos_personalizados', {}).get('texto_firma', 'Dr. [Nombre del Médico]\nMédico Patólogo\nMP: [Número de Matrícula]') }}</textarea>
+                        <small class="text-muted">Una línea por renglón. Use \n para saltos de línea.</small>
+                    </div>
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="mostrar_pie" {{ 'checked' if configuracion.get('textos_personalizados', {}).get('mostrar_pie', True) else '' }}>
+                            Mostrar pie de página
+                        </label>
+                    </div>
+                    <div class="config-group">
+                        <label>Texto del Pie (opcional)</label>
+                        <textarea id="texto_pie" class="form-control" rows="2" placeholder="Deje vacío para usar datos del laboratorio">{{ configuracion.get('textos_personalizados', {}).get('texto_pie', '') }}</textarea>
+                        <small class="text-muted">Si está vacío, se usan los datos del laboratorio (dirección, teléfono, ciudad)</small>
+                    </div>
+                </div>
+
+                <!-- Impresión -->
+                <div class="config-section">
+                    <h6><i class="bi bi-printer"></i> Impresión</h6>
+                    <div class="config-group">
+                        <label>Tamaño de Papel</label>
+                        <select id="tamano_papel">
+                            <option value="A4" {{ 'selected' if configuracion.impresion.tamaño_papel == 'A4' else '' }}>A4</option>
+                            <option value="Letter" {{ 'selected' if configuracion.impresion.tamaño_papel == 'Letter' else '' }}>Letter</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label>Orientación</label>
+                        <select id="orientacion">
+                            <option value="vertical" {{ 'selected' if configuracion.impresion.orientacion == 'vertical' else '' }}>Vertical</option>
+                            <option value="horizontal" {{ 'selected' if configuracion.impresion.orientacion == 'horizontal' else '' }}>Horizontal</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label>Escala (%)</label>
+                        <input type="number" id="escala" value="{{ configuracion.impresion.escala }}" min="25" max="200" step="5">
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Panel de Vista Previa -->
+        <div class="preview-panel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="bi bi-eye"></i> Vista Previa</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="actualizarPreview()">
+                    <i class="bi bi-arrow-clockwise"></i> Actualizar
+                </button>
+            </div>
+            <div id="preview-frame" class="preview-frame">
+                <!-- La vista previa se generará aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const disenioId = {{ disenio.disenio_id }};
+let configActual = {{ configuracion|tojson }};
+
+// Actualizar vista previa al cambiar valores
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('#formDisenio input, #formDisenio select');
+    inputs.forEach(input => {
+        input.addEventListener('change', debounce(actualizarPreview, 500));
+        input.addEventListener('input', debounce(actualizarPreview, 500));
+    });
+    
+    actualizarPreview();
+});
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function obtenerConfiguracion() {
+    return {
+        margenes: {
+            superior: parseInt(document.getElementById('margen_superior').value) || 20,
+            inferior: parseInt(document.getElementById('margen_inferior').value) || 20,
+            izquierdo: parseInt(document.getElementById('margen_izquierdo').value) || 20,
+            derecho: parseInt(document.getElementById('margen_derecho').value) || 20
+        },
+        espacio_membrete: parseInt(document.getElementById('espacio_membrete').value) || 0,
+        header: {
+            mostrar_logo: document.getElementById('mostrar_logo').checked,
+            logo_ancho: parseInt(document.getElementById('logo_ancho').value) || 240,
+            logo_alto: parseInt(document.getElementById('logo_alto').value) || 240,
+            logo_posicion: document.getElementById('logo_posicion').value,
+            logo_margen_derecho: parseInt(document.getElementById('logo_margen_derecho').value) || 20,
+            laboratorio_nombre: document.getElementById('laboratorio_nombre').value || 'LABORATORIO DE DIAGNÓSTICO HISTOPATOLÓGICO',
+            laboratorio_fuente: document.getElementById('laboratorio_fuente').value || 'Arial',
+            laboratorio_tamano: parseInt(document.getElementById('laboratorio_tamano').value) || 24,
+            laboratorio_color: document.getElementById('laboratorio_color').value || '#007bff',
+            titulo_tamano: parseInt(document.getElementById('titulo_tamano').value) || 18,
+            titulo_fuente: document.getElementById('titulo_fuente').value || 'Arial',
+            titulo_color: document.getElementById('titulo_color').value || '#333',
+            subtitulo_tamano: parseInt(document.getElementById('subtitulo_tamano').value) || 14,
+            subtitulo_fuente: document.getElementById('subtitulo_fuente').value || 'Arial',
+            subtitulo_color: document.getElementById('subtitulo_color').value || '#666',
+            titulo_alineacion: document.getElementById('titulo_alineacion').value,
+            padding_inferior: parseInt(document.getElementById('header_padding_inferior').value) || 5
+        },
+        datos_protocolo: {
+            mostrar: document.getElementById('mostrar_datos_protocolo').checked,
+            columnas: parseInt(document.getElementById('columnas_protocolo').value) || 3,
+            espaciado: parseInt(document.getElementById('espaciado_protocolo').value) || 20,
+            padding: parseInt(document.getElementById('padding_protocolo').value) || 15,
+            fondo: document.getElementById('fondo_protocolo').value,
+            margen_inferior: parseInt(document.getElementById('margen_inferior_protocolo').value) || 30,
+            label_protocolo: document.getElementById('label_protocolo').value || 'Protocolo:',
+            label_fecha: document.getElementById('label_fecha').value || 'Fecha:',
+            label_paciente: document.getElementById('label_paciente').value || 'Paciente:',
+            label_dni: document.getElementById('label_dni').value || 'DNI:',
+            label_edad: document.getElementById('label_edad').value || 'Edad:',
+            label_obra_social: document.getElementById('label_obra_social').value || 'Obra Social:',
+            label_medico: document.getElementById('label_medico').value || 'Médico:',
+            label_especialidad: document.getElementById('label_especialidad').value || 'Especialidad:',
+            titulo_grupo_protocolo: document.getElementById('titulo_grupo_protocolo').value || 'PROTOCOLO Y FECHA',
+            titulo_grupo_paciente: document.getElementById('titulo_grupo_paciente').value || 'DATOS DEL PACIENTE',
+            titulo_grupo_medico: document.getElementById('titulo_grupo_medico').value || 'DATOS DEL MÉDICO'
+        },
+        textos_personalizados: {
+            texto_firma: document.getElementById('texto_firma').value || 'Dr. [Nombre del Médico]\\nMédico Patólogo\\nMP: [Número de Matrícula]',
+            mostrar_firma: document.getElementById('mostrar_firma').checked,
+            texto_pie: document.getElementById('texto_pie').value || '',
+            mostrar_pie: document.getElementById('mostrar_pie').checked,
+            textos_adicionales: []
+        },
+        secciones: {
+            espacio_entre: parseInt(document.getElementById('espacio_secciones').value) || 20,
+            titulo_tamano: parseInt(document.getElementById('titulo_seccion_tamano').value) || 12,
+            titulo_fuente: document.getElementById('titulo_seccion_fuente').value || 'Arial',
+            titulo_negrita: document.getElementById('titulo_seccion_negrita').checked,
+            titulo_color: document.getElementById('titulo_seccion_color').value,
+            contenido_tamano: parseInt(document.getElementById('contenido_tamano').value) || 12,
+            contenido_fuente: document.getElementById('contenido_fuente').value || 'Arial',
+            contenido_color: document.getElementById('contenido_color').value || '#333',
+            line_height: parseFloat(document.getElementById('line_height').value) || 1.4,
+            padding_seccion: 0,
+            margen_inferior: parseInt(document.getElementById('margen_inferior_seccion').value) || 15
+        },
+        impresion: {
+            tamaño_papel: document.getElementById('tamano_papel').value,
+            orientacion: document.getElementById('orientacion').value,
+            escala: parseInt(document.getElementById('escala').value) || 100
+        }
+    };
+}
+
+function actualizarPreview() {
+    const config = obtenerConfiguracion();
+    const previewFrame = document.getElementById('preview-frame');
+    
+    // Generar HTML de vista previa con la configuración actual
+    const htmlPreview = generarHTMLPreview(config);
+    previewFrame.innerHTML = htmlPreview;
+}
+
+function generarHTMLPreview(config) {
+    const tituloReporte = '{{ titulo_reporte }}';
+    const subtituloReporte = '{{ subtitulo_reporte }}';
+    
+    // Determinar estilo del logo según posición
+    let logoStyle = '';
+    let clearStyle = '';
+    if (config.header.mostrar_logo) {
+        if (config.header.logo_posicion === 'izquierda') {
+            logoStyle = `float: left; margin-right: ${config.header.logo_margen_derecho}px;`;
+            clearStyle = '';
+        } else if (config.header.logo_posicion === 'derecha') {
+            logoStyle = `float: right; margin-left: ${config.header.logo_margen_derecho}px;`;
+            clearStyle = '';
+        } else if (config.header.logo_posicion === 'centro') {
+            logoStyle = `display: block; margin: 0 auto ${config.header.logo_margen_derecho}px auto;`;
+            clearStyle = 'clear: both;';
+        }
+    }
+    
+    // Este es un HTML de ejemplo para la vista previa
+    return `
+        <div style="padding: ${config.margenes.superior}mm ${config.margenes.derecho}mm ${config.margenes.inferior}mm ${config.margenes.izquierdo}mm; max-width: 800px; margin: 0 auto; background: white;">
+            ${config.espacio_membrete > 0 ? `<div style="height: ${config.espacio_membrete}mm; background: #f0f0f0; margin-bottom: 20px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #999;">
+                <small>Espacio para membrete (${config.espacio_membrete}mm)</small>
+            </div>` : ''}
+            
+            <div style="text-align: ${config.header.titulo_alineacion}; margin-bottom: ${config.header.padding_inferior}px; padding-bottom: 10px; border-bottom: 3px solid #007bff; ${clearStyle}">
+                ${config.header.mostrar_logo ? `<img src="/static/img/logo.png" style="width: ${config.header.logo_ancho}px; height: ${config.header.logo_alto}px; ${logoStyle}" alt="Logo" onerror="this.style.display='none'">` : ''}
+                <div style="${clearStyle}">
+                    <div style="font-family: ${config.header.laboratorio_fuente || 'Arial'}; font-size: ${config.header.laboratorio_tamano || 24}px; color: ${config.header.laboratorio_color || '#007bff'}; font-weight: bold; margin-bottom: 10px; text-align: ${config.header.titulo_alineacion};">${config.header.laboratorio_nombre || 'LABORATORIO DE DIAGNÓSTICO HISTOPATOLÓGICO'}</div>
+                    <h2 style="font-family: ${config.header.titulo_fuente || 'Arial'}; font-size: ${config.header.titulo_tamano}px; color: ${config.header.titulo_color || '#333'}; margin: 0; text-align: ${config.header.titulo_alineacion};">${tituloReporte}</h2>
+                    <p style="font-family: ${config.header.subtitulo_fuente || 'Arial'}; font-size: ${config.header.subtitulo_tamano}px; color: ${config.header.subtitulo_color || '#666'}; margin: 5px 0 0 0; text-align: ${config.header.titulo_alineacion};">${subtituloReporte}</p>
+                </div>
+            </div>
+            
+            ${config.datos_protocolo.mostrar ? `
+            <div style="display: grid; grid-template-columns: repeat(${config.datos_protocolo.columnas}, 1fr); gap: ${config.datos_protocolo.espaciado}px; margin-bottom: ${config.datos_protocolo.margen_inferior}px; padding: ${config.datos_protocolo.padding}px; background-color: ${config.datos_protocolo.fondo}; border-radius: 5px; border: 1px solid #dee2e6;">
+                <div style="border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: white;">
+                    <div style="font-weight: bold; color: #007bff; font-size: 14px; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">${config.datos_protocolo.titulo_grupo_protocolo || 'PROTOCOLO Y FECHA'}</div>
+                    <div style="margin-bottom: 8px;"><strong>${config.datos_protocolo.label_protocolo || 'Protocolo:'}</strong> B-25-1136</div>
+                    <div><strong>${config.datos_protocolo.label_fecha || 'Fecha:'}</strong> 09/06/2025</div>
+                </div>
+                <div style="border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: white;">
+                    <div style="font-weight: bold; color: #007bff; font-size: 14px; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">${config.datos_protocolo.titulo_grupo_paciente || 'DATOS DEL PACIENTE'}</div>
+                    <div style="margin-bottom: 8px;"><strong>${config.datos_protocolo.label_paciente || 'Paciente:'}</strong> JUAREZ, Mónica</div>
+                    <div><strong>${config.datos_protocolo.label_dni || 'DNI:'}</strong> 12345678</div>
+                </div>
+                <div style="border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; background-color: white;">
+                    <div style="font-weight: bold; color: #007bff; font-size: 14px; margin-bottom: 10px; text-align: center; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">${config.datos_protocolo.titulo_grupo_medico || 'DATOS DEL MÉDICO'}</div>
+                    <div style="margin-bottom: 8px;"><strong>${config.datos_protocolo.label_medico || 'Médico:'}</strong> IRAZOQUI, SONIA</div>
+                    <div><strong>${config.datos_protocolo.label_especialidad || 'Especialidad:'}</strong> Sin especialidad</div>
+                </div>
+            </div>
+            ` : ''}
+            
+            <div style="margin-bottom: ${config.secciones.espacio_entre}px;">
+                <h4 style="font-family: ${config.secciones.titulo_fuente || 'Arial'}; font-size: ${config.secciones.titulo_tamano}px; font-weight: ${config.secciones.titulo_negrita ? 'bold' : 'normal'}; color: ${config.secciones.titulo_color}; margin-bottom: 10px;">
+                    DATOS CLÍNICOS
+                </h4>
+                <p style="font-family: ${config.secciones.contenido_fuente || 'Arial'}; font-size: ${config.secciones.contenido_tamano}px; color: ${config.secciones.contenido_color || '#333'}; line-height: ${config.secciones.line_height}; margin-bottom: ${config.secciones.margen_inferior}px;">
+                    Texto de ejemplo para mostrar cómo se verá el contenido de las secciones en el informe.
+                </p>
+            </div>
+            
+            <div style="margin-bottom: ${config.secciones.espacio_entre}px;">
+                <h4 style="font-family: ${config.secciones.titulo_fuente || 'Arial'}; font-size: ${config.secciones.titulo_tamano}px; font-weight: ${config.secciones.titulo_negrita ? 'bold' : 'normal'}; color: ${config.secciones.titulo_color}; margin-bottom: 10px;">
+                    DIAGNÓSTICO
+                </h4>
+                <p style="font-family: ${config.secciones.contenido_fuente || 'Arial'}; font-size: ${config.secciones.contenido_tamano}px; color: ${config.secciones.contenido_color || '#333'}; line-height: ${config.secciones.line_height}; margin-bottom: ${config.secciones.margen_inferior}px;">
+                    Otro ejemplo de sección para mostrar la configuración aplicada.
+                </p>
+            </div>
+            
+            ${config.textos_personalizados && config.textos_personalizados.mostrar_firma ? `
+            <div style="margin-top: 40px; text-align: right; border-top: 1px solid #ddd; padding-top: 20px;">
+                ${(config.textos_personalizados.texto_firma || '').split(/\n|\\n/).map(linea => `<div>${linea}</div>`).join('')}
+                <div style="color: #666; font-size: 11px; margin-top: 5px;">Fecha: 09/06/2025</div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function guardarDisenio() {
+    const config = obtenerConfiguracion();
+    const nombre = document.getElementById('nombre').value.trim();
+    const es_default = document.getElementById('es_default').checked;
+
+    fetch(`/admin/disenios-informes/${disenioId}/guardar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            nombre: nombre,
+            es_default: es_default,
+            configuracion: config
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Diseño guardado correctamente');
+            // Opcional: recargar página para reflejar cambios
+            // location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo guardar el diseño'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al guardar el diseño');
+    });
+}
+</script>
+{% endblock %}
+

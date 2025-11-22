@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Probar Modelos de Claude{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-robot text-primary"></i> Probar Modelos de Claude</h2>
+                    <p class="text-muted">Verifica qué modelos están disponibles en tu cuenta de Anthropic</p>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="probarModelos()">
+                    <i class="bi bi-arrow-clockwise"></i> Probar Modelos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+    </div>
+    {% else %}
+    
+    {% if modelo_actual %}
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle-fill"></i> <strong>Modelo actual configurado:</strong> <code>{{ modelo_actual }}</code>
+        <br>
+        <small>Para cambiarlo, edita <code>config.py</code> línea 54 y reinicia el servidor Flask.</small>
+    </div>
+    {% endif %}
+
+    {% if modelos_disponibles %}
+    <div class="alert alert-success" role="alert">
+        <i class="bi bi-check-circle-fill"></i> <strong>Modelos disponibles:</strong> {{ modelos_disponibles|length }}
+        <ul class="mb-0 mt-2">
+            {% for modelo in modelos_disponibles %}
+            <li><code>{{ modelo }}</code></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-list-check"></i> Resultados de las Pruebas
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Modelo</th>
+                                    <th>Estado</th>
+                                    <th>Notas</th>
+                                    <th>Soporta Visión</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modelo, resultado in resultados.items() %}
+                                <tr>
+                                    <td><code>{{ modelo }}</code></td>
+                                    <td>
+                                        {% if resultado.disponible %}
+                                        <span class="badge bg-success">✓ Disponible</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">✗ No disponible</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if resultado.error %}
+                                        <small class="text-muted">{{ resultado.error }}</small>
+                                        {% else %}
+                                        <small class="text-success">Funciona correctamente</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if 'haiku' in modelo.lower() %}
+                                        <span class="badge bg-warning text-dark">NO</span>
+                                        {% else %}
+                                        <span class="badge bg-success">SÍ</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Información
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><strong>Haiku:</strong> Modelo más rápido y económico. <strong>NO soporta análisis de imágenes</strong>. Siempre disponible.</li>
+                        <li><strong>Sonnet:</strong> Modelo balanceado. <strong>Soporta visión</strong>. Requiere plan estándar o superior.</li>
+                        <li><strong>Opus:</strong> Modelo más potente. <strong>Soporta visión</strong>. Requiere plan Pro.</li>
+                        <li><strong>Claude 3.5:</strong> Versiones más recientes (2024-06 en adelante). Mejores capacidades.</li>
+                    </ul>
+                    <p class="mb-0">
+                        <strong>Para análisis de imágenes médicas</strong>, necesitas un modelo con soporte de visión (Sonnet u Opus).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<script>
+function probarModelos() {
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Probando...';
+    
+    // Recargar la página para probar los modelos nuevamente
+    window.location.reload();
+}
+</script>
+{% endblock %}
+

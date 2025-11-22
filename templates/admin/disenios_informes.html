@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestor de Diseños de Informes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>
+                <i class="bi bi-palette"></i> Gestor de Diseños de Informes
+            </h1>
+            <p class="text-muted">
+                Gestiona los diseños y variantes de los informes (membretado, papel común, etc.)
+            </p>
+        </div>
+    </div>
+
+    {% for tipo in tipos_estudio %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-{{ 'clipboard2-pulse' if tipo == 'PAP' else 'file-medical' if tipo == 'BIOPSIA' else 'file-text' }}"></i>
+                {{ tipo }}
+            </h5>
+            <a href="{{ url_for('admin.disenios_informes_visual') }}?tipo={{ tipo }}" class="btn btn-light btn-sm">
+                <i class="bi bi-plus-circle"></i> Nuevo Diseño Visual
+            </a>
+            <button class="btn btn-light btn-sm" onclick="crearNuevoDiseño('{{ tipo }}')">
+                <i class="bi bi-plus-circle"></i> Nuevo Diseño
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for disenio in disenios_por_tipo.get(tipo, []) %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border-{{ 'primary' if disenio.es_default else 'secondary' }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {{ disenio.nombre }}
+                                        {% if disenio.es_default %}
+                                        <span class="badge bg-primary ms-2">Por Defecto</span>
+                                        {% endif %}
+                                    </h6>
+                                    <small class="text-muted">
+                                        Creado: {{ disenio.fecha_creacion.strftime('%d/%m/%Y') }}
+                                        {% if disenio.fecha_modificacion != disenio.fecha_creacion %}
+                                        • Modificado: {{ disenio.fecha_modificacion.strftime('%d/%m/%Y') }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('admin.disenios_informes_visual', disenio_id=disenio.disenio_id) }}" 
+                                       class="btn btn-outline-success" title="Editor Visual Drag & Drop">
+                                        <i class="bi bi-layout-text-window-reverse"></i> Visual
+                                    </a>
+                                    <a href="{{ url_for('admin.disenios_informes_editar', disenio_id=disenio.disenio_id) }}" 
+                                       class="btn btn-outline-primary" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-outline-info" 
+                                            onclick="verPreview({{ disenio.disenio_id }})" 
+                                            title="Vista Previa">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    {% if not disenio.es_default %}
+                                    <button class="btn btn-outline-success" 
+                                            onclick="marcarDefault({{ disenio.disenio_id }}, '{{ tipo }}')" 
+                                            title="Marcar como Predeterminado">
+                                        <i class="bi bi-star"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-outline-danger" 
+                                            onclick="eliminarDisenio({{ disenio.disenio_id }})" 
+                                            title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <p class="text-muted text-center py-3">
+                        <i class="bi bi-info-circle"></i> No hay diseños configurados para {{ tipo }}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal para crear nuevo diseño -->
+<div class="modal fade" id="modalNuevoDisenio" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nuevo Diseño</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNuevoDisenio">
+                    <div class="mb-3">
+                        <label for="nombreDisenio" class="form-label">Nombre del Diseño</label>
+                        <input type="text" class="form-control" id="nombreDisenio" required 
+                               placeholder="Ej: Papel Común, Membretado">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tipoEstudioDisenio" class="form-label">Tipo de Estudio</label>
+                        <input type="text" class="form-control" id="tipoEstudioDisenio" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="esDefaultDisenio">
+                            <label class="form-check-label" for="esDefaultDisenio">
+                                Usar como diseño predeterminado para este tipo
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarNuevoDisenio()">Crear</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let tipoEstudioActual = '';
+
+function crearNuevoDiseño(tipo) {
+    tipoEstudioActual = tipo;
+    document.getElementById('tipoEstudioDisenio').value = tipo;
+    document.getElementById('nombreDisenio').value = '';
+    document.getElementById('esDefaultDisenio').checked = false;
+    const modal = new bootstrap.Modal(document.getElementById('modalNuevoDisenio'));
+    modal.show();
+}
+
+function guardarNuevoDisenio() {
+    const nombre = document.getElementById('nombreDisenio').value.trim();
+    if (!nombre) {
+        alert('Debe ingresar un nombre para el diseño');
+        return;
+    }
+
+    fetch('{{ url_for("admin.disenios_informes_nuevo") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            nombre: nombre,
+            tipo_estudio: tipoEstudioActual,
+            es_default: document.getElementById('esDefaultDisenio').checked,
+            configuracion: {} // Se usará la configuración por defecto del modelo
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo crear el diseño'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al crear el diseño');
+    });
+}
+
+function verPreview(disenioId) {
+    window.open('{{ url_for("admin.disenios_informes_preview", disenio_id=0) }}'.replace('0', disenioId), '_blank');
+}
+
+function marcarDefault(disenioId, tipo) {
+    if (!confirm(`¿Marcar este diseño como predeterminado para ${tipo}?`)) {
+        return;
+    }
+
+    fetch(`/admin/disenios-informes/${disenioId}/guardar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            es_default: true
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo actualizar'));
+        }
+    });
+}
+
+function eliminarDisenio(disenioId) {
+    if (!confirm('¿Está seguro de eliminar este diseño?')) {
+        return;
+    }
+
+    fetch(`/admin/disenios-informes/${disenioId}/eliminar`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar'));
+        }
+    });
+}
+</script>
+{% endblock %}
+

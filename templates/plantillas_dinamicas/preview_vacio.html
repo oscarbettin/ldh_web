@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Sin Plantilla - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> No hay plantilla guardada
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <p class="lead">No se ha generado ninguna plantilla para este protocolo.</p>
+                    <p>Para crear una plantilla, utiliza el editor de plantillas dinámicas.</p>
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('plantillas_dinamicas.editor_pap', protocolo_id=protocolo.protocolo_id) }}" 
+                           class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Crear Plantilla
+                        </a>
+                        <a href="{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}" 
+                           class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Volver al Protocolo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

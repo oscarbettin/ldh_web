@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if prestador else 'Nuevo' }} Prestador{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Barra de navegación específica para Prestadores -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Panel</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('prestadores.index') }}">Prestadores</a></li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ 'Editar' if prestador else 'Nuevo' }} Prestador
+            </li>
+        </ol>
+    </nav>
+    
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="text-success">
+                <i class="bi bi-person-badge-{{ 'check' if prestador else 'fill' }}"></i>
+                {{ 'Editar' if prestador else 'Nuevo' }} Prestador
+                <small class="text-muted">- Gestión de Prestadores</small>
+            </h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Datos personales -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-person"></i> Datos Personales
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="apellido" class="form-label">Apellido *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="apellido" 
+                                       name="apellido" 
+                                       value="{{ prestador.apellido if prestador else '' }}"
+                                       required 
+                                       autofocus>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="nombre" 
+                                       name="nombre" 
+                                       value="{{ prestador.nombre if prestador else '' }}"
+                                       required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="codigo" class="form-label">Código</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="codigo" 
+                                       name="codigo" 
+                                       value="{{ prestador.codigo if prestador else '' }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="tipo_documento" class="form-label">Tipo Documento</label>
+                                <select class="form-select" id="tipo_documento" name="tipo_documento">
+                                    <option value="">Seleccione...</option>
+                                    <option value="DNI" {{ 'selected' if prestador and prestador.tipo_documento == 'DNI' else '' }}>DNI</option>
+                                    <option value="LE" {{ 'selected' if prestador and prestador.tipo_documento == 'LE' else '' }}>LE</option>
+                                    <option value="LC" {{ 'selected' if prestador and prestador.tipo_documento == 'LC' else '' }}>LC</option>
+                                    <option value="CI" {{ 'selected' if prestador and prestador.tipo_documento == 'CI' else '' }}>CI</option>
+                                    <option value="Pasaporte" {{ 'selected' if prestador and prestador.tipo_documento == 'Pasaporte' else '' }}>Pasaporte</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="numero_documento" class="form-label">Número Documento</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="numero_documento" 
+                                       name="numero_documento" 
+                                       value="{{ prestador.numero_documento if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="cuit" class="form-label">CUIT</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="cuit" 
+                                       name="cuit" 
+                                       placeholder="XX-XXXXXXXX-X"
+                                       value="{{ prestador.cuit if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Especialidad -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-briefcase"></i> Especialidad
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="especialidad_id" class="form-label">Especialidad</label>
+                                <select class="form-select" id="especialidad_id" name="especialidad_id" onchange="toggleOtraEspecialidad()">
+                                    <option value="">Seleccione una especialidad...</option>
+                                    {% for esp in especialidades %}
+                                    <option value="{{ esp.especialidad_id }}" 
+                                            {{ 'selected' if prestador and prestador.especialidad_id == esp.especialidad_id else '' }}>
+                                        {{ esp.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                    <option value="OTRA" {{ 'selected' if prestador and prestador.especialidad_otra and not prestador.especialidad_id else '' }}>
+                                        Otra (especificar)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row" id="div_otra_especialidad" style="display: {{ 'block' if prestador and prestador.especialidad_otra and not prestador.especialidad_id else 'none' }};">
+                            <div class="col-md-12 mb-3">
+                                <label for="especialidad_otra" class="form-label">Especificar Especialidad</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="especialidad_otra" 
+                                       name="especialidad_otra" 
+                                       placeholder="Ingrese la especialidad..."
+                                       value="{{ prestador.especialidad_otra if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Matrícula Profesional -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-award"></i> Matrícula Profesional
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="tipo_matricula" class="form-label">Tipo Matrícula</label>
+                                <select class="form-select" id="tipo_matricula" name="tipo_matricula">
+                                    <option value="">Seleccione...</option>
+                                    <option value="M" {{ 'selected' if prestador and prestador.tipo_matricula == 'M' else '' }}>Nacional (MN)</option>
+                                    <option value="P" {{ 'selected' if prestador and prestador.tipo_matricula == 'P' else '' }}>Provincial (MP)</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="numero_matricula" class="form-label">Número Matrícula</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="numero_matricula" 
+                                       name="numero_matricula" 
+                                       value="{{ prestador.numero_matricula if prestador else '' }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_matricula" class="form-label">Fecha Matrícula</label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="fecha_matricula" 
+                                       name="fecha_matricula" 
+                                       min="1950-01-01"
+                                       max="{{ now().strftime('%Y-%m-%d') }}"
+                                       value="{{ prestador.fecha_matricula.strftime('%Y-%m-%d') if prestador and prestador.fecha_matricula else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Domicilio -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-geo-alt"></i> Domicilio
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="direccion" class="form-label">Dirección</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="direccion" 
+                                       name="direccion" 
+                                       value="{{ prestador.direccion if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-5 mb-3">
+                                <label for="localidad" class="form-label">Localidad</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="localidad" 
+                                       name="localidad" 
+                                       value="{{ prestador.localidad if prestador else '' }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="provincia" class="form-label">Provincia</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="provincia" 
+                                       name="provincia" 
+                                       value="{{ prestador.provincia if prestador else '' }}">
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label for="codigo_postal" class="form-label">Código Postal</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="codigo_postal" 
+                                       name="codigo_postal" 
+                                       value="{{ prestador.codigo_postal if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Contacto -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-telephone"></i> Contacto
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="telefono" 
+                                       name="telefono" 
+                                       value="{{ prestador.telefono if prestador else '' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       value="{{ prestador.email if prestador else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('prestadores.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i> Información
+                    </h6>
+                    <p class="card-text text-sm">
+                        <strong>Campos obligatorios:</strong><br>
+                        Apellido y nombre son obligatorios.
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Matrícula:</strong><br>
+                        La matrícula profesional es importante para identificar correctamente al médico.
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Especialidad:</strong><br>
+                        Seleccione de la lista o elija "Otra" para especificar una especialidad no listada.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleOtraEspecialidad() {
+    var select = document.getElementById('especialidad_id');
+    var divOtra = document.getElementById('div_otra_especialidad');
+    var inputOtra = document.getElementById('especialidad_otra');
+    
+    if (select.value === 'OTRA') {
+        divOtra.style.display = 'block';
+        inputOtra.required = true;
+    } else {
+        divOtra.style.display = 'none';
+        inputOtra.required = false;
+        inputOtra.value = '';
+    }
+}
+
+// Ejecutar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    toggleOtraEspecialidad();
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,2578 @@
+{% extends "base.html" %}
+
+{% set es_medico = es_medico if es_medico is defined else rol_es_medico(current_user.rol.nombre if current_user.rol else '') %}
+{% if es_medico is undefined %}
+    {% set es_medico = false %}
+{% endif %}
+
+{% block title %}Editor de Análisis PAP - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.editor-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.header-info {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+}
+
+.left-panel {
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.content-area {
+    flex: 1;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.seccion-activa {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+
+.campo-texto {
+    margin-bottom: 20px;
+}
+
+.campo-texto label {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.campo-texto select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.botones-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.boton-seccion {
+    padding: 8px 4px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    font-size: 11px;
+    font-weight: bold;
+    min-height: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.boton-seccion:hover {
+    border-color: #2196f3;
+    background: #f0f8ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.boton-seccion.activo {
+    border-color: #2196f3;
+    background: #2196f3;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.boton-seccion .codigo {
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.boton-seccion .numero {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+.botonera-panel {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+}
+
+.botonera-panel h6 {
+    color: #495057;
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 8px;
+}
+
+/* Estilos para datos generales compactos */
+.datos-generales-compactos {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 8px;
+    height: 100%;
+}
+
+.datos-info-compacta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.datos-info-compacta > div {
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.botones-header {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    height: 100%;
+    justify-content: center;
+}
+
+/* Estilos para subsecciones */
+.subseccion {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.subseccion-titulo {
+    color: #495057;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.renglones {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.renglon {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.renglon-label {
+    font-weight: 500;
+    color: #495057;
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.renglon-selector {
+    font-size: 14px;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    background-color: white;
+}
+
+.renglon-selector:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.datos-clinicos-container,
+.descripcion-citologica-container {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.datos-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.datos-tab {
+    padding: 4px 12px;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.datos-tab:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.datos-tab.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.datos-contenido {
+    min-height: 40px;
+}
+
+.datos-panel {
+    display: none;
+}
+
+.datos-panel.active {
+    display: block;
+}
+
+.datos-panel .row {
+    margin: 0;
+}
+
+.datos-panel .col-md-4,
+.datos-panel .col-md-2,
+.datos-panel .col-md-6 {
+    padding: 0 8px;
+}
+
+.modo-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.papel-section {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.acciones-panel {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.btn-accion {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.texto-generado {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+    border-left: 4px solid #28a745;
+}
+
+.texto-generado h6 {
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+#texto-final {
+    background: white;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    min-height: 200px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* Estilos para líneas del protocolo */
+.linea-protocolo {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.linea-protocolo .form-control-plaintext {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.linea-protocolo .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.linea-protocolo .d-flex {
+    align-items: flex-start;
+}
+
+.linea-protocolo .flex-grow-1 {
+    min-width: 0;
+}
+
+/* Estilos para líneas adicionales */
+.linea-adicional {
+    margin-top: 8px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.linea-adicional .btn {
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.linea-adicional .d-flex {
+    align-items: center;
+}
+
+.linea-adicional .form-select {
+    flex: 1;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Header con info del protocolo -->
+    <div class="header-info">
+        <div class="row align-items-center">
+            <!-- Info del protocolo (izquierda) -->
+            <div class="col-md-4">
+                <h4>
+                    <i class="bi bi-file-text"></i> Editor de Análisis PAP
+                </h4>
+                <strong>PROTOCOLO:</strong> {{ protocolo.numero_protocolo }}
+                <br>
+                <strong>PACIENTE:</strong> {{ protocolo.afiliado.nombre_completo }}
+                <br>
+                <strong>FECHA:</strong> {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}
+            </div>
+            
+            <!-- Sección con pestañas (centro) -->
+            <div class="col-md-4">
+                <div class="datos-generales-compactos">
+                    <!-- Pestañas pequeñas -->
+                    <div class="datos-tabs">
+                        <button class="datos-tab active" onclick="mostrarDatosPaciente()">
+                            <i class="bi bi-person"></i> Paciente
+                        </button>
+                        <button class="datos-tab" onclick="mostrarDatosPrestador()">
+                            <i class="bi bi-person-badge"></i> Prestador
+                        </button>
+                    </div>
+                    
+                    <!-- Contenido compacto -->
+                    <div class="datos-contenido">
+                        <!-- Datos del Paciente -->
+                        <div id="datos-paciente" class="datos-panel active">
+                            <div class="datos-info-compacta">
+                                <div><small class="text-muted">Nombre:</small><br><strong>{{ protocolo.afiliado.nombre_completo }}</strong></div>
+                                <div><small class="text-muted">Edad:</small><br><strong>{{ protocolo.afiliado.edad }} años</strong></div>
+                                <div><small class="text-muted">Obra Social:</small><br><strong>{{ protocolo.obra_social.nombre if protocolo.obra_social else 'No especificada' }}</strong></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Datos del Prestador -->
+                        <div id="datos-prestador" class="datos-panel">
+                            <div class="datos-info-compacta">
+                                <div><small class="text-muted">Prestador:</small><br><strong>{{ protocolo.prestador.nombre_completo if protocolo.prestador else 'No especificado' }}</strong></div>
+                                <div><small class="text-muted">Especialidad:</small><br><strong>{{ protocolo.prestador.especialidad if protocolo.prestador and protocolo.prestador.especialidad else 'No especificada' }}</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 3 botones apilados (derecha) -->
+            <div class="col-md-4">
+                <div class="botones-header">
+                    <button class="btn btn-primary btn-sm w-100 mb-2" onclick="abrirModalGuardar()">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                    <button class="btn btn-success btn-sm w-100 mb-2" onclick="verPreview()">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                    <button class="btn btn-info btn-sm w-100" onclick="exportarTexto()">
+                        <i class="bi bi-download"></i> Exportar
+                    </button>
+                    <button class="btn btn-warning btn-sm w-100 mt-2" onclick="abrirModalGuardarPlantillaPersonalizada()">
+                        <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+                    </button>
+                    <button class="btn btn-danger btn-sm w-100 mt-2" onclick="limpiarTodasLasSecciones()" title="Limpiar todas las secciones">
+                        <i class="bi bi-x-circle"></i> Limpiar todo
+                    </button>
+                    <a class="btn btn-outline-secondary btn-sm w-100 mt-2" href="{{ url_for('editor_avanzado.editor_pap_avanzado', protocolo_id=protocolo.protocolo_id) }}">
+                        <i class="bi bi-arrow-left-right"></i> Ir al editor PAP v2
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Panel izquierdo -->
+        <div class="left-panel">
+            <h5>
+                <i class="bi bi-list-check"></i> Secciones
+            </h5>
+            
+            <div class="acciones-panel">
+                <button class="btn btn-outline-primary btn-accion" onclick="cambiarSeccion('datos-generales')">
+                    <i class="bi bi-file-text"></i> Datos Generales
+                </button>
+                <button class="btn btn-outline-primary btn-accion" onclick="cambiarSeccion('datos-clinicos')">
+                    <i class="bi bi-clipboard-data"></i> Datos Clínicos
+                </button>
+                <button class="btn btn-primary btn-accion" onclick="cambiarSeccion('descripcion-citologica')">
+                    <i class="bi bi-search"></i> Descripción Citológica
+                </button>
+            </div>
+
+            <div class="modo-section">
+                <h6>MODO</h6>
+                <button class="btn btn-success btn-sm">NORMAL</button>
+                <button class="btn btn-outline-secondary btn-sm">Edición de Plantillas</button>
+            </div>
+        </div>
+
+        <!-- Área principal -->
+        <div class="content-area">
+            <!-- Sección activa dinámica -->
+            <div class="seccion-activa" id="seccion-activa">
+                <h5 id="titulo-seccion">
+                    <i class="bi bi-search"></i> Descripción Citológica
+                </h5>
+            </div>
+
+            <!-- Contenido dinámico por sección -->
+            <div id="contenido-seccion">
+                <!-- Sección: Datos Generales -->
+                <div id="contenido-datos-generales" class="seccion-contenido" style="display: none;">
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle"></i> Datos Generales</h6>
+                        <p>Esta sección muestra la información del paciente y prestador que ya está disponible en el header superior.</p>
+                        <p><strong>Paciente:</strong> {{ protocolo.afiliado.nombre_completo }} ({{ protocolo.afiliado.edad }} años)</p>
+                        <p><strong>Prestador:</strong> {{ protocolo.prestador.nombre_completo if protocolo.prestador else 'No especificado' }}</p>
+                        <p><strong>Obra Social:</strong> {{ protocolo.obra_social.nombre if protocolo.obra_social else 'No especificada' }}</p>
+                    </div>
+                </div>
+
+                <!-- Sección: Datos Clínicos -->
+                <div id="contenido-datos-clinicos" class="seccion-contenido" style="display: none;">
+                    <div class="datos-clinicos-container">
+                        <!-- Subsección 1: Datos Clínicos Reales -->
+                        <div class="subseccion">
+                            <h6 class="subseccion-titulo">
+                                <i class="bi bi-clipboard-data"></i> Datos Clínicos
+                            </h6>
+                            <div class="renglones">
+                                <div class="renglon">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <label class="renglon-label">Datos Clínicos:</label>
+                                        <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('DATOS_CLINICOS')" title="Agregar línea">
+                                            <i class="bi bi-plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <select class="form-select renglon-selector" id="datos-clinicos">
+                                            <option value="">Seleccionar...</option>
+                                            <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                        </select>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('datos-clinicos')" title="Editar texto">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
+                                    <div id="lineas-DATOS_CLINICOS"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Sección: Descripción Citológica (activa por defecto) -->
+                <div id="contenido-descripcion-citologica" class="seccion-contenido">
+                    <!-- Layout de dos columnas -->
+                    <div class="row">
+                        <!-- Columna izquierda: Subsecciones con selectores -->
+                        <div class="col-md-8">
+                            <div class="descripcion-citologica-container">
+                                <!-- Subsección 1: Extendido -->
+                                <div class="subseccion">
+                                    <h6 class="subseccion-titulo">
+                                        <i class="bi bi-file-medical"></i> Extendido
+                                    </h6>
+                                    <div class="renglones">
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">Extendido:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('EXTENDIDO')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="extendido">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('extendido')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-EXTENDIDO"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subsección 2: Células -->
+                                <div class="subseccion">
+                                    <h6 class="subseccion-titulo">
+                                        <i class="bi bi-circle"></i> Células
+                                    </h6>
+                                    <div class="renglones">
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">Se halla conformado por células:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('CELULAS_CONFORMACION')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="celulas-conformacion">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('celulas-conformacion')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-CELULAS_CONFORMACION"></div>
+                                        </div>
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">Junto a:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('CELULAS_JUNTO_A')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="celulas-junto-a">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('celulas-junto-a')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-CELULAS_JUNTO_A"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subsección 3: Componente Inflamatorio -->
+                                <div class="subseccion">
+                                    <h6 class="subseccion-titulo">
+                                        <i class="bi bi-exclamation-triangle"></i> Componente Inflamatorio
+                                    </h6>
+                                    <div class="renglones">
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">El componente inflamatorio es:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('COMP_INFLAMATORIO')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="componente-inflamatorio">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('componente-inflamatorio')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-COMP_INFLAMATORIO"></div>
+                                        </div>
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">Flora:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('FLORA')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="flora">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('flora')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-FLORA"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Subsección 4: Diagnóstico -->
+                                <div class="subseccion">
+                                    <h6 class="subseccion-titulo">
+                                        <i class="bi bi-clipboard-check"></i> Diagnóstico
+                                    </h6>
+                                    <div class="renglones">
+                                        <div class="renglon">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <label class="renglon-label">Diagnóstico:</label>
+                                                <button class="btn btn-sm btn-outline-success" onclick="agregarLineaUI('DIAGNOSTICO')" title="Agregar línea">
+                                                    <i class="bi bi-plus"></i>
+                                                </button>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <select class="form-select renglon-selector" id="diagnostico">
+                                                    <option value="">Seleccionar...</option>
+                                                    <!-- Las opciones se cargarán dinámicamente desde la BD -->
+                                                </select>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline('diagnostico')" title="Editar texto">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            </div>
+                                            <div id="lineas-DIAGNOSTICO"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Columna derecha: Plantillas -->
+                        <div class="col-md-4">
+                            <div class="botonera-panel">
+                                <h6>
+                                    <i class="bi bi-keyboard"></i> Plantillas
+                                </h6>
+                                <!-- Grid de botones -->
+                                <div class="botones-grid" id="botones-plantillas-estandar">
+                                    {% for boton in botones %}
+                                    <button class="boton-seccion" 
+                                            onclick="seleccionarBoton('{{ boton.codigo_boton }}', {{ boton.numero_boton }})"
+                                            oncontextmenu="mostrarMenuContextual(event, '{{ boton.codigo_boton }}'); return false;"
+                                            id="btn-{{ boton.codigo_boton }}">
+                                        <div class="codigo">{{ boton.codigo_boton }}</div>
+                                        <div class="numero">({{ boton.numero_boton }})</div>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Guardar -->
+    <div class="modal fade" id="modalGuardarProtocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalGuardarProtocoloLabel">
+                        <i class="bi bi-question-circle"></i> ¿Qué desea hacer?
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+                <div class="modal-body">
+                    <p class="mb-3">Seleccione una opción para el protocolo actual.</p>
+                    <ul class="small text-muted mb-0">
+                        <li><strong>Guardar:</strong> guarda todas las secciones y mantiene el protocolo en su estado actual.</li>
+                        <li><strong>Guardar y completar:</strong> marca el protocolo como completado y registra su firma.</li>
+                    </ul>
+        </div>
+                <div class="modal-footer d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-primary" id="btn-guardar-solo">
+                            <i class="bi bi-save"></i> Guardar
+                        </button>
+                        {% if es_medico %}
+                        <button type="button" class="btn btn-success" id="btn-guardar-completar">
+                            <i class="bi bi-check2-circle"></i> Guardar y completar
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo los médicos pueden completar el protocolo.">
+                            <i class="bi bi-check2-circle"></i> Guardar y completar
+                        </button>
+                        {% endif %}
+        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Guardar Plantilla Personalizada -->
+    <div class="modal fade" id="modalGuardarPlantillaPersonalizada" tabindex="-1" aria-labelledby="modalGuardarPlantillaPersonalizadaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalGuardarPlantillaPersonalizadaLabel">
+                        <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="input-nombre-plantilla" class="form-label">Nombre o código</label>
+                        <input type="text" class="form-control" id="input-nombre-plantilla" list="lista-nombres-plantillas" placeholder="Ej: T1 personalizado o T1 para asignar al botón">
+                        <datalist id="lista-nombres-plantillas"></datalist>
+                        <small class="text-muted">
+                            <strong>Tip:</strong> Si el nombre coincide con un código de botón existente (ej: T1, H2), se asignará automáticamente a ese botón.
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Plantillas guardadas</label>
+                        <div id="lista-plantillas-personalizadas" class="list-group" style="max-height: 200px; overflow-y: auto;">
+                            <div class="text-muted text-center py-2">Cargando plantillas...</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-guardar-plantilla-personalizada">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Asignar Plantilla a Botón -->
+    <div class="modal fade" id="modalAsignarPlantilla" tabindex="-1" aria-labelledby="modalAsignarPlantillaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAsignarPlantillaLabel">
+                        <i class="bi bi-bookmark-check"></i> Asignar plantilla al botón <span id="nombre-boton-asignar"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="select-plantilla-asignar" class="form-label">Seleccionar plantilla personalizada</label>
+                        <select class="form-select" id="select-plantilla-asignar">
+                            <option value="">-- Seleccionar plantilla --</option>
+                        </select>
+                        <small class="text-muted">Seleccione una plantilla personalizada para asignarla a este botón.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btn-asignar-plantilla-boton">
+                        <i class="bi bi-check"></i> Asignar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let seccionActual = 'A1';
+let contenidoActual = {{ contenido_guardado | tojson }};
+let lineasCargadas = {};
+let lineasProtocolo = {}; // Almacenar líneas del protocolo actual
+let protocoloId = {{ protocolo.protocolo_id }};
+const esMedico = {{ es_medico | default(false) | tojson }};
+let modalGuardar = null;
+
+const mapeoCategoriasPlantilla = {
+    'EXTENDIDO': 'extendido',
+    'CELULAS_CONFORMACION': 'celulas-conformacion',
+    'CELULAS_JUNTO_A': 'celulas-junto-a',
+    'COMP_INFLAMATORIO': 'componente-inflamatorio',
+    'FLORA': 'flora',
+    'DIAGNOSTICO': 'diagnostico',
+    'DATOS_CLINICOS': 'datos-clinicos'
+};
+let plantillasPersonalizadas = {};
+let modalGuardarPlantillaPersonalizada = null;
+
+// Cargar opciones de selectores desde la base de datos
+async function cargarOpcionesSelectores() {
+    console.log('Iniciando carga de opciones de selectores...');
+    const categorias = ['EXTENDIDO', 'CELULAS_CONFORMACION', 'CELULAS_JUNTO_A', 'COMP_INFLAMATORIO', 'FLORA', 'DIAGNOSTICO', 'DATOS_CLINICOS'];
+    
+    for (const categoria of categorias) {
+        try {
+            console.log(`Cargando opciones para ${categoria}...`);
+            const response = await fetch(`/plantillas-dinamicas/api/lineas-pap/${categoria}`);
+            console.log(`Response status para ${categoria}:`, response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                // Mapeo específico para nombres de selectores
+                const mapeoSelectores = {
+                    'EXTENDIDO': 'extendido',
+                    'CELULAS_CONFORMACION': 'celulas-conformacion',
+                    'CELULAS_JUNTO_A': 'celulas-junto-a',
+                    'COMP_INFLAMATORIO': 'componente-inflamatorio',
+                    'FLORA': 'flora',
+                    'DIAGNOSTICO': 'diagnostico',
+                    'DATOS_CLINICOS': 'datos-clinicos'
+                };
+                const selectorId = mapeoSelectores[categoria];
+                console.log(`Buscando selector con ID: ${selectorId}`);
+                const selector = document.getElementById(selectorId);
+                
+                if (selector) {
+                    console.log(`Selector encontrado para ${categoria}`);
+                    // Limpiar opciones existentes (excepto la primera)
+                    selector.innerHTML = '<option value="">Seleccionar...</option>';
+                    
+                    // Agregar opciones desde la BD
+                    data.lineas.forEach(linea => {
+                        const option = document.createElement('option');
+                        option.value = linea.lineas_pap_id;
+                        option.textContent = linea.texto;
+                        selector.appendChild(option);
+                    });
+                    
+                    console.log(`✓ Opciones cargadas para ${categoria}: ${data.lineas.length}`);
+                } else {
+                    console.error(`❌ Selector no encontrado para ${categoria} (ID: ${selectorId})`);
+                }
+            } else {
+                console.error(`❌ Error cargando opciones para ${categoria}:`, response.status);
+            }
+        } catch (error) {
+            console.error(`❌ Error cargando opciones para ${categoria}:`, error);
+        }
+    }
+    console.log('Carga de opciones completada.');
+}
+
+// ===== FUNCIONES PARA GESTIONAR LÍNEAS INLINE =====
+
+// Agregar nueva línea a una sección específica
+function agregarLineaUI(seccion) {
+    console.log(`🔍 Intentando agregar línea para sección: ${seccion}`);
+    
+    const contenedor = document.getElementById(`lineas-${seccion}`);
+    console.log(`🔍 Contenedor encontrado:`, contenedor);
+    
+    if (!contenedor) {
+        console.error(`❌ Contenedor no encontrado: lineas-${seccion}`);
+        alert(`Error: No se encontró el contenedor para ${seccion}`);
+        return;
+    }
+    
+    console.log(`✅ Contenedor encontrado, agregando línea...`);
+    
+    // Crear nueva línea (sin caja, solo selector)
+    const nuevaLinea = document.createElement('div');
+    nuevaLinea.className = 'renglon linea-adicional';
+    
+    nuevaLinea.innerHTML = `
+        <div class="d-flex gap-2">
+            <select class="form-select renglon-selector" onchange="guardarSeleccionInline(this)">
+                <option value="">Seleccionar...</option>
+            </select>
+            <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline(this)" title="Editar texto">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-danger" onclick="eliminarLineaUI(this)" title="Eliminar línea">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    // Cargar opciones en el nuevo selector
+    const select = nuevaLinea.querySelector('select');
+    cargarOpcionesEnSelector(select, seccion);
+    
+    contenedor.appendChild(nuevaLinea);
+    console.log(`✅ Línea agregada exitosamente a ${seccion}`);
+}
+
+// Cargar opciones en un selector específico
+async function cargarOpcionesEnSelector(select, categoria) {
+    try {
+        // Usar API para todas las categorías (incluyendo datos clínicos)
+        const response = await fetch(`/plantillas-dinamicas/api/lineas-pap/${categoria}`);
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Limpiar opciones existentes
+            select.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            // Agregar opciones desde la API
+            data.lineas.forEach(linea => {
+                const option = document.createElement('option');
+                option.value = linea.lineas_pap_id;
+                option.textContent = linea.texto;
+                select.appendChild(option);
+            });
+        } else {
+            console.error(`Error cargando opciones para ${categoria}:`, response.status);
+        }
+    } catch (error) {
+        console.error('Error cargando opciones:', error);
+    }
+}
+
+// Editar texto inline (convertir selector a input)
+function editarTextoInline(elemento) {
+    let selector;
+    
+    // Si es un string, es un ID de selector principal
+    if (typeof elemento === 'string') {
+        selector = document.getElementById(elemento);
+    } else {
+        // Si es un botón, obtener el select del contenedor
+        selector = elemento.closest('.d-flex').querySelector('select');
+    }
+    
+    if (!selector) {
+        console.error('❌ No se pudo encontrar el selector');
+        return;
+    }
+    
+    const textoActual = selector.options[selector.selectedIndex]?.textContent || '';
+    
+    // Crear input temporal
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control';
+    input.value = textoActual;
+    input.placeholder = 'Escriba el texto de la línea...';
+    
+    // Reemplazar selector con input
+    selector.style.display = 'none';
+    selector.parentNode.insertBefore(input, selector);
+    
+    // Agregar botones de acción
+    const botonesAccion = document.createElement('div');
+    botonesAccion.className = 'd-flex gap-1 mt-2';
+    botonesAccion.innerHTML = `
+        <button class="btn btn-sm btn-success" onclick="guardarTextoInline(this)" title="Guardar">
+            <i class="bi bi-check"></i>
+        </button>
+        <button class="btn btn-sm btn-secondary" onclick="cancelarEdicionInline(this)" title="Cancelar">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    input.parentNode.insertBefore(botonesAccion, input.nextSibling);
+    input.focus();
+    input.select();
+    
+    // Agregar navegación con teclado
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            guardarTextoInline(botonesAccion.querySelector('button[onclick="guardarTextoInline(this)"]'));
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelarEdicionInline(botonesAccion.querySelector('button[onclick="cancelarEdicionInline(this)"]'));
+        }
+    });
+}
+
+// Guardar texto inline
+async function guardarTextoInline(boton) {
+    const contenedor = boton.closest('.renglon');
+    const input = contenedor.querySelector('input[type="text"]');
+    const selector = contenedor.querySelector('select');
+    const texto = input.value.trim();
+    
+    if (!texto) {
+        alert('Por favor ingrese un texto');
+        return;
+    }
+    
+    // Crear nueva opción en el selector
+    const nuevaOpcion = document.createElement('option');
+    nuevaOpcion.value = 'custom_' + Date.now();
+    nuevaOpcion.textContent = texto;
+    nuevaOpcion.selected = true;
+    selector.appendChild(nuevaOpcion);
+    
+    // Restaurar selector
+    selector.style.display = 'block';
+    input.remove();
+    boton.parentNode.remove();
+    
+    // Guardar en base de datos si es necesario
+    await guardarSeleccionInline(selector);
+}
+
+// Cancelar edición inline
+function cancelarEdicionInline(boton) {
+    const contenedor = boton.closest('.renglon');
+    const input = contenedor.querySelector('input[type="text"]');
+    const selector = contenedor.querySelector('select');
+    
+    // Restaurar selector
+    selector.style.display = 'block';
+    input.remove();
+    boton.parentNode.remove();
+}
+
+// Guardar selección inline
+async function guardarSeleccionInline(selector) {
+    const valor = selector.value;
+    const texto = selector.options[selector.selectedIndex]?.textContent;
+    
+    if (!valor || !texto) return;
+    
+    // Aquí podrías guardar la selección en la base de datos si es necesario
+    console.log('Selección guardada:', { valor, texto });
+}
+
+// Eliminar línea
+function eliminarLineaUI(boton) {
+    if (!confirm('¿Está seguro de que desea eliminar esta línea?')) {
+        return;
+    }
+    
+    const contenedor = boton.closest('.renglon');
+    if (contenedor) {
+    contenedor.remove();
+        // Actualizar texto generado después de eliminar
+        actualizarTextoGenerado();
+    }
+}
+
+function cargarPlantillasPersonalizadas() {
+    return fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.success || !Array.isArray(data.plantillas)) {
+                plantillasPersonalizadas = {};
+                return;
+            }
+            plantillasPersonalizadas = {};
+            data.plantillas.forEach(plantilla => {
+                if (plantilla && plantilla.nombre) {
+                    plantillasPersonalizadas[plantilla.nombre] = plantilla.lineas || {};
+                }
+            });
+
+            actualizarOpcionesPersonalizadas();
+        })
+        .catch(error => {
+            console.error('Error cargando plantillas personalizadas:', error);
+            plantillasPersonalizadas = {};
+        });
+}
+
+function obtenerLineasPorCategoriaDesdeClasico() {
+    const resultado = {};
+    const lineas = recolectarLineasProtocolo();
+    lineas.forEach(item => {
+        const categoria = (item.seccion || '').toUpperCase();
+        if (!categoria) {
+            return;
+        }
+        if (!resultado[categoria]) {
+            resultado[categoria] = [];
+        }
+        if (item.texto) {
+            resultado[categoria].push(item.texto);
+        }
+    });
+    return resultado;
+}
+
+function actualizarOpcionesPersonalizadas() {
+    const datalist = document.getElementById('lista-nombres-plantillas');
+    if (datalist) {
+        datalist.innerHTML = '';
+        Object.keys(plantillasPersonalizadas).forEach(nombre => {
+            const option = document.createElement('option');
+            option.value = nombre;
+            datalist.appendChild(option);
+        });
+    }
+    actualizarListaPlantillasPersonalizadas();
+}
+
+function actualizarListaPlantillasPersonalizadas() {
+    const contenedor = document.getElementById('lista-plantillas-personalizadas');
+    if (!contenedor) return;
+
+    const nombres = Object.keys(plantillasPersonalizadas);
+    if (nombres.length === 0) {
+        contenedor.innerHTML = '<div class="text-muted text-center py-2">No hay plantillas guardadas</div>';
+        return;
+    }
+
+    contenedor.innerHTML = '';
+    nombres.forEach(nombre => {
+        const item = document.createElement('div');
+        item.className = 'list-group-item d-flex justify-content-between align-items-center';
+        item.innerHTML = `
+            <span>${nombre}</span>
+            <button class="btn btn-sm btn-outline-danger" onclick="borrarPlantillaPersonalizada('${nombre}')" title="Borrar">
+                <i class="bi bi-trash"></i>
+            </button>
+        `;
+        contenedor.appendChild(item);
+    });
+}
+
+function borrarPlantillaPersonalizada(nombre) {
+    if (!nombre) return;
+
+    if (!confirm(`¿Está seguro de que desea borrar la plantilla "${nombre}"?`)) {
+        return;
+    }
+
+    fetch(`/plantillas-dinamicas/api/plantillas/personalizadas/PAP/${encodeURIComponent(nombre)}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+    })
+        .then(response => response.json()
+            .then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data || !data.success) {
+                alert(data && data.error ? `Error al borrar: ${data.error}` : 'No se pudo borrar la plantilla.');
+                return;
+            }
+
+            alert('Plantilla borrada correctamente.');
+            cargarPlantillasPersonalizadas().then(() => {
+                actualizarListaPlantillasPersonalizadas();
+            });
+        })
+        .catch(error => {
+            console.error('Error borrando plantilla personalizada:', error);
+            alert('Ocurrió un error al borrar la plantilla.');
+        });
+}
+
+function abrirModalGuardarPlantillaPersonalizada() {
+    if (!modalGuardarPlantillaPersonalizada && typeof bootstrap !== 'undefined') {
+        const modalEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+        if (modalEl) {
+            modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalEl);
+        }
+    }
+
+    // Cargar plantillas antes de abrir el modal
+    cargarPlantillasPersonalizadas().then(() => {
+        actualizarOpcionesPersonalizadas();
+
+        const input = document.getElementById('input-nombre-plantilla');
+        if (input) {
+            input.value = '';
+            setTimeout(() => input.focus(), 150);
+        }
+
+        if (modalGuardarPlantillaPersonalizada) {
+            modalGuardarPlantillaPersonalizada.show();
+        }
+    });
+}
+
+function guardarPlantillaPersonalizada() {
+    const input = document.getElementById('input-nombre-plantilla');
+    if (!input) return;
+
+    let nombre = (input.value || '').trim();
+    if (!nombre) {
+        alert('Por favor ingrese un nombre o código para la plantilla.');
+        return;
+    }
+
+    const lineas = obtenerLineasPorCategoriaDesdeClasico();
+    if (Object.keys(lineas).length === 0) {
+        alert('No hay contenido para guardar como plantilla.');
+        return;
+    }
+
+    const existentes = Object.keys(plantillasPersonalizadas);
+    const coincidencia = existentes.find(n => n.toLowerCase() === nombre.toLowerCase());
+    let sobrescribir = false;
+
+    if (coincidencia) {
+        const confirmar = confirm(`La plantilla "${coincidencia}" ya existe. ¿Desea reemplazarla?`);
+        if (!confirmar) {
+            return;
+        }
+        nombre = coincidencia;
+        sobrescribir = true;
+    }
+
+    fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            nombre: nombre,
+            lineas: lineas,
+            sobrescribir: sobrescribir
+        })
+    })
+        .then(response => response.json()
+            .then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data || !data.success) {
+                if (data && data.error === 'exists') {
+                    alert('La plantilla ya existe y no se reemplazó.');
+                } else {
+                    alert(data && data.error ? `Error al guardar: ${data.error}` : 'No se pudo guardar la plantilla.');
+                }
+                return;
+            }
+
+            let mensaje = 'Plantilla guardada correctamente.';
+            if (data.asignada_a_boton) {
+                mensaje += `\n\n✓ La plantilla se ha asignado automáticamente al botón "${nombre}".`;
+            }
+
+            alert(mensaje);
+
+            if (modalGuardarPlantillaPersonalizada) {
+                modalGuardarPlantillaPersonalizada.hide();
+            }
+
+            cargarPlantillasPersonalizadas();
+        })
+        .catch(error => {
+            console.error('Error guardando plantilla personalizada:', error);
+            alert('Ocurrió un error al guardar la plantilla.');
+        });
+}
+
+// Cargar contenido guardado al inicio
+document.addEventListener('DOMContentLoaded', function() {
+    // Cargar opciones de selectores desde la BD
+    cargarOpcionesSelectores();
+    
+    // Cargar líneas guardadas del protocolo
+    cargarLineasProtocolo();
+    
+    if (Object.keys(contenidoActual).length > 0) {
+        cargarContenidoGuardado();
+    }
+    cargarSeccion(seccionActual);
+
+    const modalElemento = document.getElementById('modalGuardarProtocolo');
+    if (modalElemento && typeof bootstrap !== 'undefined') {
+        modalGuardar = new bootstrap.Modal(modalElemento);
+    }
+
+    const btnGuardarSolo = document.getElementById('btn-guardar-solo');
+    if (btnGuardarSolo) {
+        btnGuardarSolo.addEventListener('click', function() {
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarPlantilla('guardar');
+        });
+    }
+
+    const btnGuardarCompletar = document.getElementById('btn-guardar-completar');
+    if (btnGuardarCompletar) {
+        btnGuardarCompletar.addEventListener('click', function() {
+            if (!esMedico) {
+                alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+                return;
+            }
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarPlantilla('completar');
+        });
+    }
+
+    const modalPersonalizadaEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+    if (modalPersonalizadaEl && typeof bootstrap !== 'undefined') {
+        modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalPersonalizadaEl);
+    }
+
+    const btnGuardarPlantillaPersonalizada = document.getElementById('btn-guardar-plantilla-personalizada');
+    if (btnGuardarPlantillaPersonalizada) {
+        btnGuardarPlantillaPersonalizada.addEventListener('click', guardarPlantillaPersonalizada);
+    }
+
+    // Modal de asignar plantilla a botón
+    const modalAsignarPlantilla = document.getElementById('modalAsignarPlantilla');
+    if (modalAsignarPlantilla && typeof bootstrap !== 'undefined') {
+        window.modalAsignarPlantilla = new bootstrap.Modal(modalAsignarPlantilla);
+    }
+
+    const btnAsignarPlantillaBoton = document.getElementById('btn-asignar-plantilla-boton');
+    if (btnAsignarPlantillaBoton) {
+        btnAsignarPlantillaBoton.addEventListener('click', asignarPlantillaABoton);
+    }
+
+    cargarPlantillasPersonalizadas();
+});
+
+// Variables globales para el menú contextual
+let botonSeleccionadoParaAsignar = null;
+
+// Funciones para pestañas compactas de datos generales
+function mostrarDatosPaciente() {
+    // Cambiar pestañas
+    document.querySelectorAll('.datos-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector('[onclick="mostrarDatosPaciente()"]').classList.add('active');
+    
+    // Cambiar contenido
+    document.querySelectorAll('.datos-panel').forEach(panel => panel.classList.remove('active'));
+    document.getElementById('datos-paciente').classList.add('active');
+}
+
+function mostrarDatosPrestador() {
+    // Cambiar pestañas
+    document.querySelectorAll('.datos-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector('[onclick="mostrarDatosPrestador()"]').classList.add('active');
+    
+    // Cambiar contenido
+    document.querySelectorAll('.datos-panel').forEach(panel => panel.classList.remove('active'));
+    document.getElementById('datos-prestador').classList.add('active');
+}
+
+function cambiarSeccion(tipoSeccion) {
+    // Actualizar botones del panel izquierdo
+    const panelButtons = document.querySelectorAll('.acciones-panel .btn-accion');
+    panelButtons.forEach(btn => btn.classList.remove('btn-primary'));
+    panelButtons.forEach(btn => btn.classList.add('btn-outline-primary'));
+    
+    // Activar botón correspondiente
+    const activeButton = document.querySelector(`[onclick="cambiarSeccion('${tipoSeccion}')"]`);
+    if (activeButton) {
+        activeButton.classList.remove('btn-outline-primary');
+        activeButton.classList.add('btn-primary');
+    }
+    
+    // Ocultar todos los contenidos de sección
+    document.querySelectorAll('.seccion-contenido').forEach(contenido => {
+        contenido.style.display = 'none';
+    });
+    
+    // Mostrar contenido de la sección seleccionada
+    const contenidoSeccion = document.getElementById(`contenido-${tipoSeccion}`);
+    if (contenidoSeccion) {
+        contenidoSeccion.style.display = 'block';
+    }
+    
+    // Actualizar título de la sección
+    const tituloSeccion = document.getElementById('titulo-seccion');
+    const iconos = {
+        'datos-generales': 'bi-file-text',
+        'datos-clinicos': 'bi-clipboard-data', 
+        'descripcion-citologica': 'bi-search'
+    };
+    const nombres = {
+        'datos-generales': 'Datos Generales',
+        'datos-clinicos': 'Datos Clínicos',
+        'descripcion-citologica': 'Descripción Citológica'
+    };
+    
+    if (tituloSeccion) {
+        tituloSeccion.innerHTML = `<i class="bi ${iconos[tipoSeccion]}"></i> ${nombres[tipoSeccion]}`;
+    }
+}
+
+function cargarSeccion(codigoSeccion) {
+    seccionActual = codigoSeccion;
+    
+    // Buscar sección
+    const seccion = {{ secciones | tojson }}.find(s => s.codigo === codigoSeccion);
+    if (!seccion) return;
+    
+    // Cargar líneas de la sección
+    fetch(`/plantillas-dinamicas/obtener-lineas/${seccion.seccion_id}`)
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            lineasCargadas[seccion.seccion_id] = data.lineas;
+            mostrarCamposSeccion(data.seccion, data.lineas);
+        }
+    });
+}
+
+function mostrarCamposSeccion(seccion, lineas) {
+    const camposDiv = document.getElementById('campos-seccion');
+    
+    let html = `
+        <div class="campo-texto">
+            <label>${seccion.nombre}:</label>
+            <select id="select-${seccion.id}" onchange="seleccionarLinea(${seccion.id}, this.value)">
+                <option value="">Selecciona una opción...</option>
+    `;
+    
+    lineas.forEach(linea => {
+        const selected = contenidoActual[seccion.id] == linea.id ? 'selected' : '';
+        html += `<option value="${linea.id}" ${selected}>${linea.texto}</option>`;
+    });
+    
+    html += `
+            </select>
+        </div>
+    `;
+    
+    camposDiv.innerHTML = html;
+    
+    // Actualizar texto generado
+    actualizarTextoGenerado();
+}
+
+function seleccionarLinea(seccionId, lineaId) {
+    if (lineaId) {
+        contenidoActual[seccionId] = parseInt(lineaId);
+        
+        // Registrar uso
+        fetch(`/plantillas-dinamicas/usar-linea/${lineaId}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+    } else {
+        delete contenidoActual[seccionId];
+    }
+    
+    actualizarTextoGenerado();
+}
+
+function seleccionarBoton(codigoBoton, numeroBoton) {
+    // Verificar si hay contenido actual antes de aplicar plantilla
+    const lineasActuales = recolectarLineasProtocolo();
+    const tieneContenido = lineasActuales.length > 0;
+    
+    if (tieneContenido) {
+        const confirmar = confirm(`¿Aplicar la plantilla "${codigoBoton}"? Esto reemplazará el contenido actual en las secciones correspondientes.`);
+        if (!confirmar) {
+            return;
+        }
+    }
+    
+    activarBotonPlantilla(`btn-${codigoBoton}`);
+    aplicarPlantilla(codigoBoton);
+}
+
+function activarBotonPlantilla(btnId) {
+    document.querySelectorAll('.boton-seccion, .boton-personalizada').forEach(btn => btn.classList.remove('activo'));
+    const boton = document.getElementById(btnId);
+    if (boton) {
+        boton.classList.add('activo');
+    }
+}
+
+async function aplicarPlantilla(codigoPlantilla, datosPersonalizados = null) {
+    try {
+        if (datosPersonalizados) {
+            aplicarPlantillaDesdeDatos(datosPersonalizados);
+            return;
+        }
+
+        const response = await fetch(`/plantillas-dinamicas/api/plantilla-pap/${codigoPlantilla}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.error) {
+                console.error(`Error cargando plantilla ${codigoPlantilla}:`, data.error);
+                aplicarPlantillaHardcodeada(codigoPlantilla);
+                return;
+            }
+            
+            const lineasPorCategoria = {};
+            data.lineas.forEach(linea => {
+                const categoria = (linea.categoria || '').toUpperCase();
+                if (!lineasPorCategoria[categoria]) {
+                    lineasPorCategoria[categoria] = [];
+                }
+                lineasPorCategoria[categoria].push({
+                    texto: linea.texto,
+                    lineas_pap_id: linea.lineas_pap_id
+                });
+            });
+
+            aplicarPlantillaDesdeDatos(lineasPorCategoria);
+        } else {
+            console.error(`Error cargando plantilla ${codigoPlantilla}:`, response.status);
+            aplicarPlantillaHardcodeada(codigoPlantilla);
+        }
+    } catch (error) {
+        console.error(`Error aplicando plantilla ${codigoPlantilla}:`, error);
+        aplicarPlantillaHardcodeada(codigoPlantilla);
+    }
+}
+
+function aplicarPlantillaDesdeDatos(lineasPorCategoria) {
+    console.log('📋 Aplicando plantilla desde datos:', lineasPorCategoria);
+    
+    // Mapeo de categorías a selectores
+            const mapeoCategorias = {
+                'EXTENDIDO': 'extendido',
+                'CELULAS_CONFORMACION': 'celulas-conformacion',
+                'CELULAS_JUNTO_A': 'celulas-junto-a',
+                'COMP_INFLAMATORIO': 'componente-inflamatorio',
+                'FLORA': 'flora',
+        'DIAGNOSTICO': 'diagnostico',
+        'DATOS_CLINICOS': 'datos-clinicos'
+            };
+            
+    // PRIMERO: Limpiar completamente todos los selectores y inputs antes de aplicar
+    Object.keys(mapeoCategorias).forEach(categoria => {
+        const selectorId = mapeoCategorias[categoria];
+            const selector = document.getElementById(selectorId);
+            if (selector) {
+            // Limpiar selector
+                selector.value = '';
+            // Asegurar que el selector sea visible
+            selector.style.display = 'block';
+            
+            // Buscar y eliminar TODOS los inputs de texto relacionados y botones de acción
+            const renglon = selector.closest('.renglon');
+            if (renglon) {
+                // Eliminar todos los inputs de texto en el renglon (excepto los de líneas adicionales)
+                const inputs = renglon.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    if (!input.closest('.linea-adicional')) {
+                        input.remove();
+            }
+                });
+                
+                // Eliminar botones de acción (guardar/cancelar) - buscar por el patrón de botones
+                const botonesAccion = renglon.querySelectorAll('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                if (botonesAccion.length > 0) {
+                    // Eliminar el contenedor de botones (el div padre)
+                    botonesAccion.forEach(btn => {
+                        const contenedor = btn.closest('.d-flex');
+                        if (contenedor && contenedor.querySelector('button[onclick*="guardarTextoInline"]')) {
+                            contenedor.remove();
+                        }
+                    });
+                }
+                
+                // Remover cualquier clase de marcado o estilo especial
+                renglon.classList.remove('marcado', 'eliminado', 'error', 'editando');
+            }
+            
+            // Buscar también en el contenedor padre del selector y sus hermanos
+            const parentDiv = selector.parentNode;
+            if (parentDiv) {
+                // Buscar todos los inputs de texto en el contenedor padre
+                const todosLosInputs = parentDiv.querySelectorAll('input[type="text"]');
+                todosLosInputs.forEach(input => {
+                    // Solo eliminar si no es parte de una línea adicional
+                    if (!input.closest('.linea-adicional')) {
+                        // Verificar si el input está relacionado con este selector
+                        const inputRenglon = input.closest('.renglon');
+                        const selectorRenglon = selector.closest('.renglon');
+                        if (inputRenglon === selectorRenglon || inputRenglon === null) {
+                            input.remove();
+                        }
+                    }
+                });
+                
+                // Buscar todos los contenedores de botones de acción
+                const todosLosContenedores = parentDiv.querySelectorAll('.d-flex');
+                todosLosContenedores.forEach(contenedor => {
+                    const tieneBotonesAccion = contenedor.querySelector('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                    if (tieneBotonesAccion) {
+                        // Verificar si está relacionado con este selector
+                        const contenedorRenglon = contenedor.closest('.renglon');
+                        const selectorRenglon = selector.closest('.renglon');
+                        if (contenedorRenglon === selectorRenglon || contenedorRenglon === null) {
+                            contenedor.remove();
+                        }
+                    }
+                });
+                
+                // Buscar también en los nodos siguientes al selector
+                let siguiente = selector.nextSibling;
+                while (siguiente) {
+                    if (siguiente.nodeType === 1) { // Element node
+                        if (siguiente.tagName === 'INPUT' && siguiente.type === 'text') {
+                            if (!siguiente.closest('.linea-adicional')) {
+                                siguiente.remove();
+                            }
+                        } else if (siguiente.classList && siguiente.classList.contains('d-flex')) {
+                            const tieneBotonesAccion = siguiente.querySelector('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                            if (tieneBotonesAccion) {
+                                siguiente.remove();
+                            }
+                        }
+                    }
+                    siguiente = siguiente.nextSibling;
+                }
+            }
+            
+            // Limpiar también cualquier estilo inline que pueda causar problemas visuales
+            selector.style.display = 'block';
+            selector.style.backgroundColor = '';
+            selector.style.border = '';
+            selector.style.textDecoration = '';
+            
+            // Limpiar el renglon completo si existe (usar la misma variable que se usó antes)
+            const renglonFinal = selector.closest('.renglon');
+            if (renglonFinal) {
+                renglonFinal.style.backgroundColor = '';
+                renglonFinal.style.border = '';
+                renglonFinal.style.textDecoration = '';
+                renglonFinal.style.borderLeft = '';
+            }
+        }
+        
+        // Limpiar líneas adicionales existentes Y todos sus elementos relacionados
+        const contenedor = document.getElementById(`lineas-${categoria}`);
+            if (contenedor) {
+            // Limpiar todas las líneas adicionales
+            const lineasAdicionales = contenedor.querySelectorAll('.linea-adicional, .renglon');
+            lineasAdicionales.forEach(linea => {
+                // Antes de eliminar, limpiar todos los inputs y botones de acción relacionados
+                const inputs = linea.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    // Remover cualquier estilo inline que pueda causar el fondo rojo
+                    input.style.backgroundColor = '';
+                    input.style.border = '';
+                    input.removeAttribute('readonly');
+                    input.removeAttribute('readOnly');
+                    input.removeAttribute('disabled');
+                });
+                
+                // Eliminar botones de acción (guardar/cancelar) si existen
+                const botonesAccion = linea.querySelectorAll('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                if (botonesAccion.length > 0) {
+                    botonesAccion.forEach(btn => {
+                        const contenedorBotones = btn.closest('.d-flex');
+                        if (contenedorBotones) {
+                            contenedorBotones.remove();
+                        }
+                    });
+                }
+                
+                // Eliminar la línea completa
+                linea.remove();
+            });
+            
+            // También buscar y eliminar cualquier elemento que pueda haber quedado huérfano
+            const elementosHuérfanos = contenedor.querySelectorAll('input[type="text"], select, .d-flex');
+            elementosHuérfanos.forEach(elem => {
+                // Solo eliminar si no está dentro de una línea adicional (que ya debería estar limpia)
+                if (!elem.closest('.linea-adicional') && !elem.closest('.renglon')) {
+                    elem.remove();
+                }
+        });
+        
+            // Limpiar completamente el contenedor de cualquier contenido residual
+            contenedor.innerHTML = '';
+        }
+    });
+    
+    // Aplicar líneas por categoría
+        Object.keys(lineasPorCategoria).forEach(categoria => {
+            const selectorId = mapeoCategorias[categoria];
+        if (!selectorId) {
+            console.warn(`⚠️ Categoría ${categoria} no tiene selector asociado`);
+            return;
+        }
+        
+                    const selector = document.getElementById(selectorId);
+        if (!selector) {
+            console.warn(`⚠️ Selector ${selectorId} no encontrado`);
+            return;
+        }
+        
+        const lineas = lineasPorCategoria[categoria];
+        if (!lineas || lineas.length === 0) {
+            // Limpiar selector si no hay líneas
+            selector.value = '';
+            // Limpiar input de texto si existe
+            const input = selector.parentNode.querySelector('input[type="text"]');
+            if (input) {
+                input.value = '';
+            }
+            return;
+        }
+        
+        // Primera línea va al selector principal
+        const primeraLinea = lineas[0];
+        if (primeraLinea) {
+            // Intentar encontrar la opción por lineas_pap_id primero
+            let option = null;
+            if (primeraLinea.lineas_pap_id) {
+                option = Array.from(selector.options).find(opt => opt.value == primeraLinea.lineas_pap_id);
+            }
+            
+            // Si no se encuentra por ID, buscar por texto
+            if (!option && primeraLinea.texto) {
+                option = Array.from(selector.options).find(opt => 
+                    opt.textContent.trim().toLowerCase() === primeraLinea.texto.trim().toLowerCase()
+                );
+            }
+            
+            if (option) {
+                selector.value = option.value;
+                // Disparar evento change para que se ejecuten los handlers
+                selector.dispatchEvent(new Event('change', { bubbles: true }));
+            } else if (primeraLinea.texto) {
+                // Si no existe la opción exacta, buscar la más cercana por texto parcial
+                const opciones = Array.from(selector.options);
+                const opcionCercana = opciones.find(opt => 
+                    opt.textContent.trim().toLowerCase().includes(primeraLinea.texto.trim().toLowerCase()) ||
+                    primeraLinea.texto.trim().toLowerCase().includes(opt.textContent.trim().toLowerCase())
+                );
+                
+                if (opcionCercana) {
+                    selector.value = opcionCercana.value;
+                    selector.style.display = 'block';
+                    selector.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    // Si no hay opción cercana, crear una opción temporal en el selector
+                    // para evitar crear inputs de texto que causen problemas visuales
+                    const nuevaOpcion = document.createElement('option');
+                    nuevaOpcion.value = 'temp_' + Date.now();
+                    nuevaOpcion.textContent = primeraLinea.texto;
+                    nuevaOpcion.selected = true;
+                    selector.appendChild(nuevaOpcion);
+                    selector.style.display = 'block';
+                    selector.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                }
+                
+        // Líneas adicionales van a los contenedores de líneas adicionales
+                if (lineas.length > 1) {
+            const contenedor = document.getElementById(`lineas-${categoria}`);
+                    if (contenedor) {
+                        for (let i = 1; i < lineas.length; i++) {
+                            const linea = lineas[i];
+                    agregarLineaAdicional(categoria, linea.texto, linea.lineas_pap_id);
+                }
+            }
+        }
+    });
+    
+    // Forzar actualización del texto generado después de aplicar todas las líneas
+    // Usar un delay para asegurar que todos los eventos change se hayan procesado
+    setTimeout(() => {
+        // Recolectar líneas actualizadas del DOM para verificar que se aplicaron
+        const lineasActualizadas = recolectarLineasProtocolo();
+        console.log('📊 Líneas recolectadas después de aplicar plantilla:', lineasActualizadas.length);
+        
+        // Actualizar texto generado
+        actualizarTextoGenerado();
+        console.log('✓ Plantilla aplicada correctamente');
+    }, 400);
+}
+
+function agregarLineaAdicional(categoria, texto, lineasPapId) {
+    const contenedor = document.getElementById(`lineas-${categoria}`);
+    if (!contenedor) return;
+    
+    // Crear la línea con la misma estructura que agregarLineaUI
+    const lineaDiv = document.createElement('div');
+    lineaDiv.className = 'renglon linea-adicional';
+                            
+    // Crear la estructura: selector + botón editar + botón borrar
+    lineaDiv.innerHTML = `
+                                <div class="d-flex gap-2">
+                                    <select class="form-select renglon-selector" onchange="guardarSeleccionInline(this)">
+                                        <option value="">Seleccionar...</option>
+                                    </select>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editarTextoInline(this)" title="Editar texto">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="eliminarLineaUI(this)" title="Eliminar línea">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            `;
+                            
+    // Obtener el selector y cargar las opciones
+    const select = lineaDiv.querySelector('select');
+    
+    // Cargar opciones en el selector (igual que en agregarLineaUI)
+                            cargarOpcionesEnSelector(select, categoria).then(() => {
+        // Si hay un texto inicial, intentar seleccionarlo en el selector
+        if (texto) {
+                                const opciones = select.querySelectorAll('option');
+            let opcionEncontrada = false;
+            
+            // Buscar coincidencia exacta por texto
+                                for (let opcion of opciones) {
+                if (opcion.textContent.trim() === texto.trim()) {
+                                        select.value = opcion.value;
+                    opcionEncontrada = true;
+                    console.log(`✅ Línea adicional: texto encontrado en opciones: "${texto}"`);
+                                        break;
+                                    }
+                                }
+            
+            // Si hay un lineasPapId, buscar por ID también
+            if (!opcionEncontrada && lineasPapId) {
+                const opcionPorId = select.querySelector(`option[value="${lineasPapId}"]`);
+                if (opcionPorId) {
+                    select.value = lineasPapId;
+                    opcionEncontrada = true;
+                    console.log(`✅ Línea adicional: encontrada por ID: ${lineasPapId}`);
+                }
+            }
+            
+            // Si no se encuentra la opción, crear directamente un input de texto editable
+            // para mostrar el texto sin necesidad de activar el modo de edición
+            if (!opcionEncontrada) {
+                console.log(`⚠️ Línea adicional: texto "${texto}" no encontrado en opciones. Creando input de texto.`);
+                
+                // Ocultar el selector y crear un input de texto editable
+                select.style.display = 'none';
+                
+                // Crear input de texto editable (sin readonly para evitar fondo rojo)
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'form-control renglon-selector';
+                input.value = texto;
+                input.placeholder = 'Texto personalizado...';
+                
+                // Asegurar que NO tenga readonly (esto causa el fondo rojo)
+                input.removeAttribute('readonly');
+                input.removeAttribute('readOnly');
+                input.removeAttribute('disabled');
+                // Limpiar cualquier estilo que pueda causar fondo rojo
+                input.style.backgroundColor = '';
+                input.style.border = '';
+                input.style.color = '';
+                
+                // Insertar el input en lugar del selector (en la misma posición)
+                const contenedorSelect = select.parentNode;
+                contenedorSelect.insertBefore(input, select);
+                
+                // Hacer que el input actualice cuando cambie
+                input.addEventListener('change', function() {
+                    guardarSeleccionInline(select);
+                    actualizarTextoGenerado();
+                });
+                
+                input.addEventListener('input', function() {
+                    actualizarTextoGenerado();
+                });
+                
+                // Modificar el botón de edición para permitir alternar entre input y selector
+                const btnEditar = lineaDiv.querySelector('button[onclick*="editarTextoInline"]');
+                if (btnEditar) {
+                    // Remover el onclick inline y agregar un event listener
+                    btnEditar.removeAttribute('onclick');
+                    
+                    // Nuevo comportamiento: cuando el input está visible (texto no encontrado),
+                    // el botón de edición permite alternar al selector
+                    btnEditar.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        
+                        // Verificar si el input está visible
+                        const inputVisible = input.parentNode && 
+                                           (input.style.display !== 'none') && 
+                                           (getComputedStyle(input).display !== 'none');
+                        
+                        if (inputVisible) {
+                            // Si el input está visible, alternar al selector
+                            // Guardar el valor del input en una opción temporal del selector
+                            const valorInput = input.value.trim();
+                            if (valorInput) {
+                                // Crear una opción temporal en el selector con el texto del input
+                                const opcionTemporal = document.createElement('option');
+                                opcionTemporal.value = 'temp_' + Date.now();
+                                opcionTemporal.textContent = valorInput;
+                                opcionTemporal.selected = true;
+                                select.appendChild(opcionTemporal);
+                            }
+                            
+                            // Ocultar el input y mostrar el selector
+                            input.style.display = 'none';
+                            select.style.display = 'block';
+                            select.focus();
+                        } else {
+                            // Si el selector está visible, usar la función normal de edición
+                            editarTextoInline(btnEditar);
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Disparar evento change para actualizar solo si hay una opción seleccionada
+        if (select.value && select.style.display !== 'none') {
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+    
+    contenedor.appendChild(lineaDiv);
+}
+
+// La función eliminarLineaAdicional ya no es necesaria
+// Ahora usamos eliminarLineaUI que ya existe y funciona correctamente para todas las líneas
+
+function actualizarLineaAdicional(elemento, categoria) {
+    // Esta función se ejecuta cuando se modifica una línea adicional
+    console.log('Actualizando línea adicional:', categoria, elemento.value);
+    // Actualizar el texto generado cuando cambia una línea adicional
+    actualizarTextoGenerado();
+}
+
+function limpiarTodasLasSecciones() {
+    if (!confirm('¿Está seguro de que desea limpiar todas las secciones? Se eliminará todo el contenido actual.')) {
+        return;
+    }
+    
+    // Mapeo de selectores a categorías
+    const mapeoSelectores = {
+        'extendido': 'EXTENDIDO',
+        'celulas-conformacion': 'CELULAS_CONFORMACION',
+        'celulas-junto-a': 'CELULAS_JUNTO_A',
+        'componente-inflamatorio': 'COMP_INFLAMATORIO',
+        'flora': 'FLORA',
+        'diagnostico': 'DIAGNOSTICO',
+        'datos-clinicos': 'DATOS_CLINICOS'
+    };
+    
+    // Limpiar todos los selectores principales
+    Object.keys(mapeoSelectores).forEach(selectorId => {
+        const selector = document.getElementById(selectorId);
+        if (selector) {
+            selector.value = '';
+            selector.style.display = 'block';
+            
+            // Buscar y eliminar TODOS los inputs de texto relacionados y botones de acción
+            const renglon = selector.closest('.renglon');
+            if (renglon) {
+                // Eliminar todos los inputs de texto en el renglon (excepto los de líneas adicionales)
+                const inputs = renglon.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    if (!input.closest('.linea-adicional')) {
+                        input.remove();
+                                        }
+                });
+                
+                // Eliminar botones de acción (guardar/cancelar)
+                const botonesAccion = renglon.querySelectorAll('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                if (botonesAccion.length > 0) {
+                    botonesAccion.forEach(btn => {
+                        const contenedor = btn.closest('.d-flex');
+                        if (contenedor && contenedor.querySelector('button[onclick*="guardarTextoInline"]')) {
+                            contenedor.remove();
+                                }
+                            });
+                }
+                
+                // Remover cualquier clase de marcado
+                renglon.classList.remove('marcado', 'eliminado', 'error', 'editando');
+            }
+            
+            // Buscar también en el contenedor padre del selector
+            const parentDiv = selector.parentNode;
+            if (parentDiv) {
+                // Buscar inputs y botones que estén después del selector
+                let siguiente = selector.nextSibling;
+                while (siguiente) {
+                    if (siguiente.nodeType === 1) { // Element node
+                        if (siguiente.tagName === 'INPUT' && siguiente.type === 'text') {
+                            if (!siguiente.closest('.linea-adicional')) {
+                                siguiente.remove();
+                            }
+                        } else if (siguiente.classList && siguiente.classList.contains('d-flex')) {
+                            const tieneBotonesAccion = siguiente.querySelector('button[onclick*="guardarTextoInline"], button[onclick*="cancelarEdicionInline"]');
+                            if (tieneBotonesAccion) {
+                                siguiente.remove();
+                        }
+                    }
+                }
+                    siguiente = siguiente.nextSibling;
+            }
+            }
+        }
+        
+        // Limpiar líneas adicionales
+        const categoria = mapeoSelectores[selectorId];
+        const contenedor = document.getElementById(`lineas-${categoria}`);
+        if (contenedor) {
+            const lineasAdicionales = contenedor.querySelectorAll('.linea-adicional');
+            lineasAdicionales.forEach(linea => linea.remove());
+        }
+    });
+    
+    // Limpiar contenido actual
+    contenidoActual = {};
+    
+    // Actualizar texto generado
+    actualizarTextoGenerado();
+    
+    // Desactivar botón seleccionado
+    document.querySelectorAll('.boton-seccion, .boton-personalizada').forEach(btn => btn.classList.remove('activo'));
+    
+    alert('Todas las secciones han sido limpiadas.');
+}
+
+function mostrarMenuContextual(event, codigoBoton) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    botonSeleccionadoParaAsignar = codigoBoton;
+    
+    // Actualizar el título del modal
+    const nombreBoton = document.getElementById('nombre-boton-asignar');
+    if (nombreBoton) {
+        nombreBoton.textContent = codigoBoton;
+    }
+    
+    // Cargar plantillas personalizadas en el selector
+    cargarPlantillasEnSelectorAsignar().then(() => {
+        // Mostrar el modal
+        if (window.modalAsignarPlantilla) {
+            window.modalAsignarPlantilla.show();
+        }
+    });
+}
+
+function cargarPlantillasEnSelectorAsignar() {
+    return fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('select-plantilla-asignar');
+            if (!select) return;
+            
+            // Limpiar opciones existentes (excepto la primera)
+            select.innerHTML = '<option value="">-- Seleccionar plantilla --</option>';
+            
+            if (data && data.success && Array.isArray(data.plantillas)) {
+                data.plantillas.forEach(plantilla => {
+                    if (plantilla && plantilla.nombre) {
+                        const option = document.createElement('option');
+                        option.value = plantilla.nombre;
+                        option.textContent = plantilla.nombre;
+                        select.appendChild(option);
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error cargando plantillas para asignar:', error);
+        });
+}
+
+function asignarPlantillaABoton() {
+    if (!botonSeleccionadoParaAsignar) {
+        alert('No se ha seleccionado un botón.');
+        return;
+    }
+    
+    const select = document.getElementById('select-plantilla-asignar');
+    if (!select || !select.value) {
+        alert('Por favor seleccione una plantilla.');
+        return;
+    }
+    
+    const nombrePlantilla = select.value.trim();
+    
+    // Guardar la plantilla con el código del botón para que se asigne automáticamente
+    // Primero obtener las líneas de la plantilla seleccionada
+    fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.success || !Array.isArray(data.plantillas)) {
+                alert('No se pudo cargar la plantilla seleccionada.');
+                return;
+        }
+            
+            const plantilla = data.plantillas.find(p => p.nombre === nombrePlantilla);
+            if (!plantilla) {
+                alert('Plantilla no encontrada.');
+                return;
+            }
+            
+            // Guardar la plantilla con el código del botón
+            fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    nombre: botonSeleccionadoParaAsignar,
+                    lineas: plantilla.lineas || {},
+                    sobrescribir: true
+                })
+            })
+                .then(response => response.json()
+                    .then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (!ok || !data || !data.success) {
+                        alert(data && data.error ? `Error al asignar: ${data.error}` : 'No se pudo asignar la plantilla al botón.');
+                        return;
+                    }
+                    
+                    if (window.modalAsignarPlantilla) {
+                        window.modalAsignarPlantilla.hide();
+                    }
+                    
+                    alert(`Plantilla "${nombrePlantilla}" asignada correctamente al botón "${botonSeleccionadoParaAsignar}".`);
+                    botonSeleccionadoParaAsignar = null;
+                })
+                .catch(error => {
+                    console.error('Error asignando plantilla al botón:', error);
+                    alert('Ocurrió un error al asignar la plantilla al botón.');
+                });
+        })
+        .catch(error => {
+            console.error('Error cargando plantilla:', error);
+            alert('Ocurrió un error al cargar la plantilla.');
+        });
+}
+
+
+function actualizarTextoGenerado() {
+    const textoDiv = document.getElementById('texto-final');
+    if (!textoDiv) return;
+    
+    // Recolectar líneas directamente del DOM
+    const lineasRecolectadas = recolectarLineasProtocolo();
+    
+    if (lineasRecolectadas.length === 0) {
+        textoDiv.textContent = 'Selecciona opciones para generar el texto...';
+        return;
+    }
+    
+    let texto = `PROTOCOLO: {{ protocolo.numero_protocolo }}\n`;
+    texto += `PACIENTE: {{ protocolo.afiliado.nombre_completo }}\n`;
+    texto += `FECHA: {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}\n\n`;
+    texto += 'DESCRIPCIÓN CITOLÓGICA:\n';
+    texto += '='.repeat(50) + '\n\n';
+    
+    // Mapeo de categorías a nombres de sección
+    const mapeoCategorias = {
+        'DATOS_CLINICOS': 'DATOS CLÍNICOS',
+        'EXTENDIDO': 'EXTENDIDO',
+        'CELULAS_CONFORMACION': 'DESCRIPCIÓN CITOLÓGICA',
+        'CELULAS_JUNTO_A': 'Junto a',
+        'COMP_INFLAMATORIO': 'COMPONENTE INFLAMATORIO',
+        'FLORA': 'Flora',
+        'DIAGNOSTICO': 'DIAGNÓSTICO'
+    };
+    
+    // Orden de secciones
+    const ordenSecciones = ['DATOS_CLINICOS', 'EXTENDIDO', 'CELULAS_CONFORMACION', 'CELULAS_JUNTO_A', 'COMP_INFLAMATORIO', 'FLORA', 'DIAGNOSTICO'];
+    
+    // Agrupar líneas por sección
+    const lineasPorSeccion = {};
+    lineasRecolectadas.forEach(linea => {
+        if (!lineasPorSeccion[linea.seccion]) {
+            lineasPorSeccion[linea.seccion] = [];
+        }
+        lineasPorSeccion[linea.seccion].push(linea);
+    });
+    
+    // Generar texto ordenado por secciones
+    ordenSecciones.forEach(categoria => {
+        const lineas = lineasPorSeccion[categoria];
+        if (lineas && lineas.length > 0) {
+            const nombreSeccion = mapeoCategorias[categoria] || categoria;
+            texto += `${nombreSeccion}:\n`;
+            lineas.sort((a, b) => a.orden - b.orden);
+            lineas.forEach(linea => {
+                texto += `${linea.texto}\n`;
+            });
+            texto += '\n';
+        }
+    });
+    
+    textoDiv.textContent = texto;
+}
+
+function cargarContenidoGuardado() {
+    // El contenido ya está en contenidoActual desde el template
+    // Solo necesitamos actualizar la visualización
+    actualizarTextoGenerado();
+}
+
+async function guardarPlantilla(accion = 'guardar') {
+    console.log('💾 Iniciando guardado de protocolo...');
+    
+        const lineasProtocolo = recolectarLineasProtocolo();
+    if (lineasProtocolo.length === 0) {
+        alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+        return;
+    }
+
+    if (accion === 'completar' && !esMedico) {
+        alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/plantillas-dinamicas/api/protocolo/{{ protocolo.protocolo_id }}/guardar-lineas`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                lineas: lineasProtocolo
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                console.log('✅ Guardado exitoso');
+                if (accion === 'completar') {
+                    await marcarProtocoloCompletado();
+                } else {
+                    alert('✓ Protocolo guardado correctamente');
+                }
+            } else {
+                alert('❌ Error al guardar: ' + (data.error || 'Error desconocido'));
+            }
+        } else {
+            let mensajeError = 'Error HTTP';
+            try {
+            const errorData = await response.json();
+                if (errorData.error) {
+                    mensajeError = errorData.error;
+                }
+            } catch (parseError) {
+                console.warn('No se pudo parsear la respuesta de error del servidor.', parseError);
+            }
+            alert('❌ Error del servidor: ' + mensajeError);
+        }
+    } catch (error) {
+        console.error('❌ Error guardando protocolo:', error);
+        alert('❌ Error de conexión al guardar');
+    }
+}
+
+// Recolectar todas las líneas del protocolo
+function recolectarLineasProtocolo() {
+    const lineas = [];
+    
+    // Mapeo de selectores a categorías
+    const mapeoSelectores = {
+        'extendido': 'EXTENDIDO',
+        'celulas-conformacion': 'CELULAS_CONFORMACION',
+        'celulas-junto-a': 'CELULAS_JUNTO_A',
+        'componente-inflamatorio': 'COMP_INFLAMATORIO',
+        'flora': 'FLORA',
+        'diagnostico': 'DIAGNOSTICO',
+        'datos-clinicos': 'DATOS_CLINICOS'
+    };
+    
+    console.log('🔍 Recolectando líneas del protocolo...');
+    
+    // Recolectar líneas de selectores principales
+    Object.keys(mapeoSelectores).forEach(selectorId => {
+        const selector = document.getElementById(selectorId);
+        if (selector) {
+            // Si el selector está oculto, buscar el input de texto que lo reemplazó
+            if (selector.style.display === 'none') {
+                // Buscar input de texto en el renglon
+                const renglon = selector.closest('.renglon');
+                if (renglon) {
+                    const input = renglon.querySelector('input[type="text"]');
+            if (input && input.value.trim()) {
+                        console.log(`📝 Selector principal ${selectorId} (input de texto): "${input.value}"`);
+                lineas.push({
+                    seccion: mapeoSelectores[selectorId],
+                    texto: input.value.trim(),
+                    orden: 1
+                });
+                    }
+                }
+            } else if (selector.value) {
+                // Verificar si hay un input de texto además del selector (edición inline)
+                const renglon = selector.closest('.renglon');
+                const input = renglon ? renglon.querySelector('input[type="text"]') : null;
+                
+                if (input && input.value.trim() && !input.closest('.linea-adicional')) {
+                    // Si hay un input de texto y tiene valor, usar ese
+                    console.log(`📝 Selector principal ${selectorId} (input de texto): "${input.value}"`);
+                    lineas.push({
+                        seccion: mapeoSelectores[selectorId],
+                        texto: input.value.trim(),
+                        orden: 1
+                    });
+                } else {
+                    // Usar el valor del selector
+                    const texto = selector.options[selector.selectedIndex]?.textContent || '';
+                    if (texto) {
+                console.log(`📝 Selector principal ${selectorId}: "${texto}"`);
+                lineas.push({
+                    seccion: mapeoSelectores[selectorId],
+                    texto: texto,
+                    orden: 1
+                });
+                    }
+                }
+            }
+        } else {
+            console.log(`❌ Selector principal ${selectorId} no encontrado`);
+        }
+    });
+    
+    // Recolectar líneas adicionales
+    Object.keys(mapeoSelectores).forEach(selectorId => {
+        const categoria = mapeoSelectores[selectorId];
+        const contenedor = document.getElementById(`lineas-${categoria}`);
+        if (contenedor) {
+            // Recolectar todas las líneas adicionales (selectores e inputs)
+            const lineasAdicionales = contenedor.querySelectorAll('.linea-adicional');
+            console.log(`🔍 Encontradas ${lineasAdicionales.length} líneas adicionales en ${categoria}`);
+            
+            lineasAdicionales.forEach((lineaElement, index) => {
+                let texto = '';
+                let orden = index + 2; // +2 porque el primer orden es 1
+                
+                // Verificar si es un selector o un input
+                const select = lineaElement.querySelector('select');
+                const input = lineaElement.querySelector('input[type="text"]');
+                
+                if (select && select.value) {
+                    texto = select.options[select.selectedIndex].textContent;
+                    console.log(`📝 Línea adicional con selector ${index + 1} en ${categoria}: "${texto}"`);
+                } else if (input && input.value.trim()) {
+                    texto = input.value.trim();
+                    console.log(`📝 Línea adicional editada ${index + 1} en ${categoria}: "${texto}"`);
+                }
+                
+                if (texto) {
+                    lineas.push({
+                        seccion: categoria,
+                        texto: texto,
+                        orden: orden
+                    });
+                }
+            });
+        }
+    });
+    
+    console.log(`📊 Total de líneas recolectadas: ${lineas.length}`);
+    return lineas;
+}
+
+function abrirModalGuardar() {
+    const lineas = recolectarLineasProtocolo();
+    if (lineas.length === 0) {
+        alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+        return;
+    }
+
+    const modalElemento = document.getElementById('modalGuardarProtocolo');
+    if (!modalElemento) {
+        console.warn('No se encontró el modal de guardado. Se procederá a guardar directamente.');
+        guardarPlantilla();
+        return;
+    }
+
+    if (!modalGuardar && typeof bootstrap !== 'undefined') {
+        modalGuardar = new bootstrap.Modal(modalElemento);
+    }
+
+    if (modalGuardar) {
+        modalGuardar.show();
+    } else {
+        guardarPlantilla();
+    }
+}
+
+async function marcarProtocoloCompletado() {
+    try {
+        const formData = new URLSearchParams();
+        formData.append('estado', 'COMPLETADO');
+
+        const response = await fetch(`/protocolos/{{ protocolo.protocolo_id }}/cambiar-estado`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        alert('✓ Protocolo guardado y completado correctamente');
+    } catch (error) {
+        console.error('Error marcando protocolo como completado:', error);
+        alert('Se guardó el contenido, pero hubo un error al completar el protocolo.');
+    }
+}
+
+// Cargar líneas guardadas del protocolo
+async function cargarLineasProtocolo() {
+    console.log('📥 Cargando líneas guardadas del protocolo...');
+    
+    try {
+        const response = await fetch(`/plantillas-dinamicas/api/protocolo/{{ protocolo.protocolo_id }}/lineas`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            const lineasPorSeccion = data.lineas_por_seccion || {};
+            
+            console.log('📋 Líneas cargadas:', lineasPorSeccion);
+            
+            // Mapeo de categorías a selectores
+            const mapeoCategorias = {
+                'EXTENDIDO': 'extendido',
+                'CELULAS_CONFORMACION': 'celulas-conformacion',
+                'CELULAS_JUNTO_A': 'celulas-junto-a',
+                'COMP_INFLAMATORIO': 'componente-inflamatorio',
+                'FLORA': 'flora',
+                'DIAGNOSTICO': 'diagnostico',
+                'DATOS_CLINICOS': 'datos-clinicos'
+            };
+            
+            // Cargar líneas en cada sección
+            Object.keys(lineasPorSeccion).forEach(seccion => {
+                const lineas = lineasPorSeccion[seccion];
+                const selectorId = mapeoCategorias[seccion];
+                
+                if (selectorId && lineas.length > 0) {
+                    console.log(`📝 Cargando ${lineas.length} líneas para ${seccion}`);
+                    
+                    // Aplicar primera línea al selector principal
+                    const selector = document.getElementById(selectorId);
+                    let opcionEncontrada = false;
+                    
+                    if (selector && lineas[0]) {
+                        console.log(`🎯 Aplicando primera línea a ${selectorId}: "${lineas[0].texto}"`);
+                        
+                        // Buscar la opción que coincida con el texto
+                        const opciones = selector.querySelectorAll('option');
+                        
+                        for (let opcion of opciones) {
+                            if (opcion.textContent.trim() === lineas[0].texto.trim()) {
+                                selector.value = opcion.value;
+                                selector.dispatchEvent(new Event('change'));
+                                opcionEncontrada = true;
+                                console.log(`✅ Primera línea aplicada a ${selectorId}`);
+                                break;
+                            }
+                        }
+                        
+                        if (!opcionEncontrada) {
+                            console.warn(`⚠️ No se encontró opción para "${lineas[0].texto}" en ${selectorId}`);
+                            console.log(`🔄 Creando opción temporal en el selector principal`);
+                            
+                            // En lugar de crear un input readonly (que causa el fondo rojo),
+                            // crear una opción temporal en el selector
+                            const nuevaOpcion = document.createElement('option');
+                            nuevaOpcion.value = 'temp_' + Date.now();
+                            nuevaOpcion.textContent = lineas[0].texto;
+                            nuevaOpcion.selected = true;
+                            selector.appendChild(nuevaOpcion);
+                            selector.style.display = 'block';
+                            selector.dispatchEvent(new Event('change', { bubbles: true }));
+                            console.log(`✅ Primera línea aplicada como opción temporal a ${selectorId}`);
+                        }
+                    }
+                    
+                    // Crear líneas adicionales para el resto (solo si hay más de una línea)
+                    const lineasParaAdicionales = lineas.slice(1);
+                    if (lineasParaAdicionales.length > 0) {
+                        const contenedor = document.getElementById(`lineas-${seccion}`);
+                        if (contenedor) {
+                            // Limpiar líneas existentes
+                            const lineasExistentes = contenedor.querySelectorAll('.linea-adicional, .renglon');
+                            lineasExistentes.forEach(linea => linea.remove());
+                            
+                            // Crear nuevas líneas usando la función agregarLineaAdicional
+                            // que NO crea inputs readonly (evita el fondo rojo)
+                            for (let i = 0; i < lineasParaAdicionales.length; i++) {
+                                const linea = lineasParaAdicionales[i];
+                                console.log(`➕ Creando línea adicional ${i + 1} para ${seccion}: ${linea.texto}`);
+                                // Usar la función agregarLineaAdicional que crea inputs normales sin readonly
+                                agregarLineaAdicional(seccion, linea.texto, linea.lineas_pap_id);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('✅ Líneas del protocolo cargadas correctamente');
+        } else {
+            console.log('ℹ️ No hay líneas guardadas para este protocolo');
+        }
+    } catch (error) {
+        console.error('❌ Error cargando líneas del protocolo:', error);
+    }
+}
+
+function verPreview() {
+    // Recolectar todas las líneas actuales antes de mostrar preview
+    const lineasActuales = recolectarLineasProtocolo();
+    
+    // Crear URL con parámetros
+    const params = new URLSearchParams();
+    params.append('lineas', JSON.stringify(lineasActuales));
+    
+    window.open(`/plantillas-dinamicas/preview-plantilla/{{ protocolo.protocolo_id }}?${params.toString()}`, '_blank');
+}
+
+function exportarTexto() {
+    const texto = document.getElementById('texto-final').textContent;
+    
+    // Crear archivo de texto
+    const blob = new Blob([texto], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    
+    // Descargar
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PAP_{{ protocolo.numero_protocolo }}.txt`;
+    a.click();
+    
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}
+

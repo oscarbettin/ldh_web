@@ -1,0 +1,818 @@
+{% extends 'base.html' %}
+
+{% block title %}Panel de Control{% endblock %}
+
+{% block content %}
+<style>
+/* Estilos para notificación flotante */
+#notificacionBienvenida {
+    animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+#notificacionBienvenida .alert {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+}
+
+#notificacionBienvenida .alert .btn-close {
+    filter: brightness(0) saturate(100%);
+}
+</style>
+
+<div class="container-fluid">
+    <!-- Notificación flotante de bienvenida -->
+    <div id="notificacionBienvenida" class="position-fixed top-0 end-0 p-3" style="z-index: 9999; display: none;">
+        <div class="alert alert-success alert-dismissible fade show shadow" role="alert" style="min-width: 300px;">
+            <i class="bi bi-check-circle-fill"></i>
+            <strong>¡Bienvenido, {{ current_user.nombre_completo }}!</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-speedometer2"></i> Panel de Control
+            </h1>
+        </div>
+    </div>
+    
+            <!-- ACCESO RÁPIDO A FUNCIONES PRINCIPALES -->
+            <div class="row g-4 mb-5">
+                <div class="col-12">
+                    <h3 class="mb-3 text-primary">
+                        <i class="bi bi-lightning-charge"></i> Acceso Rápido
+                    </h3>
+                </div>
+                
+        
+        <!-- Protocolos -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center p-3">
+                    <div class="mb-2">
+                        <i class="bi bi-folder-plus text-primary" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h5 class="card-title text-primary mb-2">Protocolos</h5>
+                    <p class="card-text text-muted small mb-3">
+                        Gestionar protocolos de biopsias, citologías y PAP
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('protocolos.index') }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-folder-plus"></i> Ver Protocolos
+                        </a>
+                        <a href="{{ url_for('protocolos.nuevo') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-plus-circle"></i> Nuevo Protocolo
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gestión -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-success shadow-sm">
+                <div class="card-body text-center p-3">
+                    <div class="mb-2">
+                        <i class="bi bi-gear text-success" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h5 class="card-title text-success mb-2">Gestión</h5>
+                    <p class="card-text text-muted small mb-3">
+                        Administrar pacientes, prestadores y obras sociales
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('pacientes.index') }}" class="btn btn-success btn-sm">
+                            <i class="bi bi-people"></i> Ver Gestión
+                        </a>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('pacientes.index') }}" class="btn btn-outline-success btn-sm">Pacientes</a>
+                            <a href="{{ url_for('prestadores.index') }}" class="btn btn-outline-success btn-sm">Prestadores</a>
+                            <a href="{{ url_for('obras_sociales.index') }}" class="btn btn-outline-success btn-sm">Obras Sociales</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-body text-center p-3">
+                    <div class="mb-2">
+                        <i class="bi bi-file-earmark-text text-info" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h5 class="card-title text-info mb-2">Reportes</h5>
+                    <p class="card-text text-muted small mb-3">
+                        Generar informes y reportes del sistema
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.index') }}" class="btn btn-info btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reportes
+                        </a>
+                        <a href="{{ url_for('reportes.index') }}" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-plus-circle"></i> Generar Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ESTADÍSTICAS DEL SISTEMA -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <h3 class="mb-3 text-secondary">
+                <i class="bi bi-bar-chart"></i> Estadísticas del Sistema
+            </h3>
+        </div>
+    </div>
+    
+    <!-- Tarjetas de estadísticas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Total Protocolos</h6>
+                            <h2 class="mb-0">{{ total_protocolos }}</h2>
+                        </div>
+                        <i class="bi bi-folder-fill" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Pendientes</h6>
+                            <h2 class="mb-0">{{ protocolos_pendientes }}</h2>
+                        </div>
+                        <i class="bi bi-hourglass-split" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Pacientes</h6>
+                            <h2 class="mb-0">{{ total_pacientes }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title">Este Mes</h6>
+                            <h2 class="mb-0">{{ protocolos_mes }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-check" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+    <div class="row g-3">
+        <!-- Últimos protocolos -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Últimos Protocolos Ingresados</h5>
+                </div>
+                <div class="card-body">
+                    {% if ultimos_protocolos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <style>
+                                .table tbody tr:hover {
+                                    background-color: #f8f9fa !important;
+                                    transform: translateY(-1px);
+                                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                                    transition: all 0.2s ease;
+                                }
+                            </style>
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th>
+                                    <th>Tipo</th>
+                                    <th>Paciente</th>
+                                    <th>Fecha</th>
+                                    <th>Informado por</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for protocolo in ultimos_protocolos %}
+                                <tr style="cursor: pointer;" onclick="window.location.href='{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}'">
+                                    <td>
+                                        <a href="{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}" class="text-decoration-none">
+                                            <strong>{{ protocolo.numero_protocolo }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if protocolo.tipo_estudio == 'BIOPSIA' %}
+                                            <span class="badge bg-primary">Biopsia</span>
+                                        {% elif protocolo.tipo_estudio == 'CITOLOGÍA' %}
+                                            <span class="badge bg-info">Citología</span>
+                                        {% elif protocolo.tipo_estudio == 'PAP' %}
+                                            <span class="badge bg-success">PAP</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ protocolo.afiliado.nombre_completo }}</td>
+                                    <td>{{ protocolo.fecha_ingreso | fecha_formato }}</td>
+                                    <td>
+                                        {% if protocolo.usuario_informe %}
+                                            <strong>{{ protocolo.usuario_informe.nombre_completo }}</strong>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if protocolo.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning">Pendiente</span>
+                                        {% elif protocolo.estado == 'EN_PROCESO' %}
+                                            <span class="badge bg-info">En Proceso</span>
+                                        {% elif protocolo.estado == 'COMPLETADO' %}
+                                            <span class="badge bg-success">Completado</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ protocolo.estado }}</span>
+                                        {% endif %}
+                                    {% if protocolo.estado == 'COMPLETADO' %}
+                                        <a href="{{ url_for('plantillas_dinamicas.preview_plantilla', protocolo_id=protocolo.protocolo_id) }}"
+                                           class="btn btn-sm btn-outline-info ms-2"
+                                           title="Imprimir"
+                                           onclick="event.stopPropagation();">
+                                            <i class="bi bi-printer"></i>
+                                        </a>
+                                    {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No hay protocolos registrados aún.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Estadísticas por tipo -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-pie-chart"></i> Por Tipo de Estudio</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-file-medical text-primary"></i> Biopsias</span>
+                            <strong>{{ protocolos_biopsias }}</strong>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-primary" 
+                                 style="width: {{ (protocolos_biopsias / (total_protocolos if total_protocolos > 0 else 1) * 100)|int }}%">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-file-text text-info"></i> Citología</span>
+                            <strong>{{ protocolos_citologia }}</strong>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-info" 
+                                 style="width: {{ (protocolos_citologia / (total_protocolos if total_protocolos > 0 else 1) * 100)|int }}%">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-clipboard2-pulse text-success"></i> PAP</span>
+                            <strong>{{ protocolos_pap }}</strong>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" 
+                                 style="width: {{ (protocolos_pap / (total_protocolos if total_protocolos > 0 else 1) * 100)|int }}%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Protocolos Antiguos</h5>
+                </div>
+                <div class="card-header bg-light">
+                    <!-- FILTROS -->
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label small"><strong>Filtrar por Tipo:</strong></label>
+                            <select id="filtroTipo" class="form-select form-select-sm">
+                                <option value="">Todos los tipos</option>
+                                <option value="BIOPSIA">Biopsias</option>
+                                <option value="CITOLOGÍA">Citología</option>
+                                <option value="PAP">PAP</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label small"><strong>Filtrar por Antigüedad:</strong></label>
+                            <select id="filtroAntiguedad" class="form-select form-select-sm">
+                                <option value="">Todas las antigüedades</option>
+                                <option value="urgente">🔴 URGENTE (14+ días)</option>
+                                <option value="atencion">🟠 ATENCIÓN (7+ días)</option>
+                                <option value="revisar">🔵 REVISAR (3+ días)</option>
+                                <option value="pendiente">⚫ PENDIENTE (< 3 días)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
+                            <button id="limpiarFiltros" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- LEYENDA DE COLORES -->
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <small class="text-danger">
+                                <i class="bi bi-exclamation-triangle-fill"></i> 14+ días
+                            </small>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-warning">
+                                <i class="bi bi-exclamation-triangle"></i> 7+ días
+                            </small>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-info">
+                                <i class="bi bi-info-circle"></i> 3+ días
+                            </small>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-secondary">
+                                <i class="bi bi-clock"></i> < 3 días
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if protocolos_clasificados %}
+                    <ul class="list-group list-group-flush">
+                        {% for item in protocolos_clasificados %}
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center protocolo-item" 
+                            data-tipo="{{ item.protocolo.tipo_estudio }}" 
+                            data-antiguedad="{{ item.color }}">
+                            <div>
+                                <a href="{{ url_for('protocolos.ver', id=item.protocolo.protocolo_id) }}" 
+                                   class="text-decoration-none">
+                                    <strong>{{ item.protocolo.numero_protocolo }}</strong>
+                                </a>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="bi {{ item.icono }} text-{{ item.color }}"></i>
+                                    {{ item.dias_pendiente }} días pendiente
+                                </small>
+                            </div>
+                            <div>
+                                {% if item.color == 'danger' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> URGENTE
+                                    </span>
+                                {% elif item.color == 'warning' %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-triangle"></i> ATENCIÓN
+                                    </span>
+                                {% elif item.color == 'info' %}
+                                    <span class="badge bg-info">
+                                        <i class="bi bi-info-circle"></i> REVISAR
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-clock"></i> PENDIENTE
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">No hay protocolos antiguos</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variable para evitar múltiples llamadas y loops infinitos
+    let notificacionBienvenidaMostrada = false;
+    let intentosNotificacionBienvenida = 0;
+    const MAX_INTENTOS_NOTIFICACION = 20; // Máximo 20 intentos (20 segundos)
+    
+    // Función para mostrar notificación de bienvenida cuando RIVE esté listo
+    function mostrarNotificacionBienvenida() {
+        // Evitar loops infinitos
+        if (notificacionBienvenidaMostrada) {
+            return; // Ya se mostró, no intentar de nuevo
+        }
+        
+        if (intentosNotificacionBienvenida >= MAX_INTENTOS_NOTIFICACION) {
+            console.warn('⚠️ Se alcanzó el límite de intentos para mostrar notificación de bienvenida');
+            return;
+        }
+        
+        intentosNotificacionBienvenida++;
+        
+    const notificacion = document.getElementById('notificacionBienvenida');
+        if (!notificacion) return;
+        
+        // Verificar si RIVE está listo - usar window para acceder a variables globales
+        const riveListo = (typeof window.riveButtonInstance !== 'undefined' && window.riveButtonInstance) ||
+                         (typeof riveButtonInstance !== 'undefined' && riveButtonInstance);
+        const activarMensajeDisponible = typeof activarInputMensaje === 'function';
+        
+        if (riveListo && activarMensajeDisponible) {
+            // RIVE está listo, mostrar notificación y activar input "Mensaje"
+            notificacionBienvenidaMostrada = true; // Marcar como mostrada para evitar loops
+        notificacion.style.display = 'block';
+            
+            // NO activar input "Mensaje" directamente aquí - dejar que procesarMensajesFlashExistentes lo haga
+            // para evitar múltiples llamadas y bucles infinitos
+            // El input "Mensaje" será activado por procesarMensajesFlashExistentes() cuando detecte la notificación
+            console.log('✅ Notificación de bienvenida mostrada, será procesada por procesarMensajesFlashExistentes()');
+        
+        // Auto-ocultar después de 4 segundos
+        setTimeout(() => {
+            const alert = notificacion.querySelector('.alert');
+            if (alert) {
+                alert.classList.remove('show');
+                setTimeout(() => {
+                    notificacion.style.display = 'none';
+                    // NO desactivar input "Mensaje" aquí - dejarlo a procesarMensajesFlashExistentes
+                    // para evitar múltiples llamadas y bucles infinitos
+                }, 300);
+            }
+        }, 4000);
+            
+            // También detectar cuando se hace click en el botón de cerrar
+            // NO llamar a activarInputMensaje aquí - dejarlo a procesarMensajesFlashExistentes
+            // El MutationObserver en procesarMensajesFlashExistentes se encargará de detectar el cierre
+        } else {
+            // RIVE aún no está listo, intentar de nuevo después de un delay
+            if (intentosNotificacionBienvenida < MAX_INTENTOS_NOTIFICACION) {
+                console.log(`⏳ RIVE aún no está listo, esperando para mostrar notificación de bienvenida... (intento ${intentosNotificacionBienvenida}/${MAX_INTENTOS_NOTIFICACION})`);
+                setTimeout(mostrarNotificacionBienvenida, 1000);
+            }
+        }
+    }
+    
+    // Intentar mostrar la notificación después de que el script se cargue
+    // Esperar un momento para que asistente_chat.js se cargue completamente
+    setTimeout(mostrarNotificacionBienvenida, 1000);
+    setTimeout(mostrarNotificacionBienvenida, 3000);
+    setTimeout(mostrarNotificacionBienvenida, 5000);
+    
+    const filtroTipo = document.getElementById('filtroTipo');
+    const filtroAntiguedad = document.getElementById('filtroAntiguedad');
+    const protocolos = document.querySelectorAll('.protocolo-item');
+    
+    function filtrarProtocolos() {
+        const tipoSeleccionado = filtroTipo.value;
+        const antiguedadSeleccionada = filtroAntiguedad.value;
+        
+        protocolos.forEach(protocolo => {
+            const tipo = protocolo.dataset.tipo;
+            const antiguedad = protocolo.dataset.antiguedad;
+            
+            let mostrarTipo = true;
+            let mostrarAntiguedad = true;
+            
+            // Filtrar por tipo
+            if (tipoSeleccionado && tipo !== tipoSeleccionado) {
+                mostrarTipo = false;
+            }
+            
+            // Filtrar por antigüedad
+            if (antiguedadSeleccionada) {
+                const mapeoAntiguedad = {
+                    'urgente': 'danger',
+                    'atencion': 'warning', 
+                    'revisar': 'info',
+                    'pendiente': 'secondary'
+                };
+                
+                if (antiguedad !== mapeoAntiguedad[antiguedadSeleccionada]) {
+                    mostrarAntiguedad = false;
+                }
+            }
+            
+            // Mostrar/ocultar protocolo
+            if (mostrarTipo && mostrarAntiguedad) {
+                protocolo.style.display = 'flex';
+                protocolo.style.visibility = 'visible';
+                protocolo.style.height = 'auto';
+                protocolo.style.opacity = '1';
+                protocolo.classList.remove('d-none');
+            } else {
+                protocolo.style.display = 'none';
+                protocolo.style.visibility = 'hidden';
+                protocolo.style.height = '0';
+                protocolo.style.opacity = '0';
+                protocolo.classList.add('d-none');
+            }
+        });
+        
+        // Mostrar mensaje si no hay resultados
+        const protocolosVisibles = Array.from(protocolos).filter(p => 
+            !p.classList.contains('d-none') && 
+            p.style.display !== 'none' && 
+            p.style.visibility !== 'hidden'
+        );
+        
+        console.log('🔍 Protocolos visibles después del filtro:', protocolosVisibles.length);
+        console.log('📋 Total protocolos:', protocolos.length);
+        
+        const mensajeNoResultados = document.getElementById('mensajeNoResultados');
+        
+        if (protocolosVisibles.length === 0) {
+            if (!mensajeNoResultados) {
+                const mensaje = document.createElement('div');
+                mensaje.id = 'mensajeNoResultados';
+                mensaje.className = 'alert alert-info text-center';
+                mensaje.innerHTML = '<i class="bi bi-info-circle"></i> No hay protocolos que coincidan con los filtros seleccionados.';
+                // Insertar específicamente en la sección de Protocolos Antiguos
+                const cardProtocolosAntiguos = document.querySelector('.card .list-group').closest('.card-body');
+                if (cardProtocolosAntiguos) {
+                    cardProtocolosAntiguos.appendChild(mensaje);
+                }
+            }
+        } else {
+            if (mensajeNoResultados) {
+                mensajeNoResultados.remove();
+            }
+        }
+    }
+    
+    // Event listeners para los filtros
+    filtroTipo.addEventListener('change', filtrarProtocolos);
+    filtroAntiguedad.addEventListener('change', filtrarProtocolos);
+    
+    // Botón limpiar filtros
+    document.getElementById('limpiarFiltros').addEventListener('click', function() {
+        filtroTipo.value = '';
+        filtroAntiguedad.value = '';
+        filtrarProtocolos();
+    });
+    
+    // Filtrar inicialmente
+    filtrarProtocolos();
+});
+</script>
+
+<!-- MODAL ASISTENTE IA -->
+<div class="modal fade" id="modalAsistente" tabindex="-1" aria-labelledby="modalAsistenteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="modalAsistenteLabel">
+                    <i class="bi bi-robot"></i> Asistente Inteligente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Pestañas -->
+                <ul class="nav nav-tabs mb-3" id="asistenteTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="buscar-tab" data-bs-toggle="tab" data-bs-target="#buscar" type="button" role="tab">
+                            <i class="bi bi-search"></i> Buscar
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="analizar-tab" data-bs-toggle="tab" data-bs-target="#analizar" type="button" role="tab">
+                            <i class="bi bi-graph-up"></i> Analizar
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="listados-tab" data-bs-toggle="tab" data-bs-target="#listados" type="button" role="tab">
+                            <i class="bi bi-list-ul"></i> Listados
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- Contenido de pestañas -->
+                <div class="tab-content" id="asistenteTabContent">
+                    <!-- Pestaña Buscar -->
+                    <div class="tab-pane fade show active" id="buscar" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="consultaBuscar" class="form-label">Buscar casos similares</label>
+                            <input type="text" class="form-control" id="consultaBuscar" placeholder="Ej: Protocolos con más de 7 días de antigüedad">
+                            <div class="form-text">Mín. 3 caracteres</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="tipoBuscar" class="form-label">Filtrar por tipo</label>
+                            <select class="form-select" id="tipoBuscar">
+                                <option value="">Todos los tipos</option>
+                                <option value="BIOPSIA">Biopsias</option>
+                                <option value="CITOLOGÍA">Citología</option>
+                                <option value="PAP">PAP</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="buscarConIA()">
+                            <i class="bi bi-search"></i> Buscar
+                        </button>
+                        <div id="resultadoBuscar" class="mt-3"></div>
+                    </div>
+                    
+                    <!-- Pestaña Analizar -->
+                    <div class="tab-pane fade" id="analizar" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="consultaAnalizar" class="form-label">Análisis de protocolos</label>
+                            <textarea class="form-control" id="consultaAnalizar" rows="3" placeholder="Ej: Analiza los protocolos pendientes y sugiere prioridades"></textarea>
+                        </div>
+                        <button class="btn btn-success" onclick="analizarConIA()">
+                            <i class="bi bi-graph-up"></i> Analizar
+                        </button>
+                        <div id="resultadoAnalizar" class="mt-3"></div>
+                    </div>
+                    
+                    <!-- Pestaña Listados -->
+                    <div class="tab-pane fade" id="listados" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="consultaListados" class="form-label">Generar listados</label>
+                            <input type="text" class="form-control" id="consultaListados" placeholder="Ej: Muéstrame todos los protocolos antiguos ordenados por antigüedad">
+                        </div>
+                        <button class="btn btn-warning" onclick="generarListadoConIA()">
+                            <i class="bi bi-list-ul"></i> Generar Listado
+                        </button>
+                        <div id="resultadoListados" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Funciones del Asistente IA
+async function buscarConIA() {
+    const consulta = document.getElementById('consultaBuscar').value;
+    const tipo = document.getElementById('tipoBuscar').value;
+    const resultado = document.getElementById('resultadoBuscar');
+    
+    if (consulta.length < 3) {
+        resultado.innerHTML = '<div class="alert alert-warning">Mínimo 3 caracteres requeridos</div>';
+        return;
+    }
+    
+    resultado.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Buscando con IA...</div>';
+    
+    try {
+        const response = await fetch('/asistente/claude/buscar-plantillas', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                consulta: consulta,
+                tipo: tipo
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            resultado.innerHTML = `<div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> <strong>Resultados encontrados:</strong><br>
+                ${data.resultado || 'Búsqueda completada exitosamente.'}
+            </div>`;
+        } else {
+            resultado.innerHTML = `<div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> ${data.error || 'No se encontraron resultados'}
+            </div>`;
+        }
+    } catch (error) {
+        resultado.innerHTML = `<div class="alert alert-danger">
+            <i class="bi bi-x-circle"></i> Error en la búsqueda: ${error.message}
+        </div>`;
+    }
+}
+
+async function analizarConIA() {
+    const consulta = document.getElementById('consultaAnalizar').value;
+    const resultado = document.getElementById('resultadoAnalizar');
+    
+    if (!consulta.trim()) {
+        resultado.innerHTML = '<div class="alert alert-warning">Ingresa una consulta para analizar</div>';
+        return;
+    }
+    
+    resultado.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Analizando con IA...</div>';
+    
+    try {
+        const response = await fetch('/asistente/claude/analizar-caso', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                consulta: consulta
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            resultado.innerHTML = `<div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> <strong>Análisis completado:</strong><br>
+                ${data.resultado || 'Análisis generado exitosamente.'}
+            </div>`;
+        } else {
+            resultado.innerHTML = `<div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> ${data.error || 'No se pudo completar el análisis'}
+            </div>`;
+        }
+    } catch (error) {
+        resultado.innerHTML = `<div class="alert alert-danger">
+            <i class="bi bi-x-circle"></i> Error en el análisis: ${error.message}
+        </div>`;
+    }
+}
+
+async function generarListadoConIA() {
+    const consulta = document.getElementById('consultaListados').value;
+    const resultado = document.getElementById('resultadoListados');
+    
+    if (!consulta.trim()) {
+        resultado.innerHTML = '<div class="alert alert-warning">Ingresa una consulta para generar el listado</div>';
+        return;
+    }
+    
+    resultado.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Generando listado con IA...</div>';
+    
+    try {
+        const response = await fetch('/asistente/claude/generar-informe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                consulta: consulta
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            resultado.innerHTML = `<div class="alert alert-success">
+                <i class="bi bi-check-circle"></i> <strong>Listado generado:</strong><br>
+                ${data.resultado || 'Listado generado exitosamente.'}
+            </div>`;
+        } else {
+            resultado.innerHTML = `<div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle"></i> ${data.error || 'No se pudo generar el listado'}
+            </div>`;
+        }
+    } catch (error) {
+        resultado.innerHTML = `<div class="alert alert-danger">
+            <i class="bi bi-x-circle"></i> Error al generar listado: ${error.message}
+        </div>`;
+    }
+}
+</script>
+{% endblock %}
+

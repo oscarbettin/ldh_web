@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}Mis Protocolos{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="bg-white bg-opacity-90 rounded-4 shadow-sm p-4">
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <h1 class="mb-1">
+                    <i class="bi bi-list-ul text-primary"></i> Mis Pacientes
+                </h1>
+                {% if prestador %}
+                <p class="text-muted mb-0">
+                    Prestador: <strong>{{ prestador.nombre_completo }}</strong>
+                    {% if prestador.nombre_especialidad %}- {{ prestador.nombre_especialidad }}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <span class="badge bg-primary fs-6">{{ total }} protocolos completados</span>
+            </div>
+        </div>
+
+        {% if sin_prestador %}
+        <div class="alert alert-warning">
+            Tu usuario aún no está vinculado a un prestador del laboratorio. Por favor comunicate con el equipo de LDH para habilitar el acceso.
+        </div>
+        {% else %}
+
+        <div class="card shadow-sm mb-4 prestador-filtros">
+            <div class="card-body">
+                <form class="row g-3" method="get">
+                    <div class="col-md-4">
+                        <label for="buscar" class="form-label">Buscar</label>
+                        <input type="text" id="buscar" name="buscar" value="{{ buscar }}" class="form-control"
+                               placeholder="Nombre, DNI o Nº de protocolo" data-prestador="buscar">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="fecha_desde" class="form-label">Fecha desde</label>
+                        <input type="date" id="fecha_desde" name="fecha_desde" value="{{ fecha_desde }}" class="form-control" data-prestador="desde">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="fecha_hasta" class="form-label">Fecha hasta</label>
+                        <input type="date" id="fecha_hasta" name="fecha_hasta" value="{{ fecha_hasta }}" class="form-control" data-prestador="hasta">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="orden" class="form-label">Ordenar por</label>
+                        <select id="orden" name="orden" class="form-select">
+                            <option value="fecha_desc" {{ 'selected' if orden == 'fecha_desc' else '' }}>Fecha ↓</option>
+                            <option value="fecha_asc" {{ 'selected' if orden == 'fecha_asc' else '' }}>Fecha ↑</option>
+                            <option value="paciente_asc" {{ 'selected' if orden == 'paciente_asc' else '' }}>Paciente A-Z</option>
+                            <option value="paciente_desc" {{ 'selected' if orden == 'paciente_desc' else '' }}>Paciente Z-A</option>
+                            <option value="protocolo_desc" {{ 'selected' if orden == 'protocolo_desc' else '' }}>Protocolo ↓</option>
+                            <option value="protocolo_asc" {{ 'selected' if orden == 'protocolo_asc' else '' }}>Protocolo ↑</option>
+                        </select>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button class="btn btn-primary" type="submit">
+                            <i class="bi bi-search"></i> Aplicar filtros
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                {% if protocolos %}
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Seleccione uno o varios protocolos para descargar los informes.
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-outline-secondary" id="btn-select-todos"
+                                data-estado="ninguno">
+                            <i class="bi bi-check-square"></i> Seleccionar todo
+                        </button>
+                        <button type="button" class="btn btn-primary" id="btn-descargar">
+                            <i class="bi bi-download"></i> Descargar seleccionados
+                        </button>
+                    </div>
+                </div>
+                <div class="prestador-table-wrapper">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 40px;"></th>
+                                <th>Protocolo</th>
+                                <th>Paciente</th>
+                                <th>DNI</th>
+                                <th>Fecha Informe</th>
+                                <th>Tipo</th>
+                                <th style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for protocolo in protocolos %}
+                            <tr>
+                                <td>
+                                    <input class="form-check-input" type="checkbox"
+                                           name="protocolos_seleccionados" value="{{ protocolo.id }}">
+                                </td>
+                                <td><strong>{{ protocolo.numero }}</strong></td>
+                                <td>{{ protocolo.paciente }}</td>
+                                <td>{{ protocolo.dni or '-' }}</td>
+                                <td>{{ protocolo.fecha | fecha_formato }}</td>
+                                <td>{{ protocolo.tipo }}</td>
+                                <td>
+                                    <a class="btn btn-outline-primary btn-sm"
+                                       href="{{ url_for('plantillas_dinamicas.preview_plantilla', protocolo_id=protocolo.id) }}"
+                                       target="_blank" title="Ver o imprimir informe">
+                                        <i class="bi bi-printer-fill"></i> Ver/Imprimir
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    No se encontraron protocolos con los filtros aplicados.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <p class="text-muted text-center mt-4 mb-0">
+            ¿Necesitás ayuda? Utilizá el asistente virtual (botón morado) para enviar tus consultas.
+        </p>
+
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const botonSeleccionar = document.getElementById('btn-select-todos');
+    const botonDescargar = document.getElementById('btn-descargar');
+    const checkboxes = document.querySelectorAll('input[name="protocolos_seleccionados"]');
+
+    if (botonSeleccionar && checkboxes.length) {
+        botonSeleccionar.addEventListener('click', function() {
+            const marcarTodos = this.dataset.estado !== 'todos';
+            checkboxes.forEach(cb => cb.checked = marcarTodos);
+            this.dataset.estado = marcarTodos ? 'todos' : 'ninguno';
+            this.innerHTML = marcarTodos
+                ? '<i class="bi bi-x-square"></i> Deseleccionar todo'
+                : '<i class="bi bi-check-square"></i> Seleccionar todo';
+        });
+    }
+
+    if (botonDescargar && checkboxes.length) {
+        botonDescargar.addEventListener('click', async function() {
+            const seleccionados = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.value, 10));
+            if (!seleccionados.length) {
+                alert('Seleccione al menos un protocolo antes de descargar.');
+                return;
+            }
+            botonDescargar.disabled = true;
+            botonDescargar.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Preparando...';
+            try {
+                const respuesta = await fetch('{{ url_for('portal_prestador.descargar_multiples') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ protocolos: seleccionados })
+                });
+
+                if (!respuesta.ok) {
+                    const dataError = await respuesta.json().catch(() => ({ error: 'No se pudo generar el archivo.' }));
+                    alert(dataError.error || 'No se pudo generar el archivo.');
+                    return;
+                }
+
+                const blob = await respuesta.blob();
+                const url = window.URL.createObjectURL(blob);
+                const enlace = document.createElement('a');
+                enlace.href = url;
+                enlace.download = `protocolos_${new Date().toISOString().slice(0,10)}.zip`;
+                document.body.appendChild(enlace);
+                enlace.click();
+                enlace.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error(error);
+                alert('Ocurrió un error al preparar la descarga.');
+            } finally {
+                botonDescargar.disabled = false;
+                botonDescargar.innerHTML = '<i class="bi bi-download"></i> Descargar seleccionados';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

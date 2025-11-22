@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración del Sistema{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-gear-fill text-primary"></i> Configuración del Sistema</h2>
+                    <p class="text-muted">Configurar parámetros del sistema, laboratorio y preferencias</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Configuración del Laboratorio -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-building"></i> Datos del Laboratorio
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="configLaboratorio">
+                        <div class="mb-3">
+                            <label for="laboratorio_nombre" class="form-label">Nombre del Laboratorio</label>
+                            <input type="text" class="form-control" id="laboratorio_nombre" 
+                                   value="{{ config.get('laboratorio_nombre', '') }}" 
+                                   placeholder="Ej: Laboratorio de Diagnóstico Histopatológico">
+                        </div>
+                        <div class="mb-3">
+                            <label for="laboratorio_direccion" class="form-label">Dirección</label>
+                            <input type="text" class="form-control" id="laboratorio_direccion" 
+                                   value="{{ config.get('laboratorio_direccion', '') }}" 
+                                   placeholder="Ej: Pellegrini 630">
+                        </div>
+                        <div class="mb-3">
+                            <label for="laboratorio_telefono" class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" id="laboratorio_telefono" 
+                                   value="{{ config.get('laboratorio_telefono', '') }}" 
+                                   placeholder="Ej: 03462-15412472">
+                        </div>
+                        <div class="mb-3">
+                            <label for="laboratorio_ciudad" class="form-label">Ciudad</label>
+                            <input type="text" class="form-control" id="laboratorio_ciudad" 
+                                   value="{{ config.get('laboratorio_ciudad', '') }}" 
+                                   placeholder="Ej: 2600 - Venado Tuerto">
+                        </div>
+                        <div class="mb-3">
+                            <label for="laboratorio_email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="laboratorio_email" 
+                                   value="{{ config.get('laboratorio_email', '') }}" 
+                                   placeholder="Ej: info@laboratorio.com">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Guardar Configuración
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuración del Sistema -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-sliders"></i> Configuración del Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="configSistema">
+                        <div class="mb-3">
+                            <label for="items_per_pagina" class="form-label">Items por Página</label>
+                            <select class="form-select" id="items_per_pagina">
+                                <option value="25" {{ 'selected' if config.get('items_per_pagina', '50') == '25' else '' }}>25</option>
+                                <option value="50" {{ 'selected' if config.get('items_per_pagina', '50') == '50' else '' }}>50</option>
+                                <option value="100" {{ 'selected' if config.get('items_per_pagina', '50') == '100' else '' }}>100</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="session_timeout" class="form-label">Timeout de Sesión (horas)</label>
+                            <select class="form-select" id="session_timeout">
+                                <option value="4" {{ 'selected' if config.get('session_timeout', '8') == '4' else '' }}>4 horas</option>
+                                <option value="8" {{ 'selected' if config.get('session_timeout', '8') == '8' else '' }}>8 horas</option>
+                                <option value="12" {{ 'selected' if config.get('session_timeout', '8') == '12' else '' }}>12 horas</option>
+                                <option value="24" {{ 'selected' if config.get('session_timeout', '8') == '24' else '' }}>24 horas</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="debug_mode" 
+                                       {{ 'checked' if config.get('debug_mode', 'false') == 'true' else '' }}>
+                                <label class="form-check-label" for="debug_mode">
+                                    Modo Debug
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="maintenance_mode" 
+                                       {{ 'checked' if config.get('maintenance_mode', 'false') == 'true' else '' }}>
+                                <label class="form-check-label" for="maintenance_mode">
+                                    Modo Mantenimiento
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-save"></i> Guardar Configuración
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración de Reportes -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-text"></i> Configuración de Reportes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="configReportes">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="reporte_footer" class="form-label">Pie de Página de Reportes</label>
+                                    <textarea class="form-control" id="reporte_footer" rows="3" 
+                                              placeholder="Texto que aparecerá en el pie de página de los reportes">{{ config.get('reporte_footer', '') }}</textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="reporte_logo" class="form-label">Logo del Laboratorio</label>
+                                    
+                                    <!-- Logo actual -->
+                                    <div id="logo-actual" class="mb-2">
+                                        <img id="logo-img-actual" src="/static/img/logo.png" alt="Logo actual" 
+                                             style="max-width: 100px; max-height: 100px;" 
+                                             onerror="this.style.display='none'; document.getElementById('logo-no-existe').style.display='block';">
+                                        <div id="logo-no-existe" style="display: none;" class="text-muted">
+                                            <small>No hay logo cargado</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Input para nuevo logo -->
+                                    <input type="file" class="form-control" id="reporte_logo" accept="image/*" onchange="previewLogo(this)">
+                                    <div class="form-text">Formatos permitidos: PNG, JPG, JPEG. Tamaño recomendado: 240x240px</div>
+                                    
+                                    <!-- Vista previa del nuevo logo -->
+                                    <div id="logo-preview" class="mt-2" style="display: none;">
+                                        <img id="preview-img" src="" alt="Vista previa" style="max-width: 100px; max-height: 100px;">
+                                        <div class="mt-1">
+                                            <small class="text-muted" id="logo-info"></small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="mostrar_logo_reporte" 
+                                               {{ 'checked' if config.get('mostrar_logo_reporte', 'true') == 'true' else '' }}>
+                                        <label class="form-check-label" for="mostrar_logo_reporte">
+                                            Mostrar logo en reportes
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-save"></i> Guardar Configuración
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información del Sistema -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-info-circle"></i> Información del Sistema
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Versión del Sistema</h6>
+                            <p class="text-muted">LDH Web v1.0.0</p>
+                            
+                            <h6>Base de Datos</h6>
+                            <p class="text-muted">SQLite - {{ db_info.total_tablas }} tablas</p>
+                            
+                            <h6>Usuarios Registrados</h6>
+                            <p class="text-muted">{{ db_info.total_usuarios }} usuarios</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Protocolos</h6>
+                            <p class="text-muted">{{ db_info.total_protocolos }} protocolos</p>
+                            
+                            <h6>Pacientes</h6>
+                            <p class="text-muted">{{ db_info.total_pacientes }} pacientes</p>
+                            
+                            <h6>Última Actualización</h6>
+                            <p class="text-muted">{{ moment_actual }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// JavaScript para manejar los formularios de configuración
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuración del Laboratorio
+    document.getElementById('configLaboratorio').addEventListener('submit', function(e) {
+        e.preventDefault();
+        guardarConfiguracion('laboratorio');
+    });
+    
+    // Configuración del Sistema
+    document.getElementById('configSistema').addEventListener('submit', function(e) {
+        e.preventDefault();
+        guardarConfiguracion('sistema');
+    });
+    
+    // Configuración de Reportes
+    document.getElementById('configReportes').addEventListener('submit', function(e) {
+        e.preventDefault();
+        guardarConfiguracion('reportes');
+    });
+});
+
+function guardarConfiguracion(tipo) {
+    const form = document.getElementById('config' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
+    
+    // Si es configuración de reportes y hay un archivo de logo
+    if (tipo === 'reportes') {
+        const logoFile = document.getElementById('reporte_logo').files[0];
+        if (logoFile) {
+            subirLogo(logoFile);
+            return; // Salir aquí, la subida del logo manejará el resto
+        }
+    }
+    
+    // Obtener todos los inputs del formulario (excepto archivos)
+    const inputs = form.querySelectorAll('input:not([type="file"]), select, textarea');
+    const data = {};
+    
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            data[input.id] = input.checked;
+        } else {
+            data[input.id] = input.value;
+        }
+    });
+    
+    // Agregar tipo de configuración
+    data.tipo = tipo;
+    
+    // Debug: mostrar datos que se van a enviar
+    console.log('Datos a enviar:', data);
+    
+    fetch('/admin/configuracion/guardar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('success', 'Configuración guardada correctamente');
+        } else {
+            mostrarAlerta('error', 'Error al guardar la configuración: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('error', 'Error de conexión');
+    });
+}
+
+function previewLogo(input) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('logo-preview');
+            const img = document.getElementById('preview-img');
+            const info = document.getElementById('logo-info');
+            
+            img.src = e.target.result;
+            info.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        document.getElementById('logo-preview').style.display = 'none';
+    }
+}
+
+function subirLogo(file) {
+    const formData = new FormData();
+    formData.append('logo', file);
+    formData.append('tipo', 'reportes');
+    
+    // También agregar los otros campos del formulario de reportes
+    const form = document.getElementById('configReportes');
+    const inputs = form.querySelectorAll('input:not([type="file"]), select, textarea');
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            formData.append(input.id, input.checked);
+        } else {
+            formData.append(input.id, input.value);
+        }
+    });
+    
+    console.log('Subiendo logo:', file.name);
+    
+    fetch('/admin/configuracion/guardar', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('success', 'Logo y configuración guardados correctamente');
+            // Limpiar el input de archivo
+            document.getElementById('reporte_logo').value = '';
+            document.getElementById('logo-preview').style.display = 'none';
+            
+            // Actualizar el logo actual con timestamp para evitar cache
+            const logoActual = document.getElementById('logo-img-actual');
+            const logoNoExiste = document.getElementById('logo-no-existe');
+            logoActual.src = '/static/img/logo.png?t=' + new Date().getTime();
+            logoActual.style.display = 'block';
+            logoNoExiste.style.display = 'none';
+        } else {
+            mostrarAlerta('error', 'Error al guardar: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('error', 'Error de conexión');
+    });
+}
+
+function mostrarAlerta(tipo, mensaje) {
+    const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // Insertar alerta al inicio del contenido
+    const container = document.querySelector('.container-fluid');
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+    
+    // Auto-ocultar después de 5 segundos
+    setTimeout(() => {
+        const alert = container.querySelector('.alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

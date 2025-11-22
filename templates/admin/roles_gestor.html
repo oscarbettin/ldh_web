@@ -1,0 +1,490 @@
+{% extends "base.html" %}
+
+{% block title %}Gestor de Roles{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Estilos para la tabla principal */
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #343a40;
+    color: #fff;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    vertical-align: top;
+    padding: 0.75rem 0.5rem;
+}
+
+.table thead th .d-flex {
+    min-height: 40px;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.table thead th .fw-bold {
+    display: block;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+}
+
+.table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.table tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Estilos para encabezados de módulo */
+.modulo-header {
+    background-color: #6c757d !important;
+    color: #fff !important;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.modulo-header:hover {
+    background-color: #5a6268 !important;
+}
+
+.modulo-header td {
+    border: none !important;
+    padding: 0.75rem 1rem;
+}
+
+/* Estilos para contenido de módulo */
+.modulo-content {
+    transition: all 0.3s ease;
+}
+
+.modulo-content td {
+    padding: 0.5rem 1rem;
+    border-left: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+}
+
+/* Estilos para chevron */
+#chevron-1, #chevron-2, #chevron-3, #chevron-4, #chevron-5, #chevron-6, #chevron-7, #chevron-8, #chevron-9, #chevron-10 {
+    transition: transform 0.3s ease;
+}
+
+.chevron-rotated {
+    transform: rotate(90deg);
+}
+
+/* Estilos para checkboxes */
+.permiso-checkbox {
+    transform: scale(1.2);
+}
+
+.permiso-checkbox:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.permiso-checkbox:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Estilos para botones de rol */
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+/* Estilos para el encabezado fijo */
+.table-responsive {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="bi bi-shield-check text-primary"></i> Gestor de Roles</h2>
+                    <p class="text-muted">Matriz completa de roles y permisos detallados</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-info me-2" onclick="toggleAllAccordions()">
+                        <i class="bi bi-arrows-expand"></i> Expandir/Colapsar Todo
+                    </button>
+                    <button class="btn btn-primary me-2" onclick="nuevoRol()">
+                        <i class="bi bi-plus-circle"></i> Nuevo Rol
+                    </button>
+                    <button class="btn btn-secondary" onclick="volver()">
+                        <i class="bi bi-arrow-left"></i> Volver
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <!-- Tabla principal con encabezado fijo y módulos colapsables -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="matrizRoles">
+                            <!-- Encabezado fijo con roles -->
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 300px;">Permiso</th>
+                                    {% for rol in roles %}
+                                    <th class="text-center" style="width: 120px;">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <span class="fw-bold" style="line-height: 1.2;">
+                                                {% if rol.nombre == 'OSCAR' %}
+                                                    Super Administrador
+                                                {% else %}
+                                                    {{ rol.nombre }}
+                                                {% endif %}
+                                            </span>
+                                            {% if rol.nombre not in ['Administrador', 'Médico', 'Medico', 'PRESTADOR', 'Prestador'] %}
+                                            <div class="btn-group btn-group-sm mt-1">
+                                                <button class="btn btn-outline-light btn-sm" onclick="editarRol({{ rol.rol_id }})" title="Editar rol">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                {% if not rol.oculto %}
+                                                <button class="btn btn-outline-danger btn-sm" onclick="eliminarRol({{ rol.rol_id }})" title="Eliminar rol">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set modulo_counter = namespace(value=0) %}
+                                {% for modulo, permisos_modulo in permisos_por_modulo.items() %}
+                                {% set modulo_counter.value = modulo_counter.value + 1 %}
+                                <!-- Encabezado del módulo (colapsable) -->
+                                <tr class="table-secondary modulo-header" data-modulo="{{ modulo_counter.value }}" style="cursor: pointer;">
+                                    <td colspan="{{ roles|length + 1 }}" class="fw-bold" onclick="toggleModulo({{ modulo_counter.value }})">
+                                        <i class="bi bi-folder me-2"></i>
+                                        <i class="bi bi-chevron-right me-2" id="chevron-{{ modulo_counter.value }}"></i>
+                                        {{ modulo }}
+                                        <span class="badge bg-secondary ms-2">{{ permisos_modulo|length }} permisos</span>
+                                    </td>
+                                </tr>
+                                <!-- Permisos del módulo (colapsables) -->
+                                {% for permiso in permisos_modulo %}
+                                <tr class="modulo-content modulo-{{ modulo_counter.value }}" style="display: none;">
+                                    <td>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold">{{ permiso.nombre }}</span>
+                                            <small class="text-muted">{{ permiso.codigo }}</small>
+                                        </div>
+                                    </td>
+                                    {% for rol in roles %}
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input permiso-checkbox" 
+                                                   type="checkbox" 
+                                                   data-rol-id="{{ rol.rol_id }}" 
+                                                   data-permiso-id="{{ permiso.permiso_id }}"
+                                                   {% if permiso in rol.permisos %}checked{% endif %}
+                                                   {% if rol.nombre == 'Administrador' %}disabled{% endif %}
+                                                   onchange="cambiarPermiso({{ rol.rol_id }}, {{ permiso.permiso_id }}, this.checked)">
+                                        </div>
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Contenedor para mensajes temporales -->
+<div id="mensaje-temporal" class="position-fixed" style="bottom: 20px; right: 20px; z-index: 1050; display: none;">
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i>
+        <span id="mensaje-texto"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<!-- Modal para nuevo/editar rol -->
+<div class="modal fade" id="modalRol" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalRolTitulo">Nuevo Rol</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formRol">
+                    <input type="hidden" id="rolId" name="rol_id">
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre del Rol</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="guardarRol()">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let roles = {{ roles_json|tojson }};
+let permisos = {{ permisos_json|tojson }};
+
+// Función para cambiar permiso
+function cambiarPermiso(rolId, permisoId, tienePermiso) {
+    console.log(`Cambiando permiso ${permisoId} para rol ${rolId}: ${tienePermiso}`);
+    
+    // Obtener nombres para el mensaje
+    const rol = roles.find(r => r.rol_id === rolId);
+    const permiso = permisos.find(p => p.permiso_id === permisoId);
+    
+    // Verificar si es el rol Administrador
+    if (rol && rol.nombre === 'Administrador') {
+        mostrarAlerta('error', 'No se pueden modificar los permisos del rol Administrador');
+        // Revertir el checkbox
+        const checkbox = document.querySelector(`input[data-rol-id="${rolId}"][data-permiso-id="${permisoId}"]`);
+        checkbox.checked = !tienePermiso;
+        return;
+    }
+    
+    fetch('/admin/roles/cambiar-permiso', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            rol_id: rolId,
+            permiso_id: permisoId,
+            tiene_permiso: tienePermiso
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar mensaje temporal con nombres específicos
+            const accion = tienePermiso ? 'habilitado' : 'deshabilitado';
+            const nombreRol = rol ? rol.nombre : 'Rol';
+            const nombrePermiso = permiso ? permiso.codigo : 'Permiso';
+            
+            mostrarMensajeTemporal(`Permiso "${nombrePermiso}" ${accion} para el rol "${nombreRol}"`);
+        } else {
+            mostrarAlerta('error', 'Error al actualizar permiso: ' + data.error);
+            // Revertir el checkbox
+            const checkbox = document.querySelector(`input[data-rol-id="${rolId}"][data-permiso-id="${permisoId}"]`);
+            checkbox.checked = !tienePermiso;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('error', 'Error de conexión');
+        // Revertir el checkbox
+        const checkbox = document.querySelector(`input[data-rol-id="${rolId}"][data-permiso-id="${permisoId}"]`);
+        checkbox.checked = !tienePermiso;
+    });
+}
+
+// Función para nuevo rol
+function nuevoRol() {
+    document.getElementById('modalRolTitulo').textContent = 'Nuevo Rol';
+    document.getElementById('formRol').reset();
+    document.getElementById('rolId').value = '';
+    new bootstrap.Modal(document.getElementById('modalRol')).show();
+}
+
+// Función para editar rol
+function editarRol(rolId) {
+    const rol = roles.find(r => r.rol_id === rolId);
+    if (rol) {
+        document.getElementById('modalRolTitulo').textContent = 'Editar Rol';
+        document.getElementById('rolId').value = rol.rol_id;
+        document.getElementById('nombre').value = rol.nombre;
+        document.getElementById('descripcion').value = rol.descripcion || '';
+        new bootstrap.Modal(document.getElementById('modalRol')).show();
+    }
+}
+
+// Función para eliminar rol
+function eliminarRol(rolId) {
+    const rol = roles.find(r => r.rol_id === rolId);
+    if (rol) {
+        // Verificar si es un rol protegido
+        const nombreNormalizado = rol.nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        if (['administrador', 'medico', 'prestador'].includes(nombreNormalizado)) {
+            mostrarAlerta('error', `No se puede eliminar el rol ${rol.nombre}`);
+            return;
+        }
+        
+        if (confirm(`¿Estás seguro de que quieres eliminar el rol "${rol.nombre}"?`)) {
+            fetch(`/admin/roles/eliminar/${rolId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarAlerta('success', 'Rol eliminado correctamente');
+                    location.reload();
+                } else {
+                    mostrarAlerta('error', 'Error al eliminar rol: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarAlerta('error', 'Error de conexión');
+            });
+        }
+    }
+}
+
+// Función para guardar rol
+function guardarRol() {
+    const formData = new FormData(document.getElementById('formRol'));
+    const data = Object.fromEntries(formData.entries());
+    
+    // Los roles creados desde la interfaz nunca son ocultos (solo OSCAR es oculto)
+    data.oculto = false;
+    
+    const url = data.rol_id ? `/admin/roles/editar/${data.rol_id}` : '/admin/roles/crear';
+    const method = data.rol_id ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('success', 'Rol guardado correctamente');
+            bootstrap.Modal.getInstance(document.getElementById('modalRol')).hide();
+            location.reload();
+        } else {
+            mostrarAlerta('error', 'Error al guardar rol: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarAlerta('error', 'Error de conexión');
+    });
+}
+
+// Función para volver
+function volver() {
+    window.history.back();
+}
+
+// Función para expandir/colapsar todos los módulos
+function toggleAllAccordions() {
+    const moduloHeaders = document.querySelectorAll('.modulo-header');
+    const allCollapsed = Array.from(moduloHeaders).every(header => {
+        const moduloIndex = header.dataset.modulo;
+        const contentRows = document.querySelectorAll(`.modulo-${moduloIndex}`);
+        return Array.from(contentRows).every(row => row.style.display === 'none');
+    });
+    
+    moduloHeaders.forEach(header => {
+        const moduloIndex = header.dataset.modulo;
+        const contentRows = document.querySelectorAll(`.modulo-${moduloIndex}`);
+        const chevron = document.getElementById(`chevron-${moduloIndex}`);
+        
+        if (allCollapsed) {
+            // Expandir todos
+            contentRows.forEach(row => row.style.display = '');
+            chevron.classList.add('chevron-rotated');
+        } else {
+            // Colapsar todos
+            contentRows.forEach(row => row.style.display = 'none');
+            chevron.classList.remove('chevron-rotated');
+        }
+    });
+}
+
+// Función para colapsar/expandir un módulo específico
+function toggleModulo(moduloIndex) {
+    const contentRows = document.querySelectorAll(`.modulo-${moduloIndex}`);
+    const chevron = document.getElementById(`chevron-${moduloIndex}`);
+    const isCollapsed = contentRows[0].style.display === 'none';
+    
+    contentRows.forEach(row => {
+        row.style.display = isCollapsed ? '' : 'none';
+    });
+    
+    if (isCollapsed) {
+        chevron.classList.add('chevron-rotated');
+    } else {
+        chevron.classList.remove('chevron-rotated');
+    }
+}
+
+// Función para mostrar mensajes temporales (esquina inferior derecha)
+function mostrarMensajeTemporal(mensaje) {
+    const mensajeElement = document.getElementById('mensaje-temporal');
+    const mensajeTexto = document.getElementById('mensaje-texto');
+    
+    mensajeTexto.textContent = mensaje;
+    mensajeElement.style.display = 'block';
+    
+    // Auto-ocultar después de 3 segundos
+    setTimeout(() => {
+        mensajeElement.style.display = 'none';
+    }, 3000);
+}
+
+// Función para mostrar alertas
+function mostrarAlerta(tipo, mensaje) {
+    const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
+    const alertHtml = `
+        <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+    
+    setTimeout(() => {
+        const alert = container.querySelector('.alert');
+        if (alert) {
+            alert.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+
+{% block title %}Mensajes del Asistente{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h1><i class="bi bi-chat-dots"></i> Mensajes del Asistente</h1>
+            <p class="text-muted">Consultas y solicitudes enviadas por usuarios y prestadores.</p>
+        </div>
+    </div>
+
+    <form method="get" class="row g-3 mb-3">
+        <div class="col-md-3">
+            <label for="tipo" class="form-label">Tipo</label>
+            <select name="tipo" id="tipo" class="form-select">
+                <option value="">Todos</option>
+                <option value="ASISTENTE_MENSAJE" {{ 'selected' if tipo == 'ASISTENTE_MENSAJE' else '' }}>Asistente (portal)</option>
+                <option value="ASISTENTE_LOGIN_MENSAJE" {{ 'selected' if tipo == 'ASISTENTE_LOGIN_MENSAJE' else '' }}>Asistente (login)</option>
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="buscar" class="form-label">Buscar</label>
+            <input type="text" name="buscar" id="buscar" value="{{ buscar }}" class="form-control" placeholder="Palabra clave en el mensaje">
+        </div>
+        <div class="col-md-3 d-flex align-items-end gap-2">
+            <button class="btn btn-primary" type="submit">
+                <i class="bi bi-search"></i> Filtrar
+            </button>
+            <a href="{{ url_for('admin.asistente_mensajes') }}" class="btn btn-outline-secondary">Limpiar</a>
+        </div>
+    </form>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 160px;">Fecha</th>
+                            <th>Usuario</th>
+                            <th>Tipo</th>
+                            <th>Tema</th>
+                            <th>Contexto</th>
+                            <th>Mensaje</th>
+                            <th style="width: 120px;">IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if mensajes.items %}
+                        {% for m in mensajes.items %}
+                            {% set lineas = (m.descripcion or '').split('\n') %}
+                            {% set tema = '' %}
+                            {% set contexto = '' %}
+                            {% set cuerpo = [] %}
+                            {% for linea in lineas %}
+                                {% if 'tema:' in linea|lower and not tema %}
+                                    {% set tema = linea.split(':', 1)[1].strip() %}
+                                {% elif 'contexto:' in linea|lower and not contexto %}
+                                    {% set contexto = linea.split(':', 1)[1].strip() %}
+                                {% else %}
+                                    {% if linea.strip() %}{% set cuerpo = cuerpo + [linea.strip()] %}{% endif %}
+                                {% endif %}
+                            {% endfor %}
+                            {% if not tema and m.accion == 'ASISTENTE_LOGIN_MENSAJE' %}
+                                {% set tema = 'Recuperación de acceso' %}
+                            {% endif %}
+                            <tr>
+                                <td>{{ m.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    {% if m.usuario %}
+                                        <strong>{{ m.usuario.nombre_completo }}</strong><br>
+                                        <small class="text-muted">{{ m.usuario.email }}</small>
+                                    {% else %}
+                                        <span class="text-muted">Invitado</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if m.accion == 'ASISTENTE_MENSAJE' %}
+                                        <span class="badge bg-primary">Portal</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Login</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ tema or '—' }}</td>
+                                <td>{{ contexto or '—' }}</td>
+                                <td>
+                                    {% if cuerpo %}
+                                        {% for linea in cuerpo %}
+                                            <div>{{ linea }}</div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td><small class="text-muted">{{ m.ip_address or '—' }}</small></td>
+                            </tr>
+                        {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center text-muted py-4">No se encontraron mensajes con los filtros aplicados.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if mensajes.pages > 1 %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if mensajes.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.asistente_mensajes', page=mensajes.prev_num, tipo=tipo, buscar=buscar) }}">Anterior</a>
+            </li>
+            {% endif %}
+            {% for page_num in mensajes.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    {% if page_num == mensajes.page %}
+                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                    <li class="page-item"><a class="page-link" href="{{ url_for('admin.asistente_mensajes', page=page_num, tipo=tipo, buscar=buscar) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+            {% endfor %}
+            {% if mensajes.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.asistente_mensajes', page=mensajes.next_num, tipo=tipo, buscar=buscar) }}">Siguiente</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+

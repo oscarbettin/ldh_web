@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editor PAP - Base de Datos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .plantillas-section {
+            margin-bottom: 30px;
+        }
+        .plantillas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .plantilla-btn {
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        .plantilla-btn:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        .plantilla-btn.activo {
+            border-color: #007bff;
+            background: #007bff;
+            color: white;
+        }
+        .seccion {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .seccion h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 10px;
+        }
+        .opciones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        .opcion {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .opcion:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+        .opcion.seleccionada {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+        .texto-final {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .btn-guardar {
+            background: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        .btn-guardar:hover {
+            background: #218838;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Editor PAP - Plantillas desde Base de Datos</h1>
+            <p>Selecciona una plantilla o personaliza manualmente</p>
+        </div>
+
+        <div class="plantillas-section">
+            <h2>Plantillas Disponibles</h2>
+            <div class="plantillas-grid" id="plantillas-grid">
+                <div class="loading">Cargando plantillas...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Extendido</h3>
+            <div class="opciones-grid" id="extendido-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Células (Conformación)</h3>
+            <div class="opciones-grid" id="celulas-conformacion-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Células (Junto a)</h3>
+            <div class="opciones-grid" id="celulas-junto-a-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Componente Inflamatorio</h3>
+            <div class="opciones-grid" id="componente-inflamatorio-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Flora</h3>
+            <div class="opciones-grid" id="flora-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h3>Diagnóstico</h3>
+            <div class="opciones-grid" id="diagnostico-opciones">
+                <div class="loading">Cargando opciones...</div>
+            </div>
+        </div>
+
+        <div class="texto-final">
+            <h3>Texto Generado</h3>
+            <div id="texto-final">Selecciona opciones para generar el texto...</div>
+            <button class="btn-guardar" onclick="guardarInforme()">Guardar Informe</button>
+        </div>
+    </div>
+
+    <script>
+        let contenidoActual = {};
+        let plantillasDisponibles = {};
+        let lineasDisponibles = {};
+
+        // Cargar plantillas al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarPlantillas();
+            cargarLineas();
+        });
+
+        async function cargarPlantillas() {
+            try {
+                const response = await fetch('/plantillas-dinamicas-pap/api/plantillas');
+                const data = await response.json();
+                
+                if (data.plantillas) {
+                    plantillasDisponibles = data.plantillas;
+                    mostrarPlantillas(data.plantillas);
+                }
+            } catch (error) {
+                console.error('Error cargando plantillas:', error);
+                document.getElementById('plantillas-grid').innerHTML = '<div class="loading">Error cargando plantillas</div>';
+            }
+        }
+
+        function mostrarPlantillas(plantillas) {
+            const grid = document.getElementById('plantillas-grid');
+            grid.innerHTML = '';
+            
+            plantillas.forEach(plantilla => {
+                const btn = document.createElement('div');
+                btn.className = 'plantilla-btn';
+                btn.id = `btn-${plantilla.codigo}`;
+                btn.innerHTML = `
+                    <strong>${plantilla.codigo}</strong><br>
+                    <small>${plantilla.descripcion}</small>
+                `;
+                btn.onclick = () => seleccionarPlantilla(plantilla.codigo);
+                grid.appendChild(btn);
+            });
+        }
+
+        async function cargarLineas() {
+            const categorias = ['EXTENDIDO', 'CELULAS_CONFORMACION', 'CELULAS_JUNTO_A', 'COMP_INFLAMATORIO', 'FLORA', 'DIAGNOSTICO'];
+            
+            for (const categoria of categorias) {
+                try {
+                    const response = await fetch(`/plantillas-dinamicas-pap/api/lineas/${categoria}`);
+                    const data = await response.json();
+                    
+                    if (data.lineas) {
+                        lineasDisponibles[categoria] = data.lineas;
+                        mostrarLineas(categoria, data.lineas);
+                    }
+                } catch (error) {
+                    console.error(`Error cargando líneas para ${categoria}:`, error);
+                }
+            }
+        }
+
+        function mostrarLineas(categoria, lineas) {
+            const seccionId = categoria.toLowerCase().replace('_', '-') + '-opciones';
+            const container = document.getElementById(seccionId);
+            
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            lineas.forEach(linea => {
+                const opcion = document.createElement('div');
+                opcion.className = 'opcion';
+                opcion.dataset.lineaId = linea.lineas_pap_id;
+                opcion.dataset.categoria = categoria;
+                opcion.textContent = linea.texto;
+                opcion.onclick = () => seleccionarOpcion(opcion, categoria);
+                container.appendChild(opcion);
+            });
+        }
+
+        function seleccionarPlantilla(codigo) {
+            // Remover selección anterior
+            document.querySelectorAll('.plantilla-btn').forEach(btn => btn.classList.remove('activo'));
+            
+            // Activar botón seleccionado
+            document.getElementById(`btn-${codigo}`).classList.add('activo');
+            
+            // Aplicar plantilla
+            aplicarPlantilla(codigo);
+        }
+
+        async function aplicarPlantilla(codigo) {
+            try {
+                const response = await fetch(`/plantillas-dinamicas-pap/api/plantilla/${codigo}`);
+                const data = await response.json();
+                
+                if (data.lineas) {
+                    // Limpiar selecciones anteriores
+                    document.querySelectorAll('.opcion.seleccionada').forEach(opcion => {
+                        opcion.classList.remove('seleccionada');
+                    });
+                    
+                    // Aplicar líneas de la plantilla
+                    data.lineas.forEach(linea => {
+                        const opcion = document.querySelector(`[data-linea-id="${linea.lineas_pap_id}"]`);
+                        if (opcion) {
+                            opcion.classList.add('seleccionada');
+                            contenidoActual[linea.categoria] = linea.texto;
+                        }
+                    });
+                    
+                    actualizarTextoGenerado();
+                }
+            } catch (error) {
+                console.error('Error aplicando plantilla:', error);
+            }
+        }
+
+        function seleccionarOpcion(elemento, categoria) {
+            // Remover selección anterior en la misma categoría
+            document.querySelectorAll(`[data-categoria="${categoria}"]`).forEach(opcion => {
+                opcion.classList.remove('seleccionada');
+            });
+            
+            // Seleccionar nueva opción
+            elemento.classList.add('seleccionada');
+            contenidoActual[categoria] = elemento.textContent;
+            
+            // Remover selección de plantilla
+            document.querySelectorAll('.plantilla-btn').forEach(btn => btn.classList.remove('activo'));
+            
+            actualizarTextoGenerado();
+        }
+
+        function actualizarTextoGenerado() {
+            const textoDiv = document.getElementById('texto-final');
+            
+            if (Object.keys(contenidoActual).length === 0) {
+                textoDiv.textContent = 'Selecciona opciones para generar el texto...';
+                return;
+            }
+            
+            let texto = '';
+            
+            // Ordenar secciones
+            const ordenSecciones = ['EXTENDIDO', 'CELULAS_CONFORMACION', 'CELULAS_JUNTO_A', 'COMP_INFLAMATORIO', 'FLORA', 'DIAGNOSTICO'];
+            
+            ordenSecciones.forEach(seccion => {
+                if (contenidoActual[seccion]) {
+                    texto += `${seccion}: ${contenidoActual[seccion]}\n\n`;
+                }
+            });
+            
+            textoDiv.textContent = texto.trim();
+        }
+
+        async function guardarInforme() {
+            try {
+                const response = await fetch('/plantillas-dinamicas-pap/api/guardar-informe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(contenidoActual)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Informe guardado correctamente');
+                } else {
+                    alert('Error al guardar: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error guardando informe:', error);
+                alert('Error al guardar el informe');
+            }
+        }
+    </script>
+</body>
+</html>

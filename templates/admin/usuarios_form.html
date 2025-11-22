@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if usuario else 'Nuevo' }} Usuario{% endblock %}
+
+{% block content %}
+{% set matricula_tipo_val = request.form.get('matricula_tipo', usuario.matricula_tipo if usuario else '') %}
+{% set matricula_numero_val = request.form.get('matricula_numero', usuario.matricula_numero if usuario else '') %}
+{% set especialidad_val = request.form.get('especialidad', usuario.especialidad if usuario else '') %}
+{% set prestador_id_val = request.form.get('prestador_id', usuario.prestador_id if usuario else '') %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>
+                <i class="bi bi-person-{{ 'check' if usuario else 'plus' }}-fill"></i>
+                {{ 'Editar' if usuario else 'Nuevo' }} Usuario
+            </h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Datos de acceso -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-key"></i> Datos de Acceso
+                        </h5>
+                        
+                        {% if not usuario %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Usuario *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       required 
+                                       autofocus
+                                       pattern="[a-zA-Z0-9_-]+"
+                                       title="Solo letras, números, guiones y guiones bajos">
+                                <small class="text-muted">Solo letras, números y guiones. Se guardará en minúsculas.</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       required>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Usuario</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       value="{{ usuario.username }}" 
+                                       disabled>
+                                <small class="text-muted">El username no se puede cambiar</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       value="{{ usuario.email }}"
+                                       required>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Contraseña -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">
+                                    Contraseña {{ '*' if not usuario else '(dejar vacío para no cambiar)' }}
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       minlength="6"
+                                       {{ 'required' if not usuario else '' }}>
+                                <small class="text-muted">Mínimo 6 caracteres</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="password_confirm" class="form-label">
+                                    Confirmar Contraseña {{ '*' if not usuario else '' }}
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password_confirm" 
+                                       name="password_confirm" 
+                                       minlength="6"
+                                       {{ 'required' if not usuario else '' }}>
+                            </div>
+                        </div>
+                        
+                        <!-- Datos personales -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-person"></i> Datos Personales
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="nombre_completo" class="form-label">Nombre Completo *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="nombre_completo" 
+                                       name="nombre_completo" 
+                                       value="{{ usuario.nombre_completo if usuario else '' }}"
+                                       required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="telefono" 
+                                       name="telefono" 
+                                       value="{{ usuario.telefono if usuario else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Rol -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-shield-check"></i> Rol y Permisos
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="rol_id" class="form-label">Rol *</label>
+                                <select class="form-select" id="rol_id" name="rol_id" required>
+                                    <option value="">Seleccione un rol...</option>
+                                    {% for rol in roles %}
+                                    <option value="{{ rol.rol_id }}" 
+                                            data-nombre="{{ rol.nombre }}"
+                                            {{ 'selected' if usuario and usuario.rol_id == rol.rol_id else ( 'selected' if request.form.get('rol_id') and request.form.get('rol_id')|int == rol.rol_id else '' ) }}>
+                                        {{ rol.nombre }} - {{ rol.descripcion }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">
+                                    El rol determina qué puede hacer el usuario en el sistema
+                                </small>
+                            </div>
+                        </div>
+
+                        <div id="bloque-matricula" class="row mt-2" style="display: none;">
+                            <div class="col-md-4 mb-3">
+                                <label for="matricula_tipo" class="form-label">Tipo de Matrícula</label>
+                                <select class="form-select" id="matricula_tipo" name="matricula_tipo">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="MN" {{ 'selected' if matricula_tipo_val == 'MN' else '' }}>MN - Nacional</option>
+                                    <option value="MP" {{ 'selected' if matricula_tipo_val == 'MP' else '' }}>MP - Provincial</option>
+                                    <option value="OT" {{ 'selected' if matricula_tipo_val == 'OT' else '' }}>Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label for="matricula_numero" class="form-label">Número de Matrícula</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="matricula_numero"
+                                       name="matricula_numero"
+                                       value="{{ matricula_numero_val }}">
+                                <small class="text-muted">Este dato se mostrará en la firma del informe cuando el usuario complete un protocolo.</small>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label for="especialidad" class="form-label">Especialidad</label>
+                                <input type="text"
+                                       class="form-control"
+                                       id="especialidad"
+                                       name="especialidad"
+                                       value="{{ especialidad_val }}">
+                                <small class="text-muted">Texto visible en la firma del informe. Ej.: Anatomopatóloga.</small>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label for="prestador_id" class="form-label">Prestador asociado</label>
+                                <select class="form-select" id="prestador_id" name="prestador_id">
+                                    <option value="">Seleccione un prestador...</option>
+                                    {% for prestador in prestadores %}
+                                    <option value="{{ prestador.prestador_id }}" {{ 'selected' if prestador_id_val and prestador_id_val|int == prestador.prestador_id else '' }}>
+                                        {{ prestador.nombre_completo }} - {{ prestador.nombre_especialidad }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="text-muted">Determina qué protocolos verá este usuario en el portal de prestadores.</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('admin.usuarios') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i> Información
+                    </h6>
+                    <p class="card-text text-sm">
+                        <strong>Usuario:</strong><br>
+                        El username debe ser único y solo puede contener letras, números, guiones y guiones bajos.
+                        {% if not usuario %}
+                        Se guardará automáticamente en minúsculas.
+                        {% else %}
+                        No se puede modificar una vez creado.
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Contraseña:</strong><br>
+                        Debe tener al menos 6 caracteres. Se almacena encriptada de forma segura.
+                        {% if usuario %}
+                        <br>Dejar vacío para no modificarla.
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Roles disponibles:</strong><br>
+                        - <strong>Administrador:</strong> Acceso total<br>
+                        - <strong>Médico:</strong> Crea informes y firma protocolos<br>
+                        - <strong>Técnico:</strong> Ingresa protocolos<br>
+                        - <strong>Secretaria:</strong> Recepción<br>
+                        - <strong>Contable:</strong> Facturación<br>
+                        - <strong>Solo Lectura:</strong> Consulta<br>
+                        - <strong>Prestador:</strong> Solicita estudios
+                    </p>
+                </div>
+            </div>
+            
+            {% if usuario %}
+            <div class="card mt-3 bg-warning bg-opacity-10">
+                <div class="card-body">
+                    <h6 class="card-title text-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Atención
+                    </h6>
+                    <p class="card-text text-sm mb-0">
+                        Los cambios en el rol afectarán inmediatamente los permisos del usuario.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Validar que las contraseñas coincidan
+document.querySelector('form').addEventListener('submit', function(e) {
+    var pass = document.getElementById('password').value;
+    var confirm = document.getElementById('password_confirm').value;
+    
+    if (pass && pass !== confirm) {
+        e.preventDefault();
+        alert('Las contraseñas no coinciden');
+        return false;
+    }
+});
+
+const rolSelect = document.getElementById('rol_id');
+const bloqueMatricula = document.getElementById('bloque-matricula');
+const campoTipo = document.getElementById('matricula_tipo');
+const campoNumero = document.getElementById('matricula_numero');
+const campoEspecialidad = document.getElementById('especialidad');
+const selectPrestador = document.getElementById('prestador_id');
+
+function normalizarTexto(valor) {
+    if (!valor) return '';
+    return valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
+function debeMostrarMatricula(nombreRol) {
+    const normalizado = normalizarTexto(nombreRol);
+    return ['medico', 'prestador'].includes(normalizado);
+}
+
+function actualizarSeccionMatricula() {
+    const opcion = rolSelect.options[rolSelect.selectedIndex];
+    const mostrar = opcion ? debeMostrarMatricula(opcion.dataset.nombre || opcion.textContent) : false;
+    if (mostrar) {
+        bloqueMatricula.style.display = '';
+        campoTipo.disabled = false;
+        campoNumero.disabled = false;
+        campoEspecialidad.disabled = false;
+        if (selectPrestador) selectPrestador.disabled = false;
+    } else {
+        bloqueMatricula.style.display = 'none';
+        campoTipo.disabled = true;
+        campoNumero.disabled = true;
+        campoEspecialidad.disabled = true;
+        if (selectPrestador) selectPrestador.disabled = true;
+    }
+}
+
+rolSelect.addEventListener('change', actualizarSeccionMatricula);
+actualizarSeccionMatricula();
+</script>
+{% endblock %}
+{% endblock %}
+

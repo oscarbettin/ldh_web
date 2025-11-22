@@ -1,0 +1,1091 @@
+{% extends "base.html" %}
+
+{% block title %}Editor de Análisis PAP v2 - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.editor-container {
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.header-info {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    border-left: 4px solid #007bff;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+}
+
+.left-panel {
+    width: 350px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.content-area {
+    flex: 1;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Categorías con colores distintivos */
+.categoria-trofoco {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.categoria-hipotrofoco {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.categoria-atrofico {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.categoria-inflamatorio {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.categoria-otros {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: white;
+}
+
+.categoria-header {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.categoria-header:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+.categoria-content {
+    display: none;
+    padding: 10px 0;
+}
+
+.categoria-content.show {
+    display: block;
+}
+
+.plantilla-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 5px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.plantilla-item:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    transform: translateX(5px);
+}
+
+.plantilla-item.seleccionada {
+    background: #e8f5e8;
+    border-color: #28a745;
+    border-left: 4px solid #28a745;
+}
+
+.selector-plantillas {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.selector-plantillas::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: left 0.5s;
+}
+
+.selector-plantillas:hover::before {
+    left: 100%;
+}
+
+.selector-plantillas:hover {
+    border-color: #007bff;
+    background: #e3f2fd;
+    transform: translateY(-2px);
+}
+
+.selector-plantillas.has-content {
+    border: 2px solid #28a745;
+    background: #f8fff8;
+}
+
+.texto-generado {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    min-height: 200px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+}
+
+.boton-plantilla {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin: 3px;
+    font-size: 0.9em;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.boton-plantilla:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    transform: translateY(-1px);
+}
+
+.boton-plantilla.seleccionado {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+}
+
+/* Iconos para categorías */
+.categoria-icon {
+    font-size: 1.2em;
+    margin-right: 10px;
+}
+
+/* Botones de acción */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.btn-modern {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-primary-modern {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-success-modern {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: white;
+}
+
+.btn-info-modern {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .main-content {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .left-panel {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+}
+
+.categoria-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 15px;
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 10px;
+}
+
+.plantillas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.contador-plantillas {
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    margin-left: 8px;
+}
+
+.btn-selector-moderno {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-selector-moderno:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    color: white;
+}
+
+.preview-area {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    min-height: 200px;
+}
+
+.preview-area h6 {
+    color: #495057;
+    margin-bottom: 10px;
+}
+
+.texto-preview {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Header con información del protocolo -->
+    <div class="header-info">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-text text-primary"></i>
+                    Editor de Análisis PAP v2
+                </h4>
+                <p class="text-muted mb-0">Protocolo: <strong>{{ protocolo.numero_protocolo }}</strong></p>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group">
+                <a href="{{ url_for('protocolos.ver', id=protocolo.protocolo_id) }}" 
+                   class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver al Protocolo
+                </a>
+                    <button class="btn btn-success" onclick="guardarPlantilla()">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- Panel izquierdo - Navegación -->
+        <div class="left-panel">
+            <h5 class="mb-3">
+                <i class="bi bi-list-ul"></i> Secciones
+            </h5>
+            
+            <div class="list-group">
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="extendido">
+                    <i class="bi bi-file-text"></i> Extendido
+                </a>
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="conformacion">
+                    <i class="bi bi-grid-3x3"></i> Conformación Celular
+                </a>
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="adicionales">
+                    <i class="bi bi-plus-circle"></i> Células Adicionales
+                </a>
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="inflamatorio">
+                    <i class="bi bi-exclamation-triangle"></i> Componente Inflamatorio
+                </a>
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="flora">
+                    <i class="bi bi-bug"></i> Flora
+                </a>
+                <a href="#" class="list-group-item list-group-item-action seccion-nav" 
+                   data-seccion="diagnostico">
+                    <i class="bi bi-clipboard-check"></i> Diagnóstico
+                </a>
+            </div>
+
+            <hr>
+
+            <h6 class="mb-3">
+                <i class="bi bi-tools"></i> Herramientas
+            </h6>
+            
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary btn-sm" onclick="limpiarSeccion()">
+                    <i class="bi bi-eraser"></i> Limpiar Sección
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="limpiarTodo()">
+                    <i class="bi bi-trash"></i> Limpiar Todo
+                </button>
+                <button class="btn btn-outline-info btn-sm" onclick="mostrarVistaPrevia()">
+                    <i class="bi bi-eye"></i> Vista Previa
+                </button>
+                <button class="btn btn-outline-success btn-sm" onclick="generarInformeConClaude()">
+                    <i class="bi bi-robot"></i> Generar con IA
+                </button>
+            </div>
+        </div>
+
+        <!-- Área de contenido principal -->
+        <div class="content-area">
+            <!-- Sección activa -->
+            <div id="seccion-activa">
+                <h5 id="titulo-seccion">
+                    <i class="bi bi-file-text"></i> Selecciona una sección
+                </h5>
+                
+                <div id="contenido-seccion">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-arrow-left" style="font-size: 2rem;"></i>
+                        <p class="mt-3">Selecciona una sección del panel izquierdo para comenzar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Selector de Plantillas -->
+{% include 'components/selector_plantillas_modal.html' %}
+
+<!-- Modal de Vista Previa Completa -->
+<div class="modal fade" id="modalVistaPreviaCompleta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-eye"></i> Vista Previa del Informe Completo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="contenidoVistaPreviaCompleta" class="texto-preview">
+                    <!-- Contenido generado dinámicamente -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-primary" onclick="exportarInforme()">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let seccionActual = null;
+    let contenidoSecciones = {};
+    
+    // Mapeo de secciones
+    const secciones = {
+        'extendido': {
+            titulo: 'Extendido',
+            icono: 'bi-file-text',
+            color: 'primary',
+            descripcion: 'Descripción del extendido citológico'
+        },
+        'conformacion': {
+            titulo: 'Conformación Celular',
+            icono: 'bi-grid-3x3',
+            color: 'success',
+            descripcion: 'Descripción de la conformación celular'
+        },
+        'adicionales': {
+            titulo: 'Células Adicionales',
+            icono: 'bi-plus-circle',
+            color: 'info',
+            descripcion: 'Descripción de células adicionales observadas'
+        },
+        'inflamatorio': {
+            titulo: 'Componente Inflamatorio',
+            icono: 'bi-exclamation-triangle',
+            color: 'warning',
+            descripcion: 'Descripción del componente inflamatorio'
+        },
+        'flora': {
+            titulo: 'Flora',
+            icono: 'bi-bug',
+            color: 'secondary',
+            descripcion: 'Descripción de la flora observada'
+        },
+        'diagnostico': {
+            titulo: 'Diagnóstico',
+            icono: 'bi-clipboard-check',
+            color: 'danger',
+            descripcion: 'Diagnóstico final del estudio'
+        }
+    };
+    
+    // Inicializar navegación
+    initNavegacion();
+    
+    function initNavegacion() {
+        document.querySelectorAll('.seccion-nav').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (this && this.dataset && this.dataset.seccion) {
+                    const seccion = this.dataset.seccion;
+                    mostrarSeccion(seccion);
+                } else {
+                    console.error('Error: elemento sin dataset.seccion', this);
+                }
+            });
+        });
+    }
+    
+    function mostrarSeccion(seccionId) {
+        seccionActual = seccionId;
+        const info = secciones[seccionId];
+        
+        if (!info) {
+            console.error('Sección no encontrada:', seccionId);
+            return;
+        }
+        
+        // Actualizar navegación
+        document.querySelectorAll('.seccion-nav').forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        const elementoSeccion = document.querySelector(`[data-seccion="${seccionId}"]`);
+        if (elementoSeccion) {
+            elementoSeccion.classList.add('active');
+        } else {
+            console.error('Elemento de sección no encontrado:', seccionId);
+        }
+        
+        // Actualizar título
+        document.getElementById('titulo-seccion').innerHTML = `
+            <i class="bi ${info.icono} text-${info.color}"></i> ${info.titulo}
+        `;
+        
+        // Actualizar contenido
+        mostrarContenidoSeccion(seccionId);
+    }
+    
+    function mostrarContenidoSeccion(seccionId) {
+        const contenido = `
+            <div class="mb-4">
+                <p class="text-muted">${secciones[seccionId].descripcion}</p>
+            </div>
+            
+            <!-- Selector de Plantillas -->
+            <div class="selector-plantillas" id="selector-${seccionId}">
+                <div class="text-center">
+                    <i class="bi bi-collection text-muted" style="font-size: 2rem;"></i>
+                    <h6 class="mt-2 text-muted">Sin plantillas seleccionadas</h6>
+                    <p class="text-muted small mb-3">Haz clic en el botón para seleccionar plantillas</p>
+                    <button class="btn btn-selector-moderno" onclick="abrirSelectorPlantillas('${seccionId}')">
+                        <i class="bi bi-plus-circle"></i> Seleccionar Plantillas
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Área de texto generado -->
+            <div class="texto-generado" id="texto-${seccionId}">
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-file-text"></i>
+                    <p class="mt-2 mb-0">El texto aparecerá aquí al seleccionar plantillas</p>
+                </div>
+            </div>
+            
+            <!-- Controles de la sección -->
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary btn-sm" onclick="abrirSelectorPlantillas('${seccionId}')">
+                        <i class="bi bi-plus"></i> Agregar Plantillas
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm ms-2" onclick="editarTexto('${seccionId}')">
+                        <i class="bi bi-pencil"></i> Editar Texto
+                    </button>
+                    <button class="btn btn-outline-info btn-sm ms-2" onclick="sugerirConClaude('${seccionId}')" id="btn-claude-${seccionId}">
+                        <i class="bi bi-robot"></i> Sugerir con IA
+                    </button>
+                </div>
+                <div class="col-md-6 text-end">
+                    <span class="badge bg-secondary">
+                        <span id="contador-${seccionId}">0</span> plantillas
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Vista previa de la sección -->
+            <div class="preview-area">
+                <h6><i class="bi bi-eye"></i> Vista Previa</h6>
+                <div class="texto-preview" id="preview-${seccionId}">
+                    <!-- Texto de vista previa -->
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('contenido-seccion').innerHTML = contenido;
+        
+        // Cargar contenido guardado si existe
+        if (contenidoSecciones[seccionId]) {
+            cargarContenidoGuardado(seccionId);
+        }
+    }
+    
+    function abrirSelectorPlantillas(seccionId) {
+        // Guardar la sección actual para aplicar las plantillas
+        window.seccionActualParaPlantillas = seccionId;
+        
+        // Abrir modal
+        const modal = new bootstrap.Modal(document.getElementById('modalPlantillas'));
+        modal.show();
+    }
+    
+    function cargarContenidoGuardado(seccionId) {
+        const contenido = contenidoSecciones[seccionId];
+        if (contenido && contenido.plantillas && contenido.plantillas.length > 0) {
+            actualizarSelectorPlantillas(seccionId, contenido.plantillas);
+            actualizarTextoGenerado(seccionId, contenido.texto);
+        }
+    }
+    
+    function actualizarSelectorPlantillas(seccionId, plantillas) {
+        const selector = document.getElementById(`selector-${seccionId}`);
+        const contador = document.getElementById(`contador-${seccionId}`);
+        
+        if (plantillas.length > 0) {
+            selector.classList.add('has-content');
+            selector.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-check-circle text-success"></i>
+                        <strong>${plantillas.length} plantilla${plantillas.length !== 1 ? 's' : ''} seleccionada${plantillas.length !== 1 ? 's' : ''}</strong>
+                    </div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="abrirSelectorPlantillas('${seccionId}')">
+                        <i class="bi bi-pencil"></i> Modificar
+                    </button>
+                </div>
+            `;
+            contador.textContent = plantillas.length;
+        }
+    }
+    
+    function actualizarTextoGenerado(seccionId, texto) {
+        const areaTexto = document.getElementById(`texto-${seccionId}`);
+        const preview = document.getElementById(`preview-${seccionId}`);
+        
+        if (texto && texto.trim()) {
+            areaTexto.innerHTML = `
+                <div class="texto-contenido">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">
+                            <i class="bi bi-file-text"></i> Texto generado
+                        </small>
+                        <button class="btn btn-outline-primary btn-sm" onclick="editarTexto('${seccionId}')">
+                            <i class="bi bi-pencil"></i> Editar
+                        </button>
+                    </div>
+                    <div class="texto-plano">${texto}</div>
+                </div>
+            `;
+            preview.textContent = texto;
+        }
+    }
+    
+    // Funciones globales
+    window.abrirSelectorPlantillas = abrirSelectorPlantillas;
+    window.limpiarSeccion = limpiarSeccion;
+    window.limpiarTodo = limpiarTodo;
+    window.mostrarVistaPrevia = mostrarVistaPrevia;
+    window.editarTexto = editarTexto;
+    window.guardarPlantilla = guardarPlantilla;
+    window.exportarInforme = exportarInforme;
+    window.sugerirConClaude = sugerirConClaude;
+    window.generarInformeConClaude = generarInformeConClaude;
+    
+    function limpiarSeccion() {
+        if (seccionActual) {
+            delete contenidoSecciones[seccionActual];
+            mostrarContenidoSeccion(seccionActual);
+        }
+    }
+    
+    function limpiarTodo() {
+        if (confirm('¿Estás seguro de que quieres limpiar todo el contenido?')) {
+            contenidoSecciones = {};
+            mostrarContenidoSeccion(seccionActual);
+        }
+    }
+    
+    function mostrarVistaPrevia() {
+        let contenidoCompleto = '';
+        
+        Object.keys(secciones).forEach(seccionId => {
+            if (contenidoSecciones[seccionId] && contenidoSecciones[seccionId].texto) {
+                contenidoCompleto += `\n${secciones[seccionId].titulo.toUpperCase()}:\n`;
+                contenidoCompleto += contenidoSecciones[seccionId].texto + '\n';
+            }
+        });
+        
+        document.getElementById('contenidoVistaPreviaCompleta').textContent = contenidoCompleto || 'No hay contenido generado aún.';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalVistaPreviaCompleta'));
+        modal.show();
+    }
+    
+    function editarTexto(seccionId) {
+        const textoActual = contenidoSecciones[seccionId] ? contenidoSecciones[seccionId].texto : '';
+        
+        const nuevoTexto = prompt('Editar texto:', textoActual);
+        if (nuevoTexto !== null) {
+            if (!contenidoSecciones[seccionId]) {
+                contenidoSecciones[seccionId] = { plantillas: [], texto: '' };
+            }
+            contenidoSecciones[seccionId].texto = nuevoTexto;
+            actualizarTextoGenerado(seccionId, nuevoTexto);
+        }
+    }
+    
+    function guardarPlantilla() {
+        // Aquí se implementaría el guardado en la base de datos
+        console.log('Guardando plantilla:', contenidoSecciones);
+        alert('Plantilla guardada correctamente');
+    }
+    
+    function exportarInforme() {
+        // Aquí se implementaría la exportación
+        console.log('Exportando informe');
+        alert('Informe exportado correctamente');
+    }
+    
+    // Integración con el selector de plantillas
+    window.aplicarPlantillasSeleccionadas = function(plantillas) {
+        if (window.seccionActualParaPlantillas) {
+            const seccionId = window.seccionActualParaPlantillas;
+            const textos = plantillas.map(p => p.texto).join('\n\n');
+            
+            if (!contenidoSecciones[seccionId]) {
+                contenidoSecciones[seccionId] = { plantillas: [], texto: '' };
+            }
+            
+            contenidoSecciones[seccionId].plantillas = plantillas;
+            contenidoSecciones[seccionId].texto = textos;
+            
+            actualizarSelectorPlantillas(seccionId, plantillas);
+            actualizarTextoGenerado(seccionId, textos);
+            
+            window.seccionActualParaPlantillas = null;
+        }
+    };
+    
+    // ============================================================================
+    // INTEGRACIÓN CON CLAUDE API
+    // ============================================================================
+    
+    let claudeDisponible = false;
+    let modoAsistente = 'silencioso';
+    
+    // Verificar estado de Claude al cargar
+    function verificarClaude() {
+        fetch('/asistente/claude/estado')
+            .then(response => response.json())
+            .then(data => {
+                claudeDisponible = data.claude_disponible;
+                if (claudeDisponible) {
+                    mostrarNotificacion('success', 'Claude API conectado', 'Asistente IA disponible');
+                } else {
+                    mostrarNotificacion('warning', 'Claude API no disponible', 'Modo sin IA activado');
+                }
+            })
+            .catch(error => {
+                console.error('Error verificando Claude:', error);
+                claudeDisponible = false;
+            });
+    }
+    
+    // Sugerir plantillas con Claude
+    function sugerirConClaude(seccionId) {
+        if (!claudeDisponible) {
+            mostrarNotificacion('warning', 'Claude no disponible', 'Configura la API key');
+            return;
+        }
+        
+        const seccionActual = secciones[seccionId];
+        const plantillasActuales = contenidoSecciones[seccionId] ? contenidoSecciones[seccionId].plantillas : [];
+        
+        const datos = {
+            protocolo_id: {{ protocolo.protocolo_id }},
+            seccion_actual: seccionActual.titulo,
+            plantillas_seleccionadas: plantillasActuales.map(p => p.codigo)
+        };
+        
+        // Mostrar loading
+        mostrarNotificacion('info', 'Consultando Claude...', 'Analizando caso');
+        
+        fetch('/asistente/claude/sugerir-plantillas', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.sugerencias.length > 0) {
+                mostrarSugerenciasClaude(data.sugerencias, seccionId);
+            } else {
+                mostrarNotificacion('info', 'Sin sugerencias', data.observaciones || 'No hay sugerencias para este caso');
+            }
+        })
+        .catch(error => {
+            console.error('Error con Claude:', error);
+            mostrarNotificacion('error', 'Error con Claude', error.message);
+        });
+    }
+    
+    // Mostrar sugerencias de Claude
+    function mostrarSugerenciasClaude(sugerencias, seccionId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-robot"></i> Sugerencias de Claude IA
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            Claude ha analizado tu caso y sugiere estas plantillas:
+                        </div>
+                        <div class="list-group">
+                            ${sugerencias.map(s => `
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <span class="badge bg-${getCategoriaColor(s.categoria)}">${s.categoria}</span>
+                                                ${s.codigo} - ${s.seccion}
+                                            </h6>
+                                            <p class="mb-1">${s.texto}</p>
+                                            <small class="text-muted">${s.razon}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-success">${Math.round(s.confianza * 100)}%</span>
+                                            <button class="btn btn-sm btn-primary ms-2" onclick="aplicarSugerenciaClaude(${s.linea_id}, '${seccionId}')">
+                                                <i class="bi bi-plus"></i> Aplicar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cerrar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="aplicarTodasSugerenciasClaude(${JSON.stringify(sugerencias).replace(/"/g, '&quot;')}, '${seccionId}')">
+                            <i class="bi bi-check-all"></i> Aplicar Todas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        modal.addEventListener('hidden.bs.modal', () => {
+            modal.remove();
+        });
+    }
+    
+    // Aplicar sugerencia individual de Claude
+    window.aplicarSugerenciaClaude = function(lineaId, seccionId) {
+        // Buscar la plantilla por ID
+        fetch(`/selector_plantillas/obtener_lineas_seccion/${seccionId}`)
+            .then(response => response.json())
+            .then(data => {
+                const plantilla = data.lineas.find(l => l.linea_id === lineaId);
+                if (plantilla) {
+                    const plantillas = [{
+                        linea_id: plantilla.linea_id,
+                        texto: plantilla.texto
+                    }];
+                    aplicarPlantillasSeleccionadas(plantillas);
+                    bootstrap.Modal.getInstance(document.querySelector('.modal.show')).hide();
+                    mostrarNotificacion('success', 'Plantilla aplicada', 'Sugerencia de Claude aplicada');
+                }
+            });
+    };
+    
+    // Aplicar todas las sugerencias de Claude
+    window.aplicarTodasSugerenciasClaude = function(sugerencias, seccionId) {
+        const plantillas = sugerencias.map(s => ({
+            linea_id: s.linea_id,
+            texto: s.texto
+        }));
+        aplicarPlantillasSeleccionadas(plantillas);
+        bootstrap.Modal.getInstance(document.querySelector('.modal.show')).hide();
+        mostrarNotificacion('success', 'Sugerencias aplicadas', `${sugerencias.length} plantillas de Claude aplicadas`);
+    };
+    
+    // Generar informe con Claude
+    function generarInformeConClaude() {
+        if (!claudeDisponible) {
+            mostrarNotificacion('warning', 'Claude no disponible', 'Configura la API key');
+            return;
+        }
+        
+        const plantillasCompletas = [];
+        Object.keys(contenidoSecciones).forEach(seccionId => {
+            if (contenidoSecciones[seccionId] && contenidoSecciones[seccionId].plantillas) {
+                contenidoSecciones[seccionId].plantillas.forEach(p => {
+                    plantillasCompletas.push({
+                        codigo: p.codigo || 'N/A',
+                        texto: p.texto
+                    });
+                });
+            }
+        });
+        
+        if (plantillasCompletas.length === 0) {
+            mostrarNotificacion('warning', 'Sin plantillas', 'Selecciona plantillas antes de generar informe');
+            return;
+        }
+        
+        const datos = {
+            protocolo_id: {{ protocolo.protocolo_id }},
+            plantillas_seleccionadas: plantillasCompletas
+        };
+        
+        mostrarNotificacion('info', 'Generando informe...', 'Claude está creando el informe');
+        
+        fetch('/asistente/claude/generar-informe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarInformeClaude(data.informe);
+            } else {
+                mostrarNotificacion('error', 'Error generando informe', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error con Claude:', error);
+            mostrarNotificacion('error', 'Error con Claude', error.message);
+        });
+    }
+    
+    // Mostrar informe generado por Claude
+    function mostrarInformeClaude(informe) {
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-robot"></i> Informe Generado por Claude IA
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle"></i> 
+                            Claude ha generado un informe completo basado en las plantillas seleccionadas.
+                        </div>
+                        <div class="border p-3 bg-light">
+                            <pre style="white-space: pre-wrap; font-family: 'Times New Roman', serif; font-size: 14px;">${informe}</pre>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cerrar
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="exportarInformeClaude('${informe.replace(/'/g, "\\'")}')">
+                            <i class="bi bi-download"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        modal.addEventListener('hidden.bs.modal', () => {
+            modal.remove();
+        });
+    }
+    
+    // Exportar informe de Claude
+    window.exportarInformeClaude = function(informe) {
+        const blob = new Blob([informe], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Informe_PAP_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        mostrarNotificacion('success', 'Informe exportado', 'Archivo descargado correctamente');
+    };
+    
+    // Función auxiliar para colores de categorías
+    function getCategoriaColor(categoria) {
+        const colores = {
+            'T': 'primary',
+            'H': 'success', 
+            'A': 'warning',
+            'I': 'danger'
+        };
+        return colores[categoria] || 'secondary';
+    }
+    
+    // Función para mostrar notificaciones
+    function mostrarNotificacion(tipo, titulo, mensaje) {
+        // Crear notificación toast
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-white bg-${tipo} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'exclamation-triangle' : tipo === 'warning' ? 'exclamation-circle' : 'info-circle'}"></i> 
+                    <strong>${titulo}:</strong> ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        // Agregar al contenedor de toasts (crear si no existe)
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.appendChild(toast);
+        
+        // Mostrar toast
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        // Remover después de mostrar
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+    
+    // Inicializar Claude al cargar
+    verificarClaude();
+});
+</script>
+{% endblock %}

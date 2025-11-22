@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Página no encontrada{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 text-center">
+            <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 5rem;"></i>
+            <h1 class="mt-4">404 - No Encontrado</h1>
+            <p class="lead text-muted">
+                La página o el recurso que buscas no existe.
+            </p>
+            <p>
+                Es posible que el enlace esté roto o que el recurso haya sido eliminado.
+            </p>
+            <div class="mt-4">
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">
+                    <i class="bi bi-house"></i> Volver al Dashboard
+                </a>
+                <a href="javascript:history.back()" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> Volver Atrás
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

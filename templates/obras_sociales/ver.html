@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ obra_social.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="bi bi-hospital-fill"></i> {{ obra_social.nombre }}
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('obras_sociales.editar', id=obra_social.obra_social_id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            <a href="{{ url_for('obras_sociales.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Datos Básicos -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-hospital"></i> Datos Básicos</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Código:</strong></div>
+                        <div class="col-md-8">
+                            <span class="badge bg-info" style="font-size: 1rem;">{{ obra_social.codigo }}</span>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Nombre:</strong></div>
+                        <div class="col-md-8">{{ obra_social.nombre }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Código INOS:</strong></div>
+                        <div class="col-md-8">
+                            {% if obra_social.codigo_inos %}
+                                {{ obra_social.codigo_inos }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Plan de Facturación:</strong></div>
+                        <div class="col-md-8">
+                            {% if obra_social.plan %}
+                                {{ obra_social.plan.nombre }} ({{ obra_social.plan.codigo }})
+                            {% else %}
+                                <span class="text-muted">Sin plan asignado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Domicilio -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Domicilio</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Dirección:</strong></div>
+                        <div class="col-md-8">
+                            {% if obra_social.direccion %}
+                                {{ obra_social.direccion }}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Localidad:</strong></div>
+                        <div class="col-md-8">
+                            {% if obra_social.localidad %}
+                                {{ obra_social.localidad }}
+                                {% if obra_social.codigo_postal %}
+                                    ({{ obra_social.codigo_postal }})
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacto -->
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-telephone"></i> Contacto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Teléfono:</strong></div>
+                        <div class="col-md-8">
+                            {% if obra_social.telefono %}
+                                {{ obra_social.telefono }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observaciones -->
+            {% if obra_social.observaciones %}
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-chat-square-text"></i> Observaciones</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ obra_social.observaciones }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Afiliados de esta obra social -->
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-people-fill"></i> Afiliados</h5>
+                </div>
+                <div class="card-body">
+                    {% if obra_social.afiliados %}
+                    <p class="mb-2">
+                        <strong>Total de afiliados:</strong> {{ obra_social.afiliados|length }}
+                    </p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Nº Afiliado</th>
+                                    <th>Edad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for afiliado in obra_social.afiliados[:10] %}
+                                <tr>
+                                    <td>{{ afiliado.nombre_completo }}</td>
+                                    <td>{{ afiliado.numero_afiliado if afiliado.numero_afiliado else '-' }}</td>
+                                    <td>{{ afiliado.edad if afiliado.edad else '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                                {% if obra_social.afiliados|length > 10 %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">
+                                        <small>... y {{ obra_social.afiliados|length - 10 }} más</small>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">
+                        No hay afiliados registrados para esta obra social
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Estado -->
+            <div class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Estado del Registro</h6>
+                    {% if obra_social.activo %}
+                    <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-check-circle"></i> Activa
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-x-circle"></i> Inactiva
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Información del registro -->
+            <div class="card mb-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-clock-history"></i> Registro
+                    </h6>
+                    <p class="card-text text-sm mb-0">
+                        <strong>Fecha registro:</strong><br>
+                        {{ obra_social.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Acciones -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-gear"></i> Acciones
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('obras_sociales.editar', id=obra_social.obra_social_id) }}" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Editar Datos
+                        </a>
+                        <a href="{{ url_for('obras_sociales.toggle_activo', id=obra_social.obra_social_id) }}" 
+                           class="btn btn-secondary"
+                           onclick="return confirm('¿Está seguro de {{ 'desactivar' if obra_social.activo else 'activar' }} esta obra social?')">
+                            <i class="bi bi-toggle-{{ 'on' if obra_social.activo else 'off' }}"></i>
+                            {{ 'Desactivar' if obra_social.activo else 'Activar' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte {{ protocolo.tipo_estudio }} - {{ protocolo.numero_protocolo }}</title>
+    <style>
+        body {
+            font-family: {{ (disenio_config.secciones.contenido_fuente if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_fuente else 'Arial') }}, sans-serif;
+            font-size: {{ (disenio_config.secciones.contenido_tamano if disenio_config and disenio_config.secciones else 12) }}px;
+            line-height: {{ (disenio_config.secciones.line_height if disenio_config and disenio_config.secciones else 1.4) }};
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: {{ (disenio_config.secciones.contenido_color if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_color else '#333') }};
+        }
+        
+        .reporte-container {
+            max-width: 210mm; /* Ancho A4 */
+            min-height: 297mm; /* Alto A4 */
+            margin: 0 auto;
+            background: white;
+            {% if disenio_config and disenio_config.margenes %}
+            padding: {{ disenio_config.margenes.superior if disenio_config.margenes.superior is not none else 20 }}mm {{ disenio_config.margenes.derecho if disenio_config.margenes.derecho is not none else 20 }}mm {{ disenio_config.margenes.inferior if disenio_config.margenes.inferior is not none else 20 }}mm {{ disenio_config.margenes.izquierdo if disenio_config.margenes.izquierdo is not none else 20 }}mm;
+            {% else %}
+            padding: 20mm;
+            {% endif %}
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            position: relative; /* Necesario para posicionamiento absoluto de elementos hijos */
+        }
+        
+        {% if disenio_config and disenio_config.espacio_membrete > 0 %}
+        .espacio-membrete {
+            height: {{ disenio_config.espacio_membrete }}mm;
+            margin-bottom: 20px;
+        }
+        {% endif %}
+        
+        .header {
+            border-bottom: 3px solid #007bff;
+            padding-bottom: {{ (disenio_config.header.padding_inferior if disenio_config and disenio_config.header else 5) }}px;
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        
+        .logo-img {
+            max-width: {{ (disenio_config.header.logo_ancho if disenio_config and disenio_config.header else 240) }}px;
+            max-height: {{ (disenio_config.header.logo_alto if disenio_config and disenio_config.header else 240) }}px;
+            width: auto;
+            height: auto;
+            margin-right: {{ (disenio_config.header.logo_margen_derecho if disenio_config and disenio_config.header else 20) }}px;
+            object-fit: contain;
+            {% if disenio_config and disenio_config.header and disenio_config.header.logo_posicion == 'derecha' %}
+            float: right;
+            margin-right: 0;
+            margin-left: {{ disenio_config.header.logo_margen_derecho }}px;
+            {% elif disenio_config and disenio_config.header and disenio_config.header.logo_posicion == 'centro' %}
+            display: block;
+            margin: 0 auto 20px auto;
+            {% else %}
+            float: left;
+            {% endif %}
+        }
+        
+        .header-center {
+            text-align: {{ (disenio_config.header.titulo_alineacion if disenio_config and disenio_config.header else 'center') }};
+            flex-grow: 1;
+            {% if disenio_config and disenio_config.header and disenio_config.header.logo_posicion == 'izquierda' %}
+            margin-left: 10px;
+            {% elif disenio_config and disenio_config.header and disenio_config.header.logo_posicion == 'derecha' %}
+            margin-right: 10px;
+            {% endif %}
+        }
+        
+        .logo {
+            font-family: {{ (disenio_config.header.laboratorio_fuente if disenio_config and disenio_config.header and disenio_config.header.laboratorio_fuente else 'Arial') }};
+            font-size: {{ (disenio_config.header.laboratorio_tamano if disenio_config and disenio_config.header else 24) }}px;
+            font-weight: bold;
+            color: {{ (disenio_config.header.laboratorio_color if disenio_config and disenio_config.header and disenio_config.header.laboratorio_color else '#007bff') }};
+            margin-bottom: 10px;
+        }
+        
+        .titulo {
+            font-family: {{ (disenio_config.header.titulo_fuente if disenio_config and disenio_config.header and disenio_config.header.titulo_fuente else 'Arial') }};
+            font-size: {{ (disenio_config.header.titulo_tamano if disenio_config and disenio_config.header else 18) }}px;
+            font-weight: bold;
+            color: {{ (disenio_config.header.titulo_color if disenio_config and disenio_config.header and disenio_config.header.titulo_color else '#333') }};
+            margin-bottom: 5px;
+            text-align: {{ (disenio_config.header.titulo_alineacion if disenio_config and disenio_config.header else 'centro') }};
+        }
+        
+        .subtitulo {
+            font-family: {{ (disenio_config.header.subtitulo_fuente if disenio_config and disenio_config.header and disenio_config.header.subtitulo_fuente else 'Arial') }};
+            font-size: {{ (disenio_config.header.subtitulo_tamano if disenio_config and disenio_config.header else 14) }}px;
+            color: {{ (disenio_config.header.subtitulo_color if disenio_config and disenio_config.header and disenio_config.header.subtitulo_color else '#666') }};
+        }
+        
+        .datos-protocolo {
+            display: grid;
+            grid-template-columns: repeat({{ (disenio_config.datos_protocolo.columnas if disenio_config and disenio_config.datos_protocolo else 3) }}, 1fr);
+            gap: {{ (disenio_config.datos_protocolo.espaciado if disenio_config and disenio_config.datos_protocolo else 20) }}px;
+            margin-bottom: {{ (disenio_config.datos_protocolo.margen_inferior if disenio_config and disenio_config.datos_protocolo else 30) }}px;
+            padding: {{ (disenio_config.datos_protocolo.padding if disenio_config and disenio_config.datos_protocolo else 15) }}px;
+            background-color: {{ (disenio_config.datos_protocolo.fondo if disenio_config and disenio_config.datos_protocolo else '#f8f9fa') }};
+            border-radius: 5px;
+        }
+        
+        {% if disenio_config and not disenio_config.datos_protocolo.mostrar %}
+        .datos-protocolo {
+            display: none;
+        }
+        {% endif %}
+        
+        /* Contenedor para grupos de datos que deben mostrarse lado a lado */
+        .grupos-datos-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .grupo-datos {
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: white;
+        }
+        
+        .grupo-titulo {
+            font-weight: bold;
+            color: #007bff;
+            font-size: 14px;
+            margin-bottom: 10px;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+        
+        .campo {
+            margin-bottom: 8px;
+        }
+        
+        .campo-label {
+            font-weight: bold;
+            color: #333;
+            display: inline-block;
+            width: 120px;
+        }
+        
+        .campo-valor {
+            color: #555;
+        }
+        
+        /* Estilos para el logo en elementos de tipo logo */
+        .element-logo-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            min-height: 50px;
+            box-sizing: border-box;
+            padding: 0;
+        }
+        
+        .element-logo-content img {
+            max-width: 100% !important;
+            max-height: 100% !important;
+            width: auto !important;
+            height: auto !important;
+            display: block;
+            object-fit: contain;
+            margin: 0 auto;
+        }
+        
+        .seccion {
+            margin-bottom: {{ (disenio_config.secciones.espacio_entre if disenio_config and disenio_config.secciones else 25) }}px;
+            page-break-inside: avoid;
+        }
+        
+        .seccion-titulo {
+            font-family: {{ (disenio_config.secciones.titulo_fuente if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_fuente else 'Arial') }}, sans-serif !important;
+            font-size: {{ (disenio_config.secciones.titulo_tamano if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_tamano is not none else 14) }}px !important;
+            font-weight: {{ 'bold' if (disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_negrita) else 'normal' }} !important;
+            font-style: {{ 'italic' if (disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_cursiva) else 'normal' }} !important;
+            color: {{ (disenio_config.secciones.titulo_color if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_color else '#007bff') }} !important;
+            background-color: {{ (disenio_config.secciones.color_fondo_titulo if disenio_config and disenio_config.secciones and disenio_config.secciones.color_fondo_titulo else '#e3f2fd') }} !important;
+            padding: {{ (disenio_config.secciones.padding_seccion if disenio_config and disenio_config.secciones and disenio_config.secciones.padding_seccion else '8px 12px') }} !important;
+            margin-bottom: {{ (disenio_config.secciones.margen_inferior if disenio_config and disenio_config.secciones and disenio_config.secciones.margen_inferior is not none else 10) }}px !important;
+            text-align: {{ (disenio_config.secciones.titulo_alineacion if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_alineacion else 'left') }} !important;
+            border-left: 0 !important;
+        }
+        
+        .linea {
+            margin-bottom: 6px;
+            position: relative;
+        }
+        
+        /* Las viñetas se manejan condicionalmente en el HTML, no con CSS ::before */
+        
+        .linea-texto {
+            font-family: {{ (disenio_config.secciones.contenido_fuente if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_fuente else 'Arial') }};
+            font-size: {{ (disenio_config.secciones.contenido_tamano if disenio_config and disenio_config.secciones else 12) }}px;
+            color: {{ (disenio_config.secciones.contenido_color if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_color else '#333') }};
+            line-height: {{ (disenio_config.secciones.line_height if disenio_config and disenio_config.secciones else 1.4) }};
+        }
+        
+        .firma {
+            margin-top: 40px;
+            text-align: right;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+        .firma-imagen {
+            max-width: 220px;
+            max-height: 120px;
+            display: block;
+            margin-left: auto;
+            margin-bottom: 6px;
+        }
+        
+        .pie-laboratorio {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        
+        .firma-linea {
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+        
+        .fecha {
+            color: #666;
+            font-size: 11px;
+        }
+        
+        .toolbar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .toolbar button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .toolbar label {
+            margin-right: 10px;
+            font-size: 0.9rem;
+            color: #495057;
+            vertical-align: middle;
+        }
+        
+        .toolbar select {
+            padding: 5px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            margin-right: 10px;
+            font-size: 0.9rem;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .btn-imprimir {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-pdf {
+            background: #28a745;
+            color: white;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .toolbar {
+                display: none !important;
+            }
+            
+            .reporte-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 20px;
+                max-width: 100%;
+            }
+            
+            .seccion {
+                page-break-inside: avoid;
+            }
+            
+            @page {
+                margin: 1cm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="reporte-container">
+        {% if disenio_config and disenio_config.espacio_membrete > 0 %}
+        <div class="espacio-membrete"></div>
+        {% endif %}
+        
+        {# RENDERIZADO DINÁMICO USANDO estructura_visual SI ESTÁ DISPONIBLE #}
+        {% if estructura_visual and estructura_visual|length > 0 %}
+            {# Renderizar elementos en el orden almacenado (ya vienen ordenados desde la BD) #}
+            {% for elemento in estructura_visual %}
+                {% if elemento.mostrar != false %}
+                    {% set props = elemento.get('propiedades', {}) if elemento.get('propiedades') else (elemento.propiedades if elemento.propiedades else {}) %}
+                    {% set estilo_elemento = '' %}
+                    {% set margen_sup = props.get('margen_superior') %}
+                    {% set margen_inf = props.get('margen_inferior') %}
+                    {% set margen_izq = props.get('margen_izquierdo') %}
+                    {% set margen_der = props.get('margen_derecho') %}
+                    {% if margen_sup is not none %}{% set estilo_elemento = estilo_elemento + 'margin-top: ' + margen_sup|string + 'px !important; ' %}{% endif %}
+                    {% if margen_inf is not none %}{% set estilo_elemento = estilo_elemento + 'margin-bottom: ' + margen_inf|string + 'px !important; ' %}{% endif %}
+                    {% if margen_izq is not none %}{% set estilo_elemento = estilo_elemento + 'margin-left: ' + margen_izq|string + 'px !important; ' %}{% endif %}
+                    {% if margen_der is not none %}{% set estilo_elemento = estilo_elemento + 'margin-right: ' + margen_der|string + 'px !important; ' %}{% endif %}
+                    {% if props.ancho %}{% set estilo_elemento = estilo_elemento + 'width: ' + props.ancho|string + (props.ancho_unit or 'px') + '; ' %}{% endif %}
+                    {% if props.alto %}{% set estilo_elemento = estilo_elemento + 'height: ' + props.alto|string + (props.alto_unit or 'px') + '; ' %}{% endif %}
+                    {% if props.posicion == 'absolute' %}
+                        {% if props.top is not none %}
+                            {# Para posicionamiento absoluto, sumar el margen superior para que sea relativo al área de contenido #}
+                            {% set margen_sup = disenio_config.margenes.superior if disenio_config and disenio_config.margenes and disenio_config.margenes.superior is not none else 20 %}
+                            {% set top_con_margen = props.top + (margen_sup * 3.779527559) %}
+                            {% set estilo_elemento = estilo_elemento + 'position: absolute; top: ' + top_con_margen|string + 'px; ' %}
+                        {% endif %}
+                        {% if props.left is not none %}
+                            {# Para posicionamiento absoluto, sumar el margen izquierdo para que sea relativo al área de contenido #}
+                            {% set margen_izq = disenio_config.margenes.izquierdo if disenio_config and disenio_config.margenes and disenio_config.margenes.izquierdo is not none else 20 %}
+                            {% set left_con_margen = props.left + (margen_izq * 3.779527559) %}
+                            {% set estilo_elemento = estilo_elemento + 'left: ' + left_con_margen|string + 'px; ' %}
+                        {% endif %}
+                    {% elif props.posicion == 'inline' %}
+                        {% set estilo_elemento = estilo_elemento + 'display: inline-block; ' %}
+                    {% endif %}
+                    
+                    {% if elemento.get('tipo') == 'logo' or elemento.tipo == 'logo' %}
+                        <div style="{{ estilo_elemento }}display: {% if props.get('posicion') == 'inline' or props.posicion == 'inline' %}inline-block{% elif props.get('posicion') == 'absolute' or props.posicion == 'absolute' %}block{% else %}block{% endif %}; {% if props.ancho %}width: {{ props.ancho }}{{ props.ancho_unit or 'px' }};{% endif %} {% if props.alto %}height: {{ props.alto }}{{ props.alto_unit or 'px' }};{% endif %} box-sizing: border-box; overflow: hidden;">
+                            {% set contenido_logo = (elemento.get('contenido') or elemento.contenido)|replace('[NUMERO]', protocolo.numero_protocolo)|replace('[FECHA]', protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A')|replace('[NOMBRE]', protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A') %}
+                            <div class="element-logo-content">
+                                {{ contenido_logo|safe }}
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'texto-laboratorio' %}
+                        <div style="{{ estilo_elemento }}font-family: {{ props.fuente or 'Arial' }}; font-size: {{ props.tamaño or 24 }}px; font-weight: {% if props.negrita %}bold{% else %}normal{% endif %}; color: {{ props.color or '#007bff' }}; text-align: {{ props.alineacion or 'left' }}; display: {% if props.posicion == 'inline' %}inline-block{% else %}block{% endif %};">
+                            {% set contenido = elemento.contenido|replace('[NUMERO]', protocolo.numero_protocolo)|replace('[FECHA]', protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A')|replace('[NOMBRE]', protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A') %}
+                            {% if disenio_config and disenio_config.header and disenio_config.header.laboratorio_nombre %}
+                                {{ disenio_config.header.laboratorio_nombre }}
+                            {% else %}
+                                {{ contenido }}
+                            {% endif %}
+                        </div>
+                    
+                    {% elif elemento.tipo == 'titulo' %}
+                        {% set titulo_personalizado = elemento.contenido if elemento.contenido else None %}
+                        {% set texto_titulo = titulo_personalizado or titulo_reporte %}
+                        <div style="{{ estilo_elemento }}font-family: {{ props.fuente or 'Arial' }}; font-size: {{ props.tamaño or 18 }}px; font-weight: {% if props.negrita %}bold{% else %}normal{% endif %}; color: {{ props.color or '#333' }}; text-align: {{ props.alineacion or 'center' }}; display: {% if props.posicion == 'inline' %}inline-block{% else %}block{% endif %};">
+                            {{ texto_titulo }}
+                        </div>
+                    
+                    {% elif elemento.tipo == 'subtitulo' %}
+                        {% set subtitulo_personalizado = elemento.contenido if elemento.contenido else None %}
+                        {% set texto_subtitulo = subtitulo_personalizado or subtitulo_reporte %}
+                        <div style="{{ estilo_elemento }}font-family: {{ props.fuente or 'Arial' }}; font-size: {{ props.tamaño or 14 }}px; font-weight: {% if props.negrita %}bold{% else %}normal{% endif %}; color: {{ props.color or '#666' }}; text-align: {{ props.alineacion or 'center' }}; display: {% if props.posicion == 'inline' %}inline-block{% else %}block{% endif %};">
+                            {{ texto_subtitulo }}
+                        </div>
+                    
+                    {% elif elemento.tipo == 'separador' %}
+                        <hr style="{{ estilo_elemento }}border-color: {{ props.color or '#dee2e6' }}; border-width: 1px; display: {% if props.posicion == 'inline' %}inline-block{% else %}block{% endif %};">
+                    
+                    {% elif elemento.tipo == 'protocolo-fecha' %}
+                        {% set props = elemento.propiedades %}
+                        {% set mostrar_titulo = props.mostrar_titulo if props.mostrar_titulo is defined else True %}
+                        {% set titulo_fuente = props.fuente or 'Arial' %}
+                        {% set titulo_tamano = props.tamaño or 14 %}
+                        {% set titulo_negrita = props.negrita if props.negrita is defined else True %}
+                        {% set titulo_cursiva = props.cursiva if props.cursiva is defined else False %}
+                        {% set titulo_color = props.color or '#007bff' %}
+                        {% set titulo_fondo = props.color_fondo or '#e3f2fd' %}
+                        {% set titulo_alineacion = props.alineacion or 'left' %}
+                        {% set contenido_fuente = props.contenido_fuente or 'Arial' %}
+                        {% set contenido_tamano = props.contenido_tamano or 12 %}
+                        {% set contenido_color = props.contenido_color or '#333333' %}
+                        {% set mostrar_borde = props.mostrar_borde if props.mostrar_borde is defined else False %}
+                        {% set estilo_borde = 'border: 1px solid #dee2e6;' if mostrar_borde else 'border: none;' %}
+                        <div class="grupo-datos" style="{{ estilo_borde }} border-radius: 4px; padding: 12px; background: white; margin-bottom: 10px; {{ estilo_elemento }}">
+                            {% set titulo_grupo = elemento.contenido if elemento.contenido else (disenio_config.datos_protocolo.titulo_grupo_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_protocolo else 'PROTOCOLO Y FECHA') %}
+                            {% if mostrar_titulo %}
+                            <div class="grupo-titulo" style="font-family: {{ titulo_fuente }} !important; font-size: {{ titulo_tamano }}px !important; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %} !important; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %} !important; color: {{ titulo_color }} !important; background-color: {{ titulo_fondo }} !important; text-align: {{ titulo_alineacion }} !important; padding: 8px 12px !important; margin-bottom: 10px !important; border-radius: 3px;">{{ titulo_grupo }}</div>
+                            {% endif %}
+                            {% set label_prot = disenio_config.datos_protocolo.label_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_protocolo else 'Protocolo:' %}
+                            {% set label_fecha = disenio_config.datos_protocolo.label_fecha if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_fecha else 'Fecha:' %}
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_prot }}</span>
+                                <span class="campo-valor">{{ protocolo.numero_protocolo }}</span>
+                            </div>
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_fecha }}</span>
+                                <span class="campo-valor">{{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A' }}</span>
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'datos-paciente' %}
+                        {% set props = elemento.propiedades %}
+                        {% set mostrar_titulo = props.mostrar_titulo if props.mostrar_titulo is defined else True %}
+                        {% set titulo_fuente = props.fuente or 'Arial' %}
+                        {% set titulo_tamano = props.tamaño or 14 %}
+                        {% set titulo_negrita = props.negrita if props.negrita is defined else True %}
+                        {% set titulo_cursiva = props.cursiva if props.cursiva is defined else False %}
+                        {% set titulo_color = props.color or '#007bff' %}
+                        {% set titulo_fondo = props.color_fondo or '#e3f2fd' %}
+                        {% set titulo_alineacion = props.alineacion or 'left' %}
+                        {% set contenido_fuente = props.contenido_fuente or 'Arial' %}
+                        {% set contenido_tamano = props.contenido_tamano or 12 %}
+                        {% set contenido_color = props.contenido_color or '#333333' %}
+                        {% set mostrar_borde = props.mostrar_borde if props.mostrar_borde is defined else False %}
+                        {% set estilo_borde = 'border: 1px solid #dee2e6;' if mostrar_borde else 'border: none;' %}
+                        <div class="grupo-datos" style="{{ estilo_borde }} border-radius: 4px; padding: 12px; background: white; margin-bottom: 10px; {{ estilo_elemento }}">
+                            {% set titulo_grupo = elemento.contenido if elemento.contenido else (disenio_config.datos_protocolo.titulo_grupo_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_paciente else 'DATOS DEL PACIENTE') %}
+                            {% if mostrar_titulo %}
+                            <div class="grupo-titulo" style="font-family: {{ titulo_fuente }} !important; font-size: {{ titulo_tamano }}px !important; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %} !important; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %} !important; color: {{ titulo_color }} !important; background-color: {{ titulo_fondo }} !important; text-align: {{ titulo_alineacion }} !important; padding: 8px 12px !important; margin-bottom: 10px !important; border-radius: 3px;">{{ titulo_grupo }}</div>
+                            {% endif %}
+                            {% set label_pac = disenio_config.datos_protocolo.label_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_paciente else 'Paciente:' %}
+                            {% set label_dni = disenio_config.datos_protocolo.label_dni if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_dni else 'DNI:' %}
+                            {% set label_edad = disenio_config.datos_protocolo.label_edad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_edad else 'Edad:' %}
+                            {% set label_os = disenio_config.datos_protocolo.label_obra_social if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_obra_social else 'Obra Social:' %}
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_pac }}</span>
+                                <span class="campo-valor">{{ protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A' }}</span>
+                            </div>
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_dni }}</span>
+                                <span class="campo-valor">{{ protocolo.afiliado.dni if protocolo.afiliado else 'N/A' }}</span>
+                            </div>
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_edad }}</span>
+                                <span class="campo-valor">{{ protocolo.afiliado.edad if protocolo.afiliado else 'N/A' }} años</span>
+                            </div>
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_os }}</span>
+                                <span class="campo-valor">{{ protocolo.afiliado.obra_social.nombre if protocolo.afiliado and protocolo.afiliado.obra_social else 'N/A' }}</span>
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'datos-medico' %}
+                        {% set props = elemento.propiedades %}
+                        {% set mostrar_titulo = props.mostrar_titulo if props.mostrar_titulo is defined else True %}
+                        {% set titulo_fuente = props.fuente or 'Arial' %}
+                        {% set titulo_tamano = props.tamaño or 14 %}
+                        {% set titulo_negrita = props.negrita if props.negrita is defined else True %}
+                        {% set titulo_cursiva = props.cursiva if props.cursiva is defined else False %}
+                        {% set titulo_color = props.color or '#007bff' %}
+                        {% set titulo_fondo = props.color_fondo or '#e3f2fd' %}
+                        {% set titulo_alineacion = props.alineacion or 'left' %}
+                        {% set contenido_fuente = props.contenido_fuente or 'Arial' %}
+                        {% set contenido_tamano = props.contenido_tamano or 12 %}
+                        {% set contenido_color = props.contenido_color or '#333333' %}
+                        {% set mostrar_borde = props.mostrar_borde if props.mostrar_borde is defined else False %}
+                        {% set estilo_borde = 'border: 1px solid #dee2e6;' if mostrar_borde else 'border: none;' %}
+                        <div class="grupo-datos" style="{{ estilo_borde }} border-radius: 4px; padding: 12px; background: white; margin-bottom: 10px; {{ estilo_elemento }}">
+                            {% set titulo_grupo = elemento.contenido if elemento.contenido else (disenio_config.datos_protocolo.titulo_grupo_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_medico else 'DATOS DEL MÉDICO') %}
+                            {% if mostrar_titulo %}
+                            <div class="grupo-titulo" style="font-family: {{ titulo_fuente }} !important; font-size: {{ titulo_tamano }}px !important; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %} !important; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %} !important; color: {{ titulo_color }} !important; background-color: {{ titulo_fondo }} !important; text-align: {{ titulo_alineacion }} !important; padding: 8px 12px !important; margin-bottom: 10px !important; border-radius: 3px;">{{ titulo_grupo }}</div>
+                            {% endif %}
+                            {% set label_med = disenio_config.datos_protocolo.label_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_medico else 'Médico:' %}
+                            {% set label_esp = disenio_config.datos_protocolo.label_especialidad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_especialidad else 'Especialidad:' %}
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_med }}</span>
+                                <span class="campo-valor">{{ protocolo.prestador.nombre_completo if protocolo.prestador else 'N/A' }}</span>
+                            </div>
+                            <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }};">
+                                <span class="campo-label">{{ label_esp }}</span>
+                                <span class="campo-valor">{{ protocolo.prestador.nombre_especialidad if protocolo.prestador else 'N/A' }}</span>
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'datos-paciente-medico' %}
+                        {% set props = elemento.propiedades %}
+                        {% set mostrar_titulo = props.mostrar_titulo if props.mostrar_titulo is defined else True %}
+                        {% set titulo_fuente = props.fuente or 'Arial' %}
+                        {% set titulo_tamano = props.tamaño or 14 %}
+                        {% set titulo_negrita = props.negrita if props.negrita is defined else True %}
+                        {% set titulo_cursiva = props.cursiva if props.cursiva is defined else False %}
+                        {% set titulo_color = props.color or '#007bff' %}
+                        {% set titulo_fondo = props.color_fondo or '#e3f2fd' %}
+                        {% set titulo_alineacion = props.alineacion or 'left' %}
+                        {% set contenido_fuente = props.contenido_fuente or 'Arial' %}
+                        {% set contenido_tamano = props.contenido_tamano or 12 %}
+                        {% set contenido_color = props.contenido_color or '#333333' %}
+                        {% set contenido_cursiva = props.contenido_cursiva if props.contenido_cursiva is defined else False %}
+                        {% set mostrar_borde = props.mostrar_borde if props.mostrar_borde is defined else False %}
+                        {% set estilo_borde = 'border: 1px solid #dee2e6;' if mostrar_borde else 'border: none;' %}
+                        <div class="grupo-datos" style="display: flex; gap: 10px; {{ estilo_borde }} border-radius: 4px; padding: 12px; background: white; margin-bottom: 10px; {{ estilo_elemento }}">
+                            <!-- Columna Paciente -->
+                            <div style="flex: 1;">
+                                <div class="grupo-titulo" style="font-family: {{ titulo_fuente }} !important; font-size: {{ titulo_tamano }}px !important; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %} !important; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %} !important; color: {{ titulo_color }} !important; background-color: {{ titulo_fondo }} !important; text-align: {{ titulo_alineacion }} !important; padding: 8px 12px !important; margin-bottom: 10px !important; border-radius: 3px;">DATOS DEL PACIENTE</div>
+                                {% set label_pac = disenio_config.datos_protocolo.label_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_paciente else 'Paciente:' %}
+                                {% set label_dni = disenio_config.datos_protocolo.label_dni if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_dni else 'DNI:' %}
+                                {% set label_edad = disenio_config.datos_protocolo.label_edad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_edad else 'Edad:' %}
+                                {% set label_os = disenio_config.datos_protocolo.label_obra_social if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_obra_social else 'Obra Social:' %}
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_pac }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A' }}</span>
+                                </div>
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_dni }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.dni if protocolo.afiliado else 'N/A' }}</span>
+                                </div>
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_edad }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.edad if protocolo.afiliado else 'N/A' }} años</span>
+                                </div>
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_os }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.obra_social.nombre if protocolo.afiliado and protocolo.afiliado.obra_social else 'N/A' }}</span>
+                                </div>
+                            </div>
+                            <!-- Columna Médico -->
+                            <div style="flex: 1;">
+                                <div class="grupo-titulo" style="font-family: {{ titulo_fuente }} !important; font-size: {{ titulo_tamano }}px !important; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %} !important; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %} !important; color: {{ titulo_color }} !important; background-color: {{ titulo_fondo }} !important; text-align: {{ titulo_alineacion }} !important; padding: 8px 12px !important; margin-bottom: 10px !important; border-radius: 3px;">DATOS DEL MÉDICO</div>
+                                {% set label_med = disenio_config.datos_protocolo.label_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_medico else 'Médico:' %}
+                                {% set label_esp = disenio_config.datos_protocolo.label_especialidad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_especialidad else 'Especialidad:' %}
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_med }}</span>
+                                    <span class="campo-valor">{{ protocolo.prestador.nombre_completo if protocolo.prestador else 'N/A' }}</span>
+                                </div>
+                                <div class="campo" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                    <span class="campo-label">{{ label_esp }}</span>
+                                    <span class="campo-valor">{{ protocolo.prestador.nombre_especialidad if protocolo.prestador else 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'datos-protocolo' %}
+                        {# Mantener compatibilidad con diseños antiguos que usan datos-protocolo #}
+                        <div class="datos-protocolo" style="{{ estilo_elemento }}">
+                            <!-- GRUPO 1: PROTOCOLO Y FECHA -->
+                            <div class="grupo-datos">
+                                {% set titulo_grupo_1 = disenio_config.datos_protocolo.titulo_grupo_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_protocolo else 'PROTOCOLO Y FECHA' %}
+                                <div class="grupo-titulo">{{ titulo_grupo_1 }}</div>
+                                {% set label_prot = disenio_config.datos_protocolo.label_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_protocolo else 'Protocolo:' %}
+                                {% set label_fecha = disenio_config.datos_protocolo.label_fecha if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_fecha else 'Fecha:' %}
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_prot }}</span>
+                                    <span class="campo-valor">{{ protocolo.numero_protocolo }}</span>
+                                </div>
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_fecha }}</span>
+                                    <span class="campo-valor">{{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A' }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- GRUPO 2: DATOS DEL PACIENTE -->
+                            <div class="grupo-datos">
+                                {% set titulo_grupo_2 = disenio_config.datos_protocolo.titulo_grupo_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_paciente else 'DATOS DEL PACIENTE' %}
+                                <div class="grupo-titulo">{{ titulo_grupo_2 }}</div>
+                                {% set label_pac = disenio_config.datos_protocolo.label_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_paciente else 'Paciente:' %}
+                                {% set label_dni = disenio_config.datos_protocolo.label_dni if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_dni else 'DNI:' %}
+                                {% set label_edad = disenio_config.datos_protocolo.label_edad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_edad else 'Edad:' %}
+                                {% set label_os = disenio_config.datos_protocolo.label_obra_social if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_obra_social else 'Obra Social:' %}
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_pac }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A' }}</span>
+                                </div>
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_dni }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.dni if protocolo.afiliado else 'N/A' }}</span>
+                                </div>
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_edad }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.edad if protocolo.afiliado else 'N/A' }} años</span>
+                                </div>
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_os }}</span>
+                                    <span class="campo-valor">{{ protocolo.afiliado.obra_social.nombre if protocolo.afiliado and protocolo.afiliado.obra_social else 'N/A' }}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- GRUPO 3: DATOS DEL MÉDICO -->
+                            <div class="grupo-datos">
+                                {% set titulo_grupo_3 = disenio_config.datos_protocolo.titulo_grupo_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_medico else 'DATOS DEL MÉDICO' %}
+                                <div class="grupo-titulo">{{ titulo_grupo_3 }}</div>
+                                {% set label_med = disenio_config.datos_protocolo.label_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_medico else 'Médico:' %}
+                                {% set label_esp = disenio_config.datos_protocolo.label_especialidad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_especialidad else 'Especialidad:' %}
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_med }}</span>
+                                    <span class="campo-valor">{{ protocolo.prestador.nombre_completo if protocolo.prestador else 'N/A' }}</span>
+                                </div>
+                                <div class="campo">
+                                    <span class="campo-label">{{ label_esp }}</span>
+                                    <span class="campo-valor">{{ protocolo.prestador.nombre_especialidad if protocolo.prestador else 'N/A' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    
+                    {% elif elemento.tipo == 'texto-libre' %}
+                        <div style="{{ estilo_elemento }}font-family: {{ props.fuente or 'Arial' }}; font-size: {{ props.tamaño or 12 }}px; font-weight: {% if props.negrita %}bold{% else %}normal{% endif %}; font-style: {% if props.cursiva %}italic{% else %}normal{% endif %}; color: {{ props.color or '#000' }}; text-align: {{ props.alineacion or 'left' }};">
+                            {% set contenido = elemento.contenido|replace('[NUMERO]', protocolo.numero_protocolo)|replace('[FECHA]', protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A')|replace('[NOMBRE]', protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A') %}
+                            {{ contenido|safe }}
+                        </div>
+                    
+                    {% elif elemento.get('tipo') == 'seccion' or elemento.tipo == 'seccion' %}
+                        {# Renderizar sección con su contenido si está disponible #}
+                        {% set nombre_seccion = (elemento.get('contenido') or elemento.contenido)|replace('[NUMERO]', protocolo.numero_protocolo)|replace('[FECHA]', protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A')|replace('[NOMBRE]', protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A') %}
+                        
+                        {# Buscar el código de sección: primero usar seccion_codigo si existe, luego buscar por nombre #}
+                        {% set codigo_seccion = None %}
+                        {% set seccion_codigo_val = elemento.get('seccion_codigo') or (elemento.seccion_codigo if elemento.seccion_codigo else None) %}
+                        {% if seccion_codigo_val %}
+                            {% set codigo_seccion = seccion_codigo_val %}
+                        {% else %}
+                            {# Buscar por nombre en mapeo_secciones #}
+                            {% for codigo, nombre in mapeo_secciones.items() %}
+                                {% if nombre.upper() == nombre_seccion.upper() or nombre_seccion.upper() in nombre.upper() or nombre.upper() in nombre_seccion.upper() %}
+                                    {% set codigo_seccion = codigo %}
+                                {% endif %}
+                            {% endfor %}
+                            {# Si no se encontró, intentar por el contenido del elemento #}
+                            {% if not codigo_seccion %}
+                                {% set contenido_upper = nombre_seccion.upper() %}
+                                {% if 'DATOS CLÍNICOS' in contenido_upper or 'DATOS_CLINICOS' in contenido_upper %}{% set codigo_seccion = 'DATOS_CLINICOS' %}
+                                {% elif 'MATERIAL REMITIDO' in contenido_upper or 'MATERIAL_REMITIDO' in contenido_upper %}{% set codigo_seccion = 'MATERIAL_REMITIDO' %}
+                                {% elif 'MACROSCÓPICA' in contenido_upper or 'MACROSCOPICA' in contenido_upper %}{% set codigo_seccion = 'DESCRIPCION_MACROSCOPICA' %}
+                                {% elif 'MICROSCÓPICA' in contenido_upper or 'MICROSCOPICA' in contenido_upper %}{% set codigo_seccion = 'DESCRIPCION_MICROSCOPICA' %}
+                                {% elif 'DIAGNÓSTICO' in contenido_upper or 'DIAGNOSTICO' in contenido_upper %}{% set codigo_seccion = 'DIAGNOSTICO' %}
+                                {% elif 'EXTENDIDO' in contenido_upper %}{% set codigo_seccion = 'EXTENDIDO' %}
+                                {% elif 'CONFORMACIÓN' in contenido_upper or 'CONFORMACION' in contenido_upper or 'CITOLÓGICA' in contenido_upper %}{% set codigo_seccion = 'CELULAS_CONFORMACION' %}
+                                {# Mapeo especial: si el protocolo es BIOPSIA y el título es "DESCRIPCIÓN CITOLÓGICA", mapear a DESCRIPCION_MICROSCOPICA #}
+                                {% elif protocolo.tipo_estudio == 'BIOPSIA' and ('CITOLÓGICA' in contenido_upper or 'CITOLOGICA' in contenido_upper) and 'MICROSCÓPICA' not in contenido_upper and 'MACROSCÓPICA' not in contenido_upper %}{% set codigo_seccion = 'DESCRIPCION_MICROSCOPICA' %}
+                                {% elif 'JUNTO A' in contenido_upper %}{% set codigo_seccion = 'CELULAS_JUNTO_A' %}
+                                {% elif 'INFLAMATORIO' in contenido_upper %}{% set codigo_seccion = 'COMP_INFLAMATORIO' %}
+                                {% elif 'FLORA' in contenido_upper %}{% set codigo_seccion = 'FLORA' %}
+                                {% endif %}
+                            {% endif %}
+                        {% endif %}
+                        
+                        {# Configuración de sección: primero propiedades individuales, luego configuración global #}
+                        {% set color_fondo = props.get('color_fondo') if props.get('color_fondo') else (disenio_config.secciones.color_fondo_titulo if disenio_config and disenio_config.secciones and disenio_config.secciones.color_fondo_titulo else '#e3f2fd') %}
+                        {% set titulo_fuente = props.get('fuente') if props.get('fuente') else (disenio_config.secciones.titulo_fuente if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_fuente else 'Arial') %}
+                        {% set titulo_tamano = props.get('tamaño') if props.get('tamaño') is not none else (disenio_config.secciones.titulo_tamano if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_tamano is not none else 14) %}
+                        {% set titulo_negrita = props.get('negrita') if props.get('negrita') is not none else (disenio_config.secciones.titulo_negrita if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_negrita is not none else False) %}
+                        {% set titulo_cursiva = props.get('cursiva') if props.get('cursiva') is not none else (disenio_config.secciones.titulo_cursiva if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_cursiva is not none else False) %}
+                        {% set titulo_alineacion = props.get('alineacion') if props.get('alineacion') else (disenio_config.secciones.titulo_alineacion if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_alineacion else 'left') %}
+                        {% set color_texto = props.color if props.color else (disenio_config.secciones.titulo_color if disenio_config and disenio_config.secciones and disenio_config.secciones.titulo_color else '#007bff') %}
+                        {% set mostrar_vinetas = props.get('mostrar_vinetas') if props.get('mostrar_vinetas') is not none else (disenio_config.secciones.mostrar_vinetas if disenio_config and disenio_config.secciones and disenio_config.secciones.mostrar_vinetas is not none else False) %}
+                        {% set color_vineta = props.get('color_vineta') if props.get('color_vineta') else (disenio_config.secciones.color_vineta if disenio_config and disenio_config.secciones else '#007bff') %}
+                        {% set indentacion = props.get('indentacion') if props.get('indentacion') is not none else (disenio_config.secciones.indentacion if disenio_config and disenio_config.secciones else 15) %}
+                        {% set alineacion_contenido = props.get('alineacion_contenido') if props.get('alineacion_contenido') else (disenio_config.secciones.alineacion_contenido if disenio_config and disenio_config.secciones else 'left') %}
+                        {% set contenido_fuente = props.get('contenido_fuente') if props.get('contenido_fuente') else (disenio_config.secciones.contenido_fuente if disenio_config and disenio_config.secciones else 'Arial') %}
+                        {% set contenido_tamano = props.get('contenido_tamano') if props.get('contenido_tamano') is not none else (disenio_config.secciones.contenido_tamano if disenio_config and disenio_config.secciones else 12) %}
+                        {% set contenido_color = props.get('contenido_color') if props.get('contenido_color') else (disenio_config.secciones.contenido_color if disenio_config and disenio_config.secciones else '#333') %}
+                        {% set contenido_negrita = props.get('contenido_negrita') if props.get('contenido_negrita') is not none else (disenio_config.secciones.contenido_negrita if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_negrita is not none else False) %}
+                        {% set contenido_cursiva = props.get('contenido_cursiva') if props.get('contenido_cursiva') is not none else (disenio_config.secciones.contenido_cursiva if disenio_config and disenio_config.secciones and disenio_config.secciones.contenido_cursiva is not none else False) %}
+                        {% set padding_titulo = props.get('padding') if props.get('padding') else '8px 12px' %}
+                        {% set borde_izquierdo = 0 %}
+                        {% if props.get('borde_izquierdo') is not none and props.get('borde_izquierdo') > 0 %}
+                            {% set borde_izquierdo = props.get('borde_izquierdo') %}
+                        {% endif %}
+                        
+                        {% set lineas_seccion = lineas_por_seccion.get(codigo_seccion) if codigo_seccion and lineas_por_seccion else [] %}
+                        {% if not lineas_seccion and codigo_seccion == 'CELULAS_CONFORMACION' %}
+                            {% set lineas_seccion = lineas_por_seccion.get('DESCRIPCION_CITOLOGICA') or lineas_por_seccion.get('DESCRIPCION_MICROSCOPICA') %}
+                        {% elif not lineas_seccion and codigo_seccion == 'DESCRIPCION_MICROSCOPICA' and protocolo.tipo_estudio == 'BIOPSIA' %}
+                            {% set lineas_seccion = lineas_por_seccion.get('DESCRIPCION_MICROSCOPICA') %}
+                        {% endif %}
+                        {% if lineas_seccion %}
+                            <div class="seccion" style="{{ estilo_elemento }}">
+                                <div class="seccion-titulo" style="font-family: {{ titulo_fuente }}; font-size: {{ titulo_tamano }}px; font-weight: {% if titulo_negrita %}bold{% else %}normal{% endif %}; font-style: {% if titulo_cursiva %}italic{% else %}normal{% endif %}; color: {{ color_texto }}; background-color: {{ color_fondo }}; padding: {{ padding_titulo }}; text-align: {{ titulo_alineacion }}; border-left: {% if borde_izquierdo > 0 %}{{ borde_izquierdo }}px solid {{ color_texto }}{% else %}0 !important{% endif %};">
+                                    {{ nombre_seccion }}
+                                </div>
+                                    {% for linea in lineas_seccion %}
+                                        {# Obtener el texto de la línea #}
+                                        {% set texto_linea = linea.texto if linea.texto else (linea.get('texto', '') if linea.get('texto') else '') %}
+                                        {# Remover viñetas existentes del texto si las hay #}
+                                        {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                                        <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; text-align: {{ alineacion_contenido }}; position: relative;">
+                                            {% if mostrar_vinetas %}
+                                                <span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>
+                                            {% endif %}
+                                            <span class="linea-texto" style="font-family: {{ contenido_fuente }}; font-size: {{ contenido_tamano }}px; color: {{ contenido_color }}; font-weight: {% if contenido_negrita %}bold{% else %}normal{% endif %}; font-style: {% if contenido_cursiva %}italic{% else %}normal{% endif %};">
+                                                {{ texto_sin_vineta }}
+                                            </span>
+                                        </div>
+                                    {% endfor %}
+                            </div>
+                        {% endif %}
+                    
+                    {% elif elemento.tipo == 'espacio' %}
+                        <div style="{{ estilo_elemento }}height: {{ props.alto or 20 }}px;"></div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+            
+            {# Si hay estructura_visual, NO renderizar todas las secciones automáticamente #}
+            {# Solo se renderizan las secciones que están explícitamente en estructura_visual #}
+        {% else %}
+            {# LAYOUT ESTÁTICO (compatibilidad con diseños antiguos) #}
+            <!-- HEADER -->
+            <div class="header">
+                <div class="header-top">
+                    <div class="header-left">
+                        {% set mostrar_logo = True %}
+                        {% if disenio_config and disenio_config.header %}
+                            {% set mostrar_logo = disenio_config.header.mostrar_logo %}
+                        {% elif config.get('mostrar_logo_reporte', 'true') != 'true' %}
+                            {% set mostrar_logo = False %}
+                        {% endif %}
+                        {% if mostrar_logo %}
+                        <img src="/static/img/logo.png" alt="Logo Laboratorio" class="logo-img" onerror="this.style.display='none'">
+                        {% endif %}
+                    </div>
+                    <div class="header-center">
+                        {% set nombre_lab = config.get('laboratorio_nombre', 'LABORATORIO DE DIAGNÓSTICO HISTOPATOLÓGICO') %}
+                        {% if disenio_config and disenio_config.header and disenio_config.header.laboratorio_nombre %}
+                            {% set nombre_lab = disenio_config.header.laboratorio_nombre %}
+                        {% endif %}
+                        <div class="logo">{{ nombre_lab }}</div>
+                        <div class="titulo">{{ titulo_reporte }}</div>
+                        <div class="subtitulo">{{ subtitulo_reporte }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DATOS DEL PROTOCOLO -->
+            <div class="datos-protocolo">
+                <!-- GRUPO 1: PROTOCOLO Y FECHA -->
+                <div class="grupo-datos">
+                    {% set titulo_grupo_1 = disenio_config.datos_protocolo.titulo_grupo_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_protocolo else 'PROTOCOLO Y FECHA' %}
+                    <div class="grupo-titulo">{{ titulo_grupo_1 }}</div>
+                    {% set label_prot = disenio_config.datos_protocolo.label_protocolo if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_protocolo else 'Protocolo:' %}
+                    {% set label_fecha = disenio_config.datos_protocolo.label_fecha if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_fecha else 'Fecha:' %}
+                    <div class="campo">
+                        <span class="campo-label">{{ label_prot }}</span>
+                        <span class="campo-valor">{{ protocolo.numero_protocolo }}</span>
+                    </div>
+                    <div class="campo">
+                        <span class="campo-label">{{ label_fecha }}</span>
+                        <span class="campo-valor">{{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A' }}</span>
+                    </div>
+                </div>
+                
+                <!-- GRUPO 2: DATOS DEL PACIENTE -->
+                <div class="grupo-datos">
+                    {% set titulo_grupo_2 = disenio_config.datos_protocolo.titulo_grupo_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_paciente else 'DATOS DEL PACIENTE' %}
+                    <div class="grupo-titulo">{{ titulo_grupo_2 }}</div>
+                    {% set label_pac = disenio_config.datos_protocolo.label_paciente if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_paciente else 'Paciente:' %}
+                    {% set label_dni = disenio_config.datos_protocolo.label_dni if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_dni else 'DNI:' %}
+                    {% set label_edad = disenio_config.datos_protocolo.label_edad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_edad else 'Edad:' %}
+                    {% set label_os = disenio_config.datos_protocolo.label_obra_social if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_obra_social else 'Obra Social:' %}
+                    <div class="campo">
+                        <span class="campo-label">{{ label_pac }}</span>
+                        <span class="campo-valor">{{ protocolo.afiliado.nombre_completo if protocolo.afiliado else 'N/A' }}</span>
+                    </div>
+                    <div class="campo">
+                        <span class="campo-label">{{ label_dni }}</span>
+                        <span class="campo-valor">{{ protocolo.afiliado.dni if protocolo.afiliado else 'N/A' }}</span>
+                    </div>
+                    <div class="campo">
+                        <span class="campo-label">{{ label_edad }}</span>
+                        <span class="campo-valor">{{ protocolo.afiliado.edad if protocolo.afiliado else 'N/A' }} años</span>
+                    </div>
+                    <div class="campo">
+                        <span class="campo-label">{{ label_os }}</span>
+                        <span class="campo-valor">{{ protocolo.afiliado.obra_social.nombre if protocolo.afiliado and protocolo.afiliado.obra_social else 'N/A' }}</span>
+                    </div>
+                </div>
+                
+                <!-- GRUPO 3: DATOS DEL MÉDICO -->
+                <div class="grupo-datos">
+                    {% set titulo_grupo_3 = disenio_config.datos_protocolo.titulo_grupo_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.titulo_grupo_medico else 'DATOS DEL MÉDICO' %}
+                    <div class="grupo-titulo">{{ titulo_grupo_3 }}</div>
+                    {% set label_med = disenio_config.datos_protocolo.label_medico if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_medico else 'Médico:' %}
+                    {% set label_esp = disenio_config.datos_protocolo.label_especialidad if disenio_config and disenio_config.datos_protocolo and disenio_config.datos_protocolo.label_especialidad else 'Especialidad:' %}
+                    <div class="campo">
+                        <span class="campo-label">{{ label_med }}</span>
+                        <span class="campo-valor">{{ protocolo.prestador.nombre_completo if protocolo.prestador else 'N/A' }}</span>
+                    </div>
+                    <div class="campo">
+                        <span class="campo-label">{{ label_esp }}</span>
+                        <span class="campo-valor">{{ protocolo.prestador.nombre_especialidad if protocolo.prestador else 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {# SOLO renderizar todas las secciones automáticamente si NO hay estructura_visual #}
+        {% if not estructura_visual or estructura_visual|length == 0 %}
+        <!-- SECCIONES DEL INFORME - RENDERIZADO DINÁMICO -->
+        {# Obtener configuración de secciones desde disenio_config #}
+        {% set config_secciones = disenio_config.secciones if disenio_config and disenio_config.secciones else {} %}
+        {% set mostrar_vinetas = config_secciones.get('mostrar_vinetas', False) %}
+        {% set indentacion = config_secciones.get('indentacion', 15) %}
+        {% set color_vineta = config_secciones.get('color_vineta', '#007bff') %}
+        {% set alineacion_contenido = config_secciones.get('alineacion_contenido', 'left') %}
+        
+        {% if lineas_por_seccion %}
+            {% for seccion_codigo, lineas in lineas_por_seccion.items() %}
+                {% if seccion_codigo in mapeo_secciones %}
+                    <div class="seccion">
+                        {# Título de sección - usar configuración de disenio_config #}
+                        {% set titulo_seccion = mapeo_secciones[seccion_codigo] %}
+                        {% set color_fondo_titulo = config_secciones.get('color_fondo_titulo', '#e3f2fd') %}
+                        {% set color_texto_titulo = config_secciones.get('titulo_color', '#007bff') %}
+                        {% set fuente_titulo = config_secciones.get('titulo_fuente', 'Arial') %}
+                        {% set tamano_titulo = config_secciones.get('titulo_tamano', 14) %}
+                        
+                        {# Lógica especial para PAP - CELULAS_CONFORMACION #}
+                        {% if protocolo.tipo_estudio == 'PAP' and seccion_codigo == 'CELULAS_CONFORMACION' %}
+                            <div class="seccion-titulo" style="font-family: {{ fuente_titulo }}; font-size: {{ tamano_titulo }}px; font-weight: {% if config_secciones.get('titulo_negrita', True) %}bold{% else %}normal{% endif %}; color: {{ color_texto_titulo }}; background-color: {{ color_fondo_titulo }}; padding: {{ config_secciones.get('padding_seccion', '8px 12px') }}; margin-bottom: {{ config_secciones.get('margen_inferior', 10) }}px;">{{ titulo_seccion }}</div>
+                            <div class="linea" style="padding-left: {{ indentacion }}px; margin-bottom: 6px;">
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }};">Se halla conformado por células:</span>
+                            </div>
+                            {% for linea in lineas %}
+                                {# Remover viñetas existentes del texto si las hay #}
+                                {% set texto_linea = linea.get('texto', '') %}
+                                {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                            <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; margin-bottom: 6px; position: relative;">
+                                {% if mostrar_vinetas %}<span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>{% endif %}
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }}; line-height: {{ config_secciones.get('line_height', 1.4) }};">{{ texto_sin_vineta }}</span>
+                            </div>
+                            {% endfor %}
+                        
+                        {# Lógica especial para PAP - CELULAS_JUNTO_A #}
+                        {% elif protocolo.tipo_estudio == 'PAP' and seccion_codigo == 'CELULAS_JUNTO_A' %}
+                            <div class="linea" style="padding-left: {{ indentacion }}px; margin-bottom: 6px;">
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }};">Junto a:</span>
+                            </div>
+                            {% for linea in lineas %}
+                                {# Remover viñetas existentes del texto si las hay #}
+                                {% set texto_linea = linea.get('texto', '') %}
+                                {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                            <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; margin-bottom: 6px; position: relative;">
+                                {% if mostrar_vinetas %}<span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>{% endif %}
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }}; line-height: {{ config_secciones.get('line_height', 1.4) }};">{{ texto_sin_vineta }}</span>
+                            </div>
+                            {% endfor %}
+                        
+                        {# Lógica especial para PAP - COMP_INFLAMATORIO #}
+                        {% elif protocolo.tipo_estudio == 'PAP' and seccion_codigo == 'COMP_INFLAMATORIO' %}
+                            <div class="seccion-titulo" style="font-family: {{ fuente_titulo }}; font-size: {{ tamano_titulo }}px; font-weight: {% if config_secciones.get('titulo_negrita', True) %}bold{% else %}normal{% endif %}; color: {{ color_texto_titulo }}; background-color: {{ color_fondo_titulo }}; padding: {{ config_secciones.get('padding_seccion', '8px 12px') }}; margin-bottom: {{ config_secciones.get('margen_inferior', 10) }}px;">{{ titulo_seccion }}</div>
+                            <div class="linea" style="padding-left: {{ indentacion }}px; margin-bottom: 6px;">
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }};">El componente inflamatorio es:</span>
+                            </div>
+                            {% for linea in lineas %}
+                                {# Remover viñetas existentes del texto si las hay #}
+                                {% set texto_linea = linea.get('texto', '') %}
+                                {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                            <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; margin-bottom: 6px; position: relative;">
+                                {% if mostrar_vinetas %}<span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>{% endif %}
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }}; line-height: {{ config_secciones.get('line_height', 1.4) }};">{{ texto_sin_vineta }}</span>
+                            </div>
+                            {% endfor %}
+                        
+                        {# Lógica especial para PAP - FLORA #}
+                        {% elif protocolo.tipo_estudio == 'PAP' and seccion_codigo == 'FLORA' %}
+                            <div class="linea" style="padding-left: {{ indentacion }}px; margin-bottom: 6px;">
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }};">Flora:</span>
+                            </div>
+                            {% for linea in lineas %}
+                                {# Remover viñetas existentes del texto si las hay #}
+                                {% set texto_linea = linea.get('texto', '') %}
+                                {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                            <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; margin-bottom: 6px; position: relative;">
+                                {% if mostrar_vinetas %}<span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>{% endif %}
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }}; line-height: {{ config_secciones.get('line_height', 1.4) }};">{{ texto_sin_vineta }}</span>
+                            </div>
+                            {% endfor %}
+                        
+                        {# Renderizado genérico para todas las demás secciones #}
+                        {% else %}
+                            <div class="seccion-titulo" style="font-family: {{ fuente_titulo }}; font-size: {{ tamano_titulo }}px; font-weight: {% if config_secciones.get('titulo_negrita', True) %}bold{% else %}normal{% endif %}; color: {{ color_texto_titulo }}; background-color: {{ color_fondo_titulo }}; padding: {{ config_secciones.get('padding_seccion', '8px 12px') }}; margin-bottom: {{ config_secciones.get('margen_inferior', 10) }}px;">{{ titulo_seccion }}</div>
+                            {% for linea in lineas %}
+                                {# Remover viñetas existentes del texto si las hay #}
+                                {% set texto_linea = linea.get('texto', '') %}
+                                {% set texto_sin_vineta = texto_linea.replace('•', '').replace('·', '').replace('▪', '').replace('▫', '').strip() %}
+                            <div class="linea" style="padding-left: {% if mostrar_vinetas %}{{ indentacion + 15 }}px{% else %}{{ indentacion }}px{% endif %}; margin-bottom: 6px; position: relative;">
+                                {% if mostrar_vinetas %}<span style="position: absolute; left: {{ indentacion }}px; color: {{ color_vineta }}; font-weight: bold;">•</span>{% endif %}
+                                <span class="linea-texto" style="font-family: {{ config_secciones.get('contenido_fuente', 'Arial') }}; font-size: {{ config_secciones.get('contenido_tamano', 12) }}px; color: {{ config_secciones.get('contenido_color', '#333') }}; text-align: {{ alineacion_contenido }}; line-height: {{ config_secciones.get('line_height', 1.4) }};">{{ texto_sin_vineta }}</span>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="seccion">
+                <div class="seccion-titulo">No hay contenido disponible</div>
+                <div class="linea">
+                    <span class="linea-texto">Este protocolo aún no tiene contenido editado.</span>
+                </div>
+            </div>
+        {% endif %}
+        {% endif %}
+        {# Fin del bloque condicional: solo renderizar secciones automáticas si NO hay estructura_visual #}
+        
+        <!-- FIRMA -->
+        {% set mostrar_firma = True %}
+        {% set texto_firma = 'Dr. [Nombre del Médico]\nMédico Patólogo\nMP: [Número de Matrícula]' %}
+        {% if disenio_config and disenio_config.textos_personalizados %}
+            {% set mostrar_firma = disenio_config.textos_personalizados.get('mostrar_firma', True) %}
+            {% set texto_firma = disenio_config.textos_personalizados.get('texto_firma', texto_firma) %}
+        {% endif %}
+        {% if mostrar_firma %}
+            {% set medico_informe = protocolo.usuario_informe %}
+            {% if medico_informe %}
+                {% set firma_archivo = medico_informe.firma.archivo if medico_informe.firma else None %}
+                {% set nombre_medico = medico_informe.nombre_completo %}
+                {% set matricula_tipo = (medico_informe.matricula_tipo or '').strip() %}
+                {% set matricula_numero = (medico_informe.matricula_numero or '').strip() %}
+                {% if not matricula_numero %}
+                    {% set matricula_cruda = medico_informe.rol.descripcion if medico_informe.rol and medico_informe.rol.descripcion else '' %}
+                    {% if matricula_cruda %}
+                        {% set partes_matricula = matricula_cruda.split('-') %}
+                        {% set matricula_tipo = partes_matricula[0].strip() if partes_matricula|length > 0 else '' %}
+                        {% set matricula_numero = partes_matricula[1].strip() if partes_matricula|length > 1 else '' %}
+                        {% if partes_matricula|length > 2 %}
+                            {% set matricula_numero = partes_matricula[1].strip() ~ '-' ~ partes_matricula[2].strip() %}
+                        {% endif %}
+                    {% endif %}
+                {% endif %}
+                {% set matricula_tipo = matricula_tipo %}
+                {% set matricula_numero = matricula_numero %}
+                {% set matricula_tipo_num = (matricula_tipo ~ ' ' ~ matricula_numero).strip() %}
+                {% set reemplazos = {
+                    '[Nombre del Médico]': medico_informe.nombre_completo,
+                    '[NOMBRE_MEDICO]': medico_informe.nombre_completo,
+                    '[Nombre]': medico_informe.nombre_completo,
+                    '[Número de Matrícula]': matricula_numero,
+                    '[MP]': matricula_numero,
+                    '[TIPO_MATRICULA]': matricula_tipo,
+                    '[MATRICULA_COMPLETA]': matricula_tipo_num
+                } %}
+                {% set lineas_generadas = [] %}
+                {% for linea in texto_firma.split('\n') %}
+                    {% set linea_reemplazo = linea %}
+                    {% for clave, valor in reemplazos.items() %}
+                        {% set linea_reemplazo = linea_reemplazo.replace(clave, valor) %}
+                    {% endfor %}
+                    {% set linea_final = linea_reemplazo.strip() %}
+                    {% if linea_final %}
+                        {% set linea_lower = linea_final|lower %}
+                        {% if nombre_medico and linea_lower == nombre_medico|lower %}
+                            {# evitar duplicar el nombre #}
+                        {% elif 'matricula' in linea_lower or '[' in linea_lower %}
+                            {# placeholders de matrícula se manejan aparte #}
+                        {% elif linea_lower.startswith('médico') or linea_lower.startswith('medico') %}
+                            {# evitamos esta línea para controlar formato profesional #}
+                        {% else %}
+                            {% set lineas_generadas = lineas_generadas + [linea_final] %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                <div class="firma">
+                    {% if firma_archivo %}
+                    <img src="{{ url_for('static', filename=firma_archivo) }}" alt="Firma digital" class="firma-imagen">
+                    {% else %}
+                    <div class="firma-linea">_________________________</div>
+                    {% endif %}
+                    {% if nombre_medico %}
+                    <div class="firma-linea">{{ nombre_medico }}</div>
+                    {% endif %}
+                    {% set especialidad_medico = medico_informe.especialidad if medico_informe.especialidad else '' %}
+                    {% set descripcion_rol = medico_informe.rol.descripcion if medico_informe.rol and medico_informe.rol.descripcion else '' %}
+                    {% set profesion_base = especialidad_medico if especialidad_medico else (descripcion_rol.split('-')[0].strip() if descripcion_rol else '') %}
+                    {% if matricula_tipo_num %}
+                    <div class="firma-linea">{{ (profesion_base if profesion_base else 'Médico') ~ ' - ' ~ matricula_tipo_num }}</div>
+                    {% elif profesion_base %}
+                    <div class="firma-linea">{{ profesion_base }}</div>
+                    {% endif %}
+                    {% for linea in lineas_generadas %}
+                    <div class="firma-linea">{{ linea }}</div>
+                    {% endfor %}
+                    <div class="fecha">Fecha: {{ protocolo.fecha_informe.strftime('%d/%m/%Y') if protocolo.fecha_informe else protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A' }}</div>
+                </div>
+            {% else %}
+                <div class="firma">
+                    <div class="firma-linea">_________________________</div>
+                    {% for linea in texto_firma.split('\n') %}
+                    <div class="firma-linea">{{ linea }}</div>
+                    {% endfor %}
+                    <div class="fecha">Fecha: {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') if protocolo.fecha_ingreso else 'N/A' }}</div>
+                </div>
+            {% endif %}
+        {% endif %}
+        
+        <!-- PIE DE PÁGINA - DATOS DEL LABORATORIO -->
+        {% set mostrar_pie = True %}
+        {% set texto_pie = '' %}
+        {% if disenio_config and disenio_config.textos_personalizados %}
+            {% set mostrar_pie = disenio_config.textos_personalizados.get('mostrar_pie', True) %}
+            {% set texto_pie = disenio_config.textos_personalizados.get('texto_pie', '') %}
+        {% endif %}
+        {% if mostrar_pie %}
+        <div class="pie-laboratorio">
+            {% if texto_pie %}
+                {{ texto_pie }}
+            {% elif config.get('reporte_footer') %}
+                {{ config.get('reporte_footer') }}
+            {% else %}
+                {{ config.get('laboratorio_direccion', 'Pellegrini 630') }} - Tel. {{ config.get('laboratorio_telefono', '03462-15412472') }} - {{ config.get('laboratorio_ciudad', '2600 - Venado Tuerto') }}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- html2pdf.js para exportar a PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        // Función para imprimir
+        function imprimir() {
+            window.print();
+        }
+        
+        // Función para descargar como PDF
+        function descargarPDF() {
+            const elemento = document.querySelector('.reporte-container');
+            if (!elemento) {
+                alert('Error: No se encontró el contenido del reporte');
+                return;
+            }
+            
+            // Obtener información del protocolo para el nombre del archivo
+            const protocoloNumero = '{{ protocolo.numero_protocolo }}';
+            const tipoEstudio = '{{ protocolo.tipo_estudio }}';
+            const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            // Nombre del archivo: YYYY-MM-DD - TIPO_ESTUDIO - PROTOCOLO.pdf
+            const nombreArchivo = `${fecha} - ${tipoEstudio} - ${protocoloNumero}.pdf`;
+            
+            // Ocultar toolbar durante la generación del PDF
+            const toolbar = document.querySelector('.toolbar');
+            const toolbarVisible = toolbar ? toolbar.style.display !== 'none' : false;
+            if (toolbar) {
+                toolbar.style.display = 'none';
+            }
+            
+            // Opciones de configuración para el PDF
+            const opciones = {
+                margin: 0,
+                filename: nombreArchivo,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, // Mayor calidad
+                    useCORS: true,
+                    letterRendering: true,
+                    logging: false
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait',
+                    compress: true
+                },
+                pagebreak: { 
+                    mode: ['avoid-all', 'css', 'legacy'],
+                    before: '.page-break-before',
+                    after: '.page-break-after',
+                    avoid: ['.no-break', 'img', '.seccion']
+                }
+            };
+            
+            // Mostrar mensaje de carga
+            const botonPDF = document.querySelector('.btn-pdf');
+            const textoOriginal = botonPDF ? botonPDF.innerHTML : '';
+            if (botonPDF) {
+                botonPDF.disabled = true;
+                botonPDF.innerHTML = '⏳ Generando PDF...';
+            }
+            
+            // Generar y descargar el PDF
+            html2pdf()
+                .set(opciones)
+                .from(elemento)
+                .save()
+                .then(() => {
+                    // Restaurar botón
+                    if (botonPDF) {
+                        botonPDF.disabled = false;
+                        botonPDF.innerHTML = textoOriginal;
+                    }
+                    // Restaurar toolbar
+                    if (toolbar && toolbarVisible) {
+                        toolbar.style.display = '';
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error al generar PDF:', error);
+                    alert('Error al generar el PDF. Por favor, intente nuevamente.');
+                    // Restaurar botón
+                    if (botonPDF) {
+                        botonPDF.disabled = false;
+                        botonPDF.innerHTML = textoOriginal;
+                    }
+                    // Restaurar toolbar
+                    if (toolbar && toolbarVisible) {
+                        toolbar.style.display = '';
+                    }
+                });
+        }
+        
+        // Agregar botones de acción
+        document.addEventListener('DOMContentLoaded', function() {
+            const toolbar = document.createElement('div');
+            toolbar.className = 'toolbar';
+            
+            // Selector de diseño
+            const diseniosDisponibles = {{ disenios_disponibles|tojson }};
+            const disenioActualId = {{ disenio_actual.disenio_id if disenio_actual else 'null' }};
+            const protocoloId = {{ protocolo.protocolo_id }};
+            
+            let selectorHTML = '';
+            const totalDisenios = (diseniosDisponibles && Array.isArray(diseniosDisponibles)) ? diseniosDisponibles.length : 0;
+            if (totalDisenios > 0) {
+                const disabledAttr = totalDisenios === 1 ? 'disabled' : '';
+                selectorHTML = `
+                    <div class="toolbar-disenio-info" style="display: flex; align-items: center; gap: 10px; margin-right: 12px;">
+                        <label for="selector-disenio" style="font-size: 0.9rem; color: #495057; margin-bottom: 0;">
+                            Diseño:
+                        </label>
+                        <select id="selector-disenio" onchange="cambiarDisenio(this.value)" ${disabledAttr}
+                                style="padding: 5px 10px; border: 1px solid #ced4da; border-radius: 3px; font-size: 0.9rem; min-width: 220px;">
+                            ${diseniosDisponibles.map(d => {
+                                const selected = d.disenio_id === disenioActualId ? 'selected' : '';
+                                const defaultLabel = d.es_default ? ' (Predeterminado)' : '';
+                                return `<option value="${d.disenio_id}" ${selected}>${d.nombre}${defaultLabel}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                `;
+            }
+            
+            const disenioActualInfo = totalDisenios ? (diseniosDisponibles.find(d => d.disenio_id === disenioActualId) || diseniosDisponibles[0]) : null;
+            const estructuraVisualActiva = {{ estructura_visual|length if estructura_visual else 0 }};
+            const infoHTML = `
+                <span style="font-size: 0.85rem; color: #6c757d; margin-right: 12px;">
+                    Vista: ${disenioActualInfo ? `${disenioActualInfo.nombre}${disenioActualInfo.es_default ? ' (Predeterminado)' : ''}` : 'Genérico'} 
+                    · Secciones: ${estructuraVisualActiva}
+                </span>
+            `;
+            
+            toolbar.innerHTML = `
+                ${selectorHTML}
+                ${infoHTML}
+                <button onclick="imprimir()" class="btn-imprimir">
+                    🖨️ Imprimir
+                </button>
+                <button onclick="descargarPDF()" class="btn-pdf">
+                    📄 PDF
+                </button>
+            `;
+            
+            document.body.appendChild(toolbar);
+        });
+        
+        function cambiarDisenio(disenioId) {
+            const protocoloId = {{ protocolo.protocolo_id }};
+            const nuevaUrl = `/plantillas-dinamicas/preview-plantilla/${protocoloId}?disenio_id=${disenioId}`;
+            window.location.href = nuevaUrl;
+        }
+    </script>
+</body>
+</html>
+

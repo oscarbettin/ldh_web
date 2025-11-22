@@ -1,0 +1,36 @@
+# Flask y extensiones principales
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+Flask-WTF==1.2.1
+WTForms==3.1.1
+
+# Base de datos
+SQLAlchemy==2.0.23
+
+# Seguridad
+Werkzeug==3.0.1
+email-validator==2.1.0
+
+# Generación de PDFs
+reportlab==4.0.7
+weasyprint==60.1
+
+# Utilidades
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Migración desde Access (desarrollo)
+pyodbc==5.2.0
+
+# Variables de entorno
+python-dotenv==1.0.0
+
+# APIs externas
+anthropic==0.34.2
+google-generativeai==0.8.3
+requests==2.31.0
+
+# Para PDFs (dependencias adicionales de weasyprint en producción)
+# Pillow ya viene con weasyprint
+# cffi ya viene con weasyprint

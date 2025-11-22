@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ paciente.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="bi bi-person-circle"></i> {{ paciente.nombre_completo }}
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('pacientes.editar', id=paciente.afiliado_id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Editar
+            </a>
+            <a href="{{ url_for('pacientes.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Datos Personales -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Datos Personales</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Apellido:</strong></div>
+                        <div class="col-md-8">{{ paciente.apellido }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Nombre:</strong></div>
+                        <div class="col-md-8">{{ paciente.nombre }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Documento:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.tipo_documento and paciente.numero_documento %}
+                                {{ paciente.tipo_documento }} {{ paciente.numero_documento }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Fecha Nacimiento:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.fecha_nacimiento %}
+                                {{ paciente.fecha_nacimiento.strftime('%d/%m/%Y') }}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Edad:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.edad %}
+                                {{ paciente.edad }} años
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Obra Social -->
+            <div class="card mb-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-hospital"></i> Obra Social</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Obra Social:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.obra_social %}
+                                {{ paciente.obra_social.nombre }} ({{ paciente.obra_social.codigo }})
+                            {% else %}
+                                <span class="text-muted">Sin obra social</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Nº Afiliado:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.numero_afiliado %}
+                                {{ paciente.numero_afiliado }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contacto -->
+            <div class="card mb-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-telephone"></i> Contacto</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Teléfono:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.telefono %}
+                                {{ paciente.telefono }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Email:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.email %}
+                                {{ paciente.email }}
+                            {% else %}
+                                <span class="text-muted">No especificado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-4"><strong>Localidad:</strong></div>
+                        <div class="col-md-8">
+                            {% if paciente.localidad %}
+                                {{ paciente.localidad }}
+                                {% if paciente.codigo_postal %}
+                                    ({{ paciente.codigo_postal }})
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">No especificada</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observaciones -->
+            {% if paciente.observaciones %}
+            <div class="card mb-3">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0"><i class="bi bi-chat-square-text"></i> Observaciones</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ paciente.observaciones }}</p>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Protocolos del paciente -->
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-folder-fill"></i> Protocolos</h5>
+                </div>
+                <div class="card-body">
+                    {% if paciente.protocolos %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Protocolo</th>
+                                    <th>Tipo</th>
+                                    <th>Fecha</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for protocolo in paciente.protocolos %}
+                                <tr>
+                                    <td><strong>{{ protocolo.numero_protocolo }}</strong></td>
+                                    <td>{{ protocolo.tipo_estudio }}</td>
+                                    <td>{{ protocolo.fecha_ingreso | fecha_formato }}</td>
+                                    <td>
+                                        {% if protocolo.estado == 'PENDIENTE' %}
+                                            <span class="badge bg-warning">Pendiente</span>
+                                        {% elif protocolo.estado == 'EN_PROCESO' %}
+                                            <span class="badge bg-info">En Proceso</span>
+                                        {% elif protocolo.estado == 'COMPLETADO' %}
+                                            <span class="badge bg-success">Completado</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ protocolo.estado }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">
+                        No hay protocolos registrados para este paciente
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Estado -->
+            <div class="card mb-3">
+                <div class="card-body text-center">
+                    <h6 class="card-title">Estado del Registro</h6>
+                    {% if paciente.activo %}
+                    <span class="badge bg-success" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-check-circle"></i> Activo
+                    </span>
+                    {% else %}
+                    <span class="badge bg-secondary" style="font-size: 1.2rem; padding: 10px 20px;">
+                        <i class="bi bi-x-circle"></i> Inactivo
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Información del registro -->
+            <div class="card mb-3 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-clock-history"></i> Registro
+                    </h6>
+                    <p class="card-text text-sm mb-1">
+                        <strong>Fecha registro:</strong><br>
+                        {{ paciente.fecha_registro.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                    {% if paciente.ultima_modificacion %}
+                    <p class="card-text text-sm mb-0">
+                        <strong>Última modificación:</strong><br>
+                        {{ paciente.ultima_modificacion.strftime('%d/%m/%Y %H:%M') }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Acciones -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-gear"></i> Acciones
+                    </h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('pacientes.editar', id=paciente.afiliado_id) }}" class="btn btn-warning">
+                            <i class="bi bi-pencil"></i> Editar Datos
+                        </a>
+                        <a href="{{ url_for('pacientes.toggle_activo', id=paciente.afiliado_id) }}" 
+                           class="btn btn-secondary"
+                           onclick="return confirm('¿Está seguro de {{ 'desactivar' if paciente.activo else 'activar' }} este paciente?')">
+                            <i class="bi bi-toggle-{{ 'on' if paciente.activo else 'off' }}"></i>
+                            {{ 'Desactivar' if paciente.activo else 'Activar' }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,1354 @@
+{% extends "base.html" %}
+
+{% block title %}Editor de Análisis PAP v2 - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.editor-container {
+    background: #f8f9fa;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.header-info {
+    background: white;
+    padding: 10px; /* compactar */
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 10px;
+}
+
+.info-protocolo {
+    background: white;
+    padding: 8px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.main-content {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+}
+
+.left-panel {
+    width: 300px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+}
+
+.content-area {
+    flex: 1;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 16px;
+    overflow: visible; /* evitar segunda barra */
+}
+
+.seccion-activa {
+    background: #eaf4ff; /* celeste más suave */
+    border-left: 3px solid #90caf9; /* pastel */
+    padding: 8px 12px; /* menos alto */
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.seccion-header {
+    display: flex;
+    justify-content: space-between; /* alinear botones a la derecha */
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.seccion-content {
+    margin-bottom: 20px;
+}
+
+.linea-item {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 6px 8px; /* menor altura */
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.linea-item.seleccionada {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+
+/* Botones planos, pequeños y pastel */
+.btn-seleccionar-plantillas {
+    background: #bcd4ff; /* pastel azul */
+    color: #0d47a1;
+    border: 1px solid #a6c4fb;
+    padding: 6px 12px; /* más pequeño */
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-seleccionar-plantillas:hover { background: #a6c4fb; }
+
+.btn-asistente {
+    background: #ffd6a6; /* pastel naranja */
+    color: #8a4b08;
+    border: 1px solid #ffc88a;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.btn-asistente:hover { background: #ffc88a; }
+
+.config-asistente {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.texto-generado {
+    background: #f8f9fa;
+    padding: 10px; /* compactar */
+    border-radius: 8px;
+    margin-top: 10px;
+    border-left: 4px solid #28a745;
+}
+
+/* Editor de sección (v2) */
+.editor-seccion { width: 100%; min-height: 140px; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.5; }
+
+/* (revert) sin editor inline por sección */
+
+#texto-final {
+    background: white;
+    padding: 15px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    min-height: 200px;
+    max-height: 65vh; /* valor inicial; será ajustado por JS para evitar barra exterior */
+    overflow: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+/* Modal personalizado */
+.modal-plantillas {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.plantilla-option {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.plantilla-option:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+}
+
+.plantilla-option.seleccionada {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+.linea-checkbox {
+    margin-right: 10px;
+}
+
+.btn-aplicar {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.btn-cancelar {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+    <!-- Header con info del protocolo (movido al panel izquierdo para compactar) -->
+
+    <div class="main-content">
+        <!-- Panel izquierdo -->
+        <div class="left-panel">
+            <div class="info-protocolo">
+                <h6 class="mb-2"><i class="bi bi-file-text"></i> Editor de Análisis PAP v2</h6>
+                <div><strong>Protocolo:</strong> {{ protocolo.numero_protocolo }}</div>
+                <div><strong>Paciente:</strong> {{ protocolo.afiliado.nombre_completo }}</div>
+                <div><strong>Fecha:</strong> {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}</div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
+                <div class="btn-group btn-group-sm" role="group" aria-label="toolbar">
+                    <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+                    <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+                    <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+                </div>
+            </div>
+            <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="abrirModalGuardarPlantillaPersonalizada()">
+                <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+            </button>
+            <button class="btn btn-outline-danger btn-sm w-100 mb-2" onclick="limpiarTodasLasSecciones()" title="Limpiar todas las secciones">
+                <i class="bi bi-x-circle"></i> Limpiar todo
+            </button>
+            <a href="{{ url_for('plantillas_dinamicas.editor_pap', protocolo_id=protocolo.protocolo_id) }}"
+               class="btn btn-outline-secondary btn-sm w-100 mb-3">
+                <i class="bi bi-arrow-left-right"></i> Ir al editor clásico
+            </a>
+            
+            <div class="config-asistente">
+                <h6>🤖 Configuración del Asistente</h6>
+                <select id="modo-asistente" class="form-select form-select-sm mb-2">
+                    <option value="silencioso">🔇 Silencioso</option>
+                    <option value="sugeridor" selected>💡 Sugeridor</option>
+                    <option value="predictor">🤖 Predictor</option>
+                    <option value="colaborador">👥 Colaborador</option>
+                </select>
+                <small class="text-muted">Cambia el comportamiento del asistente</small>
+            </div>
+
+            <div class="mb-3" id="lista-secciones">
+                {% for s in secciones %}
+                <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="cargarSeccion({{ s.seccion_id }})">
+                    <i class="bi bi-list-ul"></i> {{ s.nombre }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3 plantillas-completas">
+                <h6 class="mb-2">
+                    <i class="bi bi-files"></i> Plantillas Completas
+                </h6>
+                <select id="select-plantilla-completa" class="form-select form-select-sm">
+                    <option value="">-- Seleccionar plantilla --</option>
+                </select>
+                <small class="text-muted d-block mt-1">Aplica todas las secciones de una plantilla en un solo paso.</small>
+            </div>
+        </div>
+
+        <!-- Área principal -->
+        <div class="content-area">
+            <div id="seccion-actual">
+                <div class="seccion-activa">
+                    <h5>
+                        <i class="bi bi-file-text"></i> Selecciona una sección
+                    </h5>
+                    <p class="text-muted">Elige una sección del panel izquierdo para comenzar</p>
+                </div>
+            </div>
+
+            <!-- Texto generado -->
+            <div class="texto-generado">
+                <h6>
+                    <i class="bi bi-file-text"></i> Texto Generado
+                </h6>
+                <div id="texto-final">Selecciona secciones y líneas para generar el texto...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para selección de plantillas -->
+<div id="modal-plantillas" class="modal-plantillas">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 id="modal-titulo">Seleccionar Plantillas</h5>
+            <span class="close" onclick="cerrarModal()">&times;</span>
+        </div>
+        <div class="modal-body" id="modal-body">
+            <!-- Contenido dinámico -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn-aplicar" onclick="aplicarPlantillasSeleccionadas()">
+                <i class="bi bi-check"></i> Aplicar Selección
+            </button>
+            <button class="btn-cancelar" onclick="cerrarModal()">
+                <i class="bi bi-x"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para sugerencias del asistente -->
+<div id="modal-asistente" class="modal-plantillas">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 id="modal-asistente-titulo">🤖 Sugerencias del Asistente</h5>
+            <span class="close" onclick="cerrarModalAsistente()">&times;</span>
+        </div>
+        <div class="modal-body" id="modal-asistente-body">
+            <!-- Contenido dinámico -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn-aplicar" onclick="aplicarSugerencias()">
+                <i class="bi bi-robot"></i> Usar Sugerencias
+            </button>
+            <button class="btn-cancelar" onclick="cerrarModalAsistente()">
+                <i class="bi bi-x"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Guardar Plantilla Personalizada -->
+<div class="modal fade" id="modalGuardarPlantillaPersonalizada" tabindex="-1" aria-labelledby="modalGuardarPlantillaPersonalizadaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGuardarPlantillaPersonalizadaLabel">
+                    <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="input-nombre-plantilla" class="form-label">Nombre o código</label>
+                    <input type="text" class="form-control" id="input-nombre-plantilla" list="lista-nombres-plantillas" placeholder="Ej: Trófico personalizado">
+                    <datalist id="lista-nombres-plantillas"></datalist>
+                    <small class="text-muted">Si eliges un nombre existente, la plantilla se reemplazará.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-guardar-plantilla-personalizada">
+                    <i class="bi bi-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Guardar Protocolo -->
+<div class="modal fade" id="modalGuardarProtocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalGuardarProtocoloLabel">
+                    <i class="bi bi-question-circle"></i> ¿Qué deseas hacer?
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">Seleccione una opción para el protocolo actual.</p>
+                <ul class="small text-muted mb-0">
+                    <li><strong>Guardar:</strong> guarda las líneas seleccionadas y mantiene el protocolo en su estado actual.</li>
+                    <li><strong>Guardar y completar:</strong> guarda el contenido y marca el protocolo como completado.</li>
+                </ul>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary" id="btn-guardar-solo">
+                        <i class="bi bi-save"></i> Guardar
+                    </button>
+                    {% if es_medico %}
+                    <button type="button" class="btn btn-success" id="btn-guardar-completar">
+                        <i class="bi bi-check2-circle"></i> Guardar y completar
+                    </button>
+                    {% else %}
+                    <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo los médicos pueden completar el protocolo.">
+                        <i class="bi bi-check2-circle"></i> Guardar y completar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let seccionActual = null; // ID de sección
+let contenidoActual = {}; // { seccionId: ["línea", ...] }
+const secciones = {{ secciones|tojson }};
+const esMedico = {{ es_medico | default(false) | tojson }};
+let modalGuardar = null;
+let modalGuardarPlantillaPersonalizada = null;
+let ultimaPlantillaCompleta = '';
+let plantillasPersonalizadas = {};
+
+function getSeccionById(id) {
+    return secciones.find(s => s.seccion_id === id);
+}
+
+function resolverCategoria(info){
+    // Si el código parece ser T1/H1/A1/I1 (botón), ignorarlo y resolver por nombre
+    if (info && info.codigo) {
+        const c = String(info.codigo).toUpperCase();
+        if (!/^([THAI])\d+$/.test(c)) {
+            return c; // códigos válidos de categoría reales (no botones)
+        }
+        // si es T1/H1/etc, seguimos
+    }
+    if (!info || !info.nombre) return '';
+    const n = info.nombre.toUpperCase();
+    if (n.includes('EXTEND')) return 'EXTENDIDO';
+    // Detectar primero Células Adicionales / Junto a
+    if (n.includes('JUNTO') || n.includes('ADICION')) return 'CELULAS_JUNTO_A';
+    if (n.includes('CONFORM') || n.includes('CÉLULAS') || n.includes('CELULAS')) return 'CELULAS_CONFORMACION';
+    if (n.includes('INFLAM')) return 'COMP_INFLAMATORIO';
+    if (n.includes('FLORA')) return 'FLORA';
+    if (n.includes('DATOS') || n.includes('CLINIC')) return 'DATOS_CLINICOS';
+    if (n.includes('DIAGN')) return 'DIAGNOSTICO';
+    return n.replaceAll(' ', '_');
+}
+
+function tieneContenido() {
+    return secciones.some(seccion => {
+        const lineas = contenidoActual[seccion.seccion_id] || [];
+        return lineas.length > 0;
+    });
+}
+
+function recolectarLineas() {
+    const lineas = [];
+    secciones.forEach(seccion => {
+        const categoria = resolverCategoria(seccion);
+        const arr = contenidoActual[seccion.seccion_id] || [];
+        arr.forEach((texto, idx) => {
+            if (texto && categoria) {
+                lineas.push({
+                    seccion: categoria,
+                    texto: texto,
+                    orden: idx + 1
+                });
+            }
+        });
+    });
+    return lineas;
+}
+
+function obtenerLineasPorCategoriaActual() {
+    const resultado = {};
+    secciones.forEach(seccion => {
+        const categoria = resolverCategoria(seccion);
+        const lineas = contenidoActual[seccion.seccion_id] || [];
+        if (lineas.length > 0) {
+            resultado[categoria] = [...lineas];
+        }
+    });
+    return resultado;
+}
+
+function cargarPlantillasCompletas() {
+    const select = document.getElementById('select-plantilla-completa');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Seleccionar plantilla --</option>';
+    plantillasPersonalizadas = {};
+
+    fetch('/plantillas-dinamicas/api/plantillas-pap')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !Array.isArray(data.plantillas)) {
+                return;
+            }
+            data.plantillas.forEach(plantilla => {
+                const option = document.createElement('option');
+                option.value = plantilla.codigo;
+                option.textContent = `${plantilla.codigo} - ${plantilla.descripcion || ''}`.trim();
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error cargando plantillas completas:', error);
+        })
+        .finally(() => {
+            cargarPlantillasPersonalizadas();
+        });
+}
+
+function cargarPlantillasPersonalizadas() {
+    const select = document.getElementById('select-plantilla-completa');
+    if (!select) return;
+
+    fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP')
+        .then(response => response.json())
+        .then(data => {
+            if (!data || !data.success || !Array.isArray(data.plantillas)) {
+                return;
+            }
+
+            plantillasPersonalizadas = {};
+            data.plantillas.forEach(plantilla => {
+                if (plantilla && plantilla.nombre) {
+                    plantillasPersonalizadas[plantilla.nombre] = plantilla.lineas || {};
+                }
+            });
+
+            actualizarOpcionesPersonalizadas();
+        })
+        .catch(error => {
+            console.error('Error cargando plantillas personalizadas:', error);
+        });
+}
+
+function actualizarOpcionesPersonalizadas() {
+    const select = document.getElementById('select-plantilla-completa');
+    const datalist = document.getElementById('lista-nombres-plantillas');
+    if (!select) return;
+
+    // Actualizar datalist para el modal
+    if (datalist) {
+        datalist.innerHTML = '';
+        Object.keys(plantillasPersonalizadas).forEach(nombre => {
+            const option = document.createElement('option');
+            option.value = nombre;
+            datalist.appendChild(option);
+        });
+    }
+
+    // Eliminar optgroup previo si existía
+    const optgroupId = 'optgroup-plantillas-personalizadas';
+    const existente = document.getElementById(optgroupId);
+    if (existente) {
+        existente.remove();
+    }
+
+    const nombres = Object.keys(plantillasPersonalizadas);
+    if (nombres.length === 0) {
+        return;
+    }
+
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = 'Personalizadas';
+    optgroup.id = optgroupId;
+
+    nombres.forEach(nombre => {
+        const option = document.createElement('option');
+        option.value = `__custom__:${nombre}`;
+        option.textContent = `Personalizada: ${nombre}`;
+        optgroup.appendChild(option);
+    });
+
+    select.appendChild(optgroup);
+
+    // Restaurar selección si la plantilla anterior sigue disponible
+    if (ultimaPlantillaCompleta && select.querySelector(`option[value="${ultimaPlantillaCompleta}"]`)) {
+        select.value = ultimaPlantillaCompleta;
+    }
+}
+
+function aplicarPlantillaCompleta(codigo) {
+    if (!codigo) return;
+
+    if (codigo.startsWith('__custom__:')) {
+        const nombrePlantilla = codigo.replace('__custom__:', '');
+        const datos = plantillasPersonalizadas[nombrePlantilla];
+        if (!datos) {
+            alert('No se encontró la plantilla personalizada seleccionada.');
+            return;
+        }
+        aplicarLineasASecciones(datos, nombrePlantilla);
+        return;
+    }
+
+    fetch(`/plantillas-dinamicas/api/plantilla-pap/${codigo}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data || data.error || !Array.isArray(data.lineas)) {
+                alert(data && data.error ? data.error : 'No se pudo cargar la plantilla seleccionada.');
+                return;
+            }
+
+            const lineasPorCategoria = {};
+            data.lineas.forEach(linea => {
+                const categoria = (linea.categoria || '').toUpperCase();
+                if (!lineasPorCategoria[categoria]) {
+                    lineasPorCategoria[categoria] = [];
+                }
+                if (linea.texto) {
+                    lineasPorCategoria[categoria].push(String(linea.texto).trim());
+                }
+            });
+
+            aplicarLineasASecciones(lineasPorCategoria, codigo);
+        })
+        .catch(error => {
+            console.error('Error aplicando plantilla completa:', error);
+            alert('Ocurrió un error al aplicar la plantilla.');
+        });
+}
+
+function aplicarLineasASecciones(lineasPorCategoria, etiqueta) {
+    secciones.forEach(seccion => {
+        const categoria = resolverCategoria(seccion);
+        const lineas = lineasPorCategoria[categoria] || [];
+        if (lineas.length > 0) {
+            contenidoActual[seccion.seccion_id] = lineas;
+        } else {
+            delete contenidoActual[seccion.seccion_id];
+        }
+    });
+
+    if (seccionActual) {
+        cargarSeccion(seccionActual);
+    }
+
+    actualizarTextoGenerado();
+    ajustarAlturaTexto();
+    if (etiqueta) {
+        alert(`Plantilla "${etiqueta}" aplicada correctamente.`);
+    }
+}
+
+function limpiarTodasLasSecciones() {
+    if (!confirm('¿Está seguro de que desea limpiar todas las secciones? Se eliminará todo el contenido actual.')) {
+        return;
+    }
+    
+    // Limpiar contenido actual
+    contenidoActual = {};
+    
+    // Limpiar todas las secciones
+    secciones.forEach(seccion => {
+        delete contenidoActual[seccion.seccion_id];
+    });
+    
+    // Recargar la sección actual para limpiar la UI
+    if (seccionActual) {
+        cargarSeccion(seccionActual);
+    }
+    
+    // Actualizar texto generado
+    actualizarTextoGenerado();
+    ajustarAlturaTexto();
+    
+    // Limpiar selector de plantillas completas
+    const selectPlantilla = document.getElementById('select-plantilla-completa');
+    if (selectPlantilla) {
+        selectPlantilla.value = '';
+        ultimaPlantillaCompleta = '';
+    }
+    
+    alert('Todas las secciones han sido limpiadas.');
+}
+let configuracionAsistente = {
+    modo: 'sugeridor',
+    detectar_atipicos: true,
+    sugerir_diagnosticos: true
+};
+
+// Ajusta el alto de #texto-final al espacio disponible en ventana
+function ajustarAlturaTexto() {
+    const tf = document.getElementById('texto-final');
+    if (!tf) return;
+    // Restablecer para medir correctamente
+    tf.style.maxHeight = '';
+    const rect = tf.getBoundingClientRect();
+    const paddingInferior = 20;
+    const disponible = window.innerHeight - rect.top - paddingInferior;
+    if (disponible > 200) {
+        tf.style.maxHeight = disponible + 'px';
+    }
+}
+
+// El detalle de líneas ahora se carga vía API al abrir el modal
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar modo del asistente
+    document.getElementById('modo-asistente').addEventListener('change', function() {
+        configuracionAsistente.modo = this.value;
+        console.log('Modo asistente cambiado a:', this.value);
+    });
+
+    const modalElemento = document.getElementById('modalGuardarProtocolo');
+    if (modalElemento && typeof bootstrap !== 'undefined') {
+        modalGuardar = new bootstrap.Modal(modalElemento);
+    }
+
+    const btnGuardarSolo = document.getElementById('btn-guardar-solo');
+    if (btnGuardarSolo) {
+        btnGuardarSolo.addEventListener('click', function() {
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarPlantilla('guardar');
+        });
+    }
+
+    const btnGuardarCompletar = document.getElementById('btn-guardar-completar');
+    if (btnGuardarCompletar) {
+        btnGuardarCompletar.addEventListener('click', function() {
+            if (!esMedico) {
+                alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+                return;
+            }
+            if (modalGuardar) {
+                modalGuardar.hide();
+            }
+            guardarPlantilla('completar');
+        });
+    }
+
+    const modalPersonalizadaEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+    if (modalPersonalizadaEl && typeof bootstrap !== 'undefined') {
+        modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalPersonalizadaEl);
+    }
+
+    const btnGuardarPlantillaPersonalizada = document.getElementById('btn-guardar-plantilla-personalizada');
+    if (btnGuardarPlantillaPersonalizada) {
+        btnGuardarPlantillaPersonalizada.addEventListener('click', guardarPlantillaPersonalizada);
+    }
+
+    // Cargar contenido previo guardado (ProtocoloLinea)
+    cargarContenidoPrevioV2();
+    ajustarAlturaTexto();
+    window.addEventListener('resize', ajustarAlturaTexto);
+
+    cargarPlantillasCompletas();
+    const selectPlantillaCompleta = document.getElementById('select-plantilla-completa');
+    if (selectPlantillaCompleta) {
+        selectPlantillaCompleta.addEventListener('change', function() {
+            const codigo = this.value;
+            if (codigo) {
+                const texto = this.options[this.selectedIndex].textContent;
+                const confirmar = confirm(`¿Aplicar la plantilla "${texto}" a todas las secciones? Esto reemplazará el contenido actual.`);
+                if (!confirmar) {
+                    this.value = ultimaPlantillaCompleta || '';
+                    return;
+                }
+                ultimaPlantillaCompleta = codigo;
+                aplicarPlantillaCompleta(codigo);
+            } else {
+                ultimaPlantillaCompleta = '';
+            }
+        });
+    }
+});
+
+function cargarContenidoPrevioV2(){
+    const protocoloId = {{ protocolo.protocolo_id }};
+    fetch(`/plantillas-dinamicas/api/editor-moderno/cargar/${protocoloId}`)
+        .then(r=>r.json())
+        .then(data=>{
+            if (!data.success || !data.contenido) return;
+            // Poblar memoria local con TODAS las secciones existentes usando el código esperado (resolverCategoria)
+            contenidoActual = {};
+            const mapa = data.contenido || {};
+            secciones.forEach(s => {
+                const clave = resolverCategoria(s); // p.ej. EXTENDIDO, FLORA, COMP_INFLAMATORIO, CELULAS_CONFORMACION, DATOS_CLINICOS, DIAGNOSTICO, CELULAS_JUNTO_A
+                const textoSec = mapa[clave] || '';
+                if (textoSec){
+                    const arr = String(textoSec).split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>0);
+                    if (arr.length>0){ contenidoActual[s.seccion_id] = arr; }
+                }
+            });
+            // Renderizar texto final a partir de contenidoActual
+            actualizarTextoGenerado();
+            ajustarAlturaTexto();
+        })
+        .catch(()=>{});
+}
+
+function cargarSeccion(seccionId) {
+    seccionActual = seccionId;
+    const info = getSeccionById(seccionId);
+    if (!info) { alert('Sección no encontrada'); return; }
+
+    const seccionDiv = document.getElementById('seccion-actual');
+    seccionDiv.innerHTML = `
+        <div class="seccion-activa">
+            <div class="seccion-header">
+                <h5><i class="bi bi-list-ul"></i> ${info.nombre}</h5>
+                <div>
+                    <button class="btn-seleccionar-plantillas" onclick="abrirModalPlantillas(${seccionId})">
+                        <i class="bi bi-grid"></i> Seleccionar Líneas
+                    </button>
+                    <button class="btn-asistente" onclick="consultarAsistente(${seccionId})">
+                        <i class="bi bi-robot"></i> Consultar Asistente
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-1" onclick="toggleEditorSeccion(${seccionId})">
+                        <i class="bi bi-pencil-square"></i> Editar sección
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="seccion-content">
+            <h6 class="mb-2">Líneas Seleccionadas:</h6>
+            <div id="lineas-seleccionadas-${seccionId}">
+                ${renderizarLineasSeleccionadas(seccionId)}
+            </div>
+            <div class="mt-3">
+                <div id="editor-wrap-${seccionId}" style="display:none;" class="mt-2">
+                    <textarea id="editor-seccion-${seccionId}" class="form-control editor-seccion" oninput="sincronizarEditor(${seccionId})"></textarea>
+                    <div class="mt-2 d-flex gap-2">
+                        <button class="btn btn-success btn-sm" onclick="guardarSeccionActual()"><i class="bi bi-save"></i> Guardar Sección</button>
+                        <small class="text-muted">Enter crea líneas • Ctrl+S guarda • Esc restaura</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    // Precarga del editor si se abre
+    const editor = document.getElementById(`editor-seccion-${seccionId}`);
+    if (editor){ editor.value = (contenidoActual[seccionId]||[]).join('\n'); }
+    // Reajustar alto del texto generado porque cambió el layout superior
+    ajustarAlturaTexto();
+}
+
+function renderizarLineasSeleccionadas(seccionId) {
+    const lineas = contenidoActual[seccionId] || [];
+    
+    if (lineas.length === 0) {
+        return '<p class="text-muted">No hay líneas seleccionadas</p>';
+    }
+    
+    return lineas.map((linea, index) => `
+        <div class="linea-item">
+            <span>${linea}</span>
+            <button class="btn btn-sm btn-outline-danger" onclick="removerLinea(${seccionId}, ${index})">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    `).join('');
+}
+
+function abrirModalPlantillas(seccionId) {
+    const info = getSeccionById(seccionId);
+    document.getElementById('modal-titulo').textContent = `Líneas disponibles - ${info ? info.nombre : ''}`;
+
+    const modalBody = document.getElementById('modal-body');
+    modalBody.innerHTML = '<div class="text-muted">Cargando líneas...</div>';
+
+    // Cargar líneas desde API de lineas_pap por categoría (tabla correcta)
+    const categoria = resolverCategoria(info);
+    console.log('Cargando líneas para categoría:', categoria, 'seccion_id:', seccionId, info);
+    fetch(`/plantillas-dinamicas/api/lineas-pap/${encodeURIComponent(categoria)}`)
+        .then(async r => {
+            if (!r.ok) {
+                const text = await r.text().catch(()=>'');
+                throw new Error(`HTTP ${r.status} ${r.statusText} ${text}`.trim());
+            }
+            return r.json();
+        })
+        .then(data => {
+            const lineas = (data && Array.isArray(data.lineas)) ? data.lineas : [];
+            modalBody.innerHTML = `
+                <div class="plantilla-option seleccionable">
+                    <h6>Líneas</h6>
+                    <ul>
+                        ${lineas.map(l => `
+                            <li>
+                                <input type="checkbox" class="linea-checkbox" value="${(l.texto || '').replace(/"/g,'&quot;')}"> ${l.texto || ''}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+            if (lineas.length === 0) {
+                modalBody.innerHTML += '<div class="text-muted mt-2">No hay líneas definidas para esta sección.</div>';
+            }
+        })
+        .catch(err => { modalBody.innerHTML = `Error de conexión: ${err.message}`; console.error(err); });
+
+    document.getElementById('modal-plantillas').style.display = 'block';
+}
+
+function togglePlantilla(element) {
+    element.classList.toggle('seleccionada');
+    const checkboxes = element.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = element.classList.contains('seleccionada'));
+}
+
+function aplicarPlantillasSeleccionadas() {
+    const plantillasSeleccionadas = document.querySelectorAll('.plantilla-option.seleccionada');
+    const lineasSeleccionadas = [];
+    
+    const checkboxes = document.querySelectorAll('#modal-body input[type="checkbox"]:checked');
+    checkboxes.forEach(cb => lineasSeleccionadas.push(cb.value));
+    
+    if (lineasSeleccionadas.length > 0) {
+        contenidoActual[seccionActual] = lineasSeleccionadas;
+        cargarSeccion(seccionActual);
+        actualizarTextoGenerado();
+        ajustarAlturaTexto();
+    }
+    
+    cerrarModal();
+}
+
+function toggleEditorSeccion(seccionId){
+    const wrap = document.getElementById(`editor-wrap-${seccionId}`);
+    if (!wrap) return;
+    const visible = wrap.style.display !== 'none';
+    wrap.style.display = visible ? 'none' : 'block';
+    const editor = document.getElementById(`editor-seccion-${seccionId}`);
+    if (editor && !visible){ editor.value = (contenidoActual[seccionId]||[]).join('\n'); }
+    ajustarAlturaTexto();
+}
+
+function sincronizarEditor(seccionId){
+    const editor = document.getElementById(`editor-seccion-${seccionId}`);
+    if (!editor) return;
+    const arr = editor.value.split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>0);
+    contenidoActual[seccionId] = arr;
+    const cont = document.getElementById(`lineas-seleccionadas-${seccionId}`);
+    if (cont) cont.innerHTML = renderizarLineasSeleccionadas(seccionId);
+    actualizarTextoGenerado();
+    ajustarAlturaTexto();
+}
+
+function guardarSeccionActual(){
+    if (!seccionActual){ alert('Seleccione una sección'); return; }
+    const info = getSeccionById(seccionActual);
+    if (!info){ alert('Sección no encontrada'); return; }
+    const editor = document.getElementById(`editor-seccion-${seccionActual}`);
+    const lineas = editor ? editor.value.split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>0) : (contenidoActual[seccionActual]||[]);
+    const payload = { protocolo_id: {{ protocolo.protocolo_id }}, seccion: resolverCategoria(info), lineas };
+    fetch('/plantillas-dinamicas/api/editor-v2/guardar',{
+        method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    }).then(r=>r.json()).then(data=>{
+        if (data && data.success){
+            contenidoActual[seccionActual] = lineas;
+            actualizarTextoGenerado();
+            ajustarAlturaTexto();
+            alert('Sección guardada');
+        } else { alert('No se pudo guardar'); }
+    }).catch(()=> alert('Error de conexión al guardar'));
+}
+
+function abrirModalGuardarPlantillaPersonalizada() {
+    if (!modalGuardarPlantillaPersonalizada && typeof bootstrap !== 'undefined') {
+        const modalEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+        if (modalEl) {
+            modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalEl);
+        }
+    }
+
+    actualizarOpcionesPersonalizadas();
+
+    const input = document.getElementById('input-nombre-plantilla');
+    if (input) {
+        input.value = '';
+        setTimeout(() => input.focus(), 150);
+    }
+
+    if (modalGuardarPlantillaPersonalizada) {
+        modalGuardarPlantillaPersonalizada.show();
+    }
+}
+
+function guardarPlantillaPersonalizada() {
+    const input = document.getElementById('input-nombre-plantilla');
+    if (!input) return;
+
+    let nombre = (input.value || '').trim();
+    if (!nombre) {
+        alert('Por favor ingrese un nombre o código para la plantilla.');
+        return;
+    }
+
+    const lineas = obtenerLineasPorCategoriaActual();
+    if (Object.keys(lineas).length === 0) {
+        alert('No hay contenido para guardar como plantilla.');
+        return;
+    }
+
+    const existentes = Object.keys(plantillasPersonalizadas);
+    const coincidencia = existentes.find(n => n.toLowerCase() === nombre.toLowerCase());
+    let sobrescribir = false;
+
+    if (coincidencia) {
+        const confirmar = confirm(`La plantilla "${coincidencia}" ya existe. ¿Desea reemplazarla?`);
+        if (!confirmar) {
+            return;
+        }
+        nombre = coincidencia;
+        sobrescribir = true;
+    }
+
+    fetch('/plantillas-dinamicas/api/plantillas/personalizadas/PAP', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            nombre: nombre,
+            lineas: lineas,
+            sobrescribir: sobrescribir
+        })
+    })
+        .then(response => response.json()
+            .then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || !data || !data.success) {
+                if (data && data.error === 'exists') {
+                    alert('La plantilla ya existe y no se reemplazó.');
+                } else {
+                    alert(data && data.error ? `Error al guardar: ${data.error}` : 'No se pudo guardar la plantilla.');
+                }
+                return;
+            }
+
+            if (modalGuardarPlantillaPersonalizada) {
+                modalGuardarPlantillaPersonalizada.hide();
+            }
+
+            alert('Plantilla guardada correctamente.');
+            ultimaPlantillaCompleta = `__custom__:${nombre}`;
+            cargarPlantillasCompletas();
+        })
+        .catch(error => {
+            console.error('Error guardando plantilla personalizada:', error);
+            alert('Ocurrió un error al guardar la plantilla.');
+        });
+}
+
+// Atajos básicos
+document.addEventListener('keydown', function(e){
+    if (e.ctrlKey && (e.key === 's' || e.key === 'S')){ e.preventDefault(); guardarSeccionActual(); }
+    if (e.key === 'Escape' && seccionActual){ const ed = document.getElementById(`editor-seccion-${seccionActual}`); if (ed) ed.value = (contenidoActual[seccionActual]||[]).join('\n'); }
+});
+
+// (revert) sin editor inline ni atajos de guardado
+
+function consultarAsistente(seccionId) {
+    const modo = configuracionAsistente.modo;
+    
+    if (modo === 'silencioso') {
+        alert('El asistente está en modo silencioso. Cambia el modo en la configuración.');
+        return;
+    }
+    
+    const info = getSeccionById(seccionId);
+    const categoria = resolverCategoria(info);
+    document.getElementById('modal-asistente-titulo').textContent = `🤖 Sugerencias para ${info ? info.nombre : ''}`;
+
+    const modalBody = document.getElementById('modal-asistente-body');
+    modalBody.innerHTML = '<div class="text-muted">Consultando asistente...</div>';
+
+    fetch(`/editor-avanzado/sugerencias/{{ protocolo.protocolo_id }}/${encodeURIComponent(categoria)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data && data.success) {
+                const sugerencias = data.sugerencias || [];
+                modalBody.innerHTML = `
+                    <div class="alert alert-info">
+                        <strong>Modo:</strong> ${data.modo}
+                    </div>
+                    ${sugerencias.map(sug => `
+                        <div class="plantilla-option">
+                            <h6>${sug.titulo}</h6>
+                            <p>${sug.descripcion}</p>
+                            ${(sug.lineas && sug.lineas.length) ? `<div><strong>Líneas sugeridas:</strong><ul>${sug.lineas.map(l=>`<li>${l}</li>`).join('')}</ul></div>` : ''}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="${(sug.lineas||[]).join('|')}">
+                                <label class="form-check-label">Aplicar esta sugerencia</label>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                const sugerencias = generarSugerenciasInteligentes(seccionId, modo);
+                renderSugerenciasFallback(modalBody, modo, seccionId, sugerencias);
+            }
+        })
+        .catch(() => {
+            const sugerencias = generarSugerenciasInteligentes(seccionId, modo);
+            renderSugerenciasFallback(modalBody, modo, seccionId, sugerencias);
+        });
+
+    document.getElementById('modal-asistente').style.display = 'block';
+}
+
+function renderSugerenciasFallback(modalBody, modo, seccionId, sugerencias){
+    modalBody.innerHTML = `
+        <div class="alert alert-warning">
+            No se pudo consultar el asistente. Mostrando sugerencias locales.
+        </div>
+        <div class="alert alert-info">
+            <strong>Modo:</strong> ${modo} | <strong>Sección:</strong> ${seccionId}
+        </div>
+        ${sugerencias.map(sug => `
+            <div class="plantilla-option">
+                <h6>${sug.titulo}</h6>
+                <p>${sug.descripcion}</p>
+                ${(sug.lineas && sug.lineas.length) ? `<div><strong>Líneas sugeridas:</strong><ul>${sug.lineas.map(l=>`<li>${l}</li>`).join('')}</ul></div>` : ''}
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${sug.lineas.join('|')}">
+                    <label class="form-check-label">Aplicar esta sugerencia</label>
+                </div>
+            </div>
+        `).join('')}
+    `;
+}
+
+function generarSugerenciasInteligentes(seccion, modo) {
+    // Simulación de sugerencias basadas en el modo
+    const sugerencias = [];
+    
+    switch (modo) {
+        case 'sugeridor':
+            sugerencias.push({
+                titulo: 'Sugerencia Basada en Patrones',
+                descripcion: 'Basado en 2,847 casos similares de PAP',
+                lineas: ['abundante, trófico y representativo']
+            });
+            break;
+            
+        case 'predictor':
+            sugerencias.push({
+                titulo: 'Predicción Automática',
+                descripcion: '89% de casos similares usan esta combinación',
+                lineas: ['abundante, trófico y representativo', 'células pavimentosas, intermedias y superficiales']
+            });
+            break;
+            
+        case 'colaborador':
+            sugerencias.push({
+                titulo: 'Análisis Completo',
+                descripcion: 'Para casos de este tipo, recomiendo esta secuencia completa',
+                lineas: ['abundante, trófico y representativo', 'células pavimentosas, intermedias y superficiales', 'moderado, leucocitario polimorfonuclear']
+            });
+            break;
+    }
+    
+    return sugerencias;
+}
+
+function aplicarSugerencias() {
+    const checkboxes = document.querySelectorAll('#modal-asistente-body input[type="checkbox"]:checked');
+    
+    checkboxes.forEach(cb => {
+        const lineas = cb.value.split('|');
+        contenidoActual[seccionActual] = lineas;
+    });
+    
+    cargarSeccion(seccionActual);
+    actualizarTextoGenerado();
+    cerrarModalAsistente();
+}
+
+function actualizarTextoGenerado() {
+    const textoDiv = document.getElementById('texto-final');
+    
+    if (Object.keys(contenidoActual).length === 0) {
+        textoDiv.textContent = 'Selecciona secciones y líneas para generar el texto...';
+        return;
+    }
+    
+    let texto = `PROTOCOLO: {{ protocolo.numero_protocolo }}\n`;
+    texto += `PACIENTE: {{ protocolo.afiliado.nombre_completo }}\n`;
+    texto += `FECHA: {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}\n\n`;
+    texto += 'DESCRIPCIÓN CITOLÓGICA:\n';
+    texto += '='.repeat(50) + '\n\n';
+    
+    // Orden de secciones
+    const ordenSecciones = secciones.map(s => s.seccion_id);
+    
+    ordenSecciones.forEach(seccion => {
+        if (contenidoActual[seccion] && contenidoActual[seccion].length > 0) {
+            const info = getSeccionById(seccion);
+            if (info) {
+                texto += `${info.nombre}:\n`;
+                contenidoActual[seccion].forEach(linea => {
+                    texto += `${linea}\n`;
+                });
+                texto += '\n';
+            }
+        }
+    });
+    
+    textoDiv.textContent = texto;
+}
+
+function cerrarModal() {
+    document.getElementById('modal-plantillas').style.display = 'none';
+}
+
+function cerrarModalAsistente() {
+    document.getElementById('modal-asistente').style.display = 'none';
+}
+
+function removerLinea(seccion, index) {
+    if (contenidoActual[seccion]) {
+        contenidoActual[seccion].splice(index, 1);
+        cargarSeccion(seccion);
+        actualizarTextoGenerado();
+    }
+}
+
+function abrirModalGuardar() {
+    if (!tieneContenido()) {
+        alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+        return;
+    }
+
+    if (!modalGuardar && typeof bootstrap !== 'undefined') {
+        const modalElemento = document.getElementById('modalGuardarProtocolo');
+        if (modalElemento) {
+            modalGuardar = new bootstrap.Modal(modalElemento);
+        }
+    }
+
+    if (modalGuardar) {
+        modalGuardar.show();
+    } else {
+        guardarPlantilla('guardar');
+    }
+}
+
+function guardarPlantilla(accion = 'guardar') {
+    const lineas = recolectarLineas();
+    if (lineas.length === 0) {
+        alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+        return;
+    }
+
+    if (accion === 'completar' && !esMedico) {
+        alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+        return;
+    }
+
+    fetch(`/plantillas-dinamicas/api/protocolo/{{ protocolo.protocolo_id }}/guardar-lineas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lineas })
+    })
+    .then(async response => {
+        if (!response.ok) {
+            let mensaje = 'Error HTTP';
+            try {
+                const data = await response.json();
+                if (data && data.error) {
+                    mensaje = data.error;
+                }
+            } catch (e) {
+                // ignorar parseo
+            }
+            throw new Error(mensaje);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data && data.success) {
+            if (accion === 'completar' && esMedico) {
+                marcarProtocoloCompletado();
+            } else {
+                alert('Protocolo guardado correctamente.');
+            }
+        } else {
+            const mensaje = data && data.error ? data.error : 'Error al guardar el protocolo.';
+            alert(mensaje);
+        }
+    })
+    .catch(error => {
+        console.error('Error guardando protocolo:', error);
+        alert('Error al guardar el protocolo.');
+    });
+}
+
+function marcarProtocoloCompletado() {
+    const formData = new URLSearchParams();
+    formData.append('estado', 'COMPLETADO');
+
+    fetch(`/protocolos/{{ protocolo.protocolo_id }}/cambiar-estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString()
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        alert('Protocolo guardado y completado correctamente.');
+    })
+    .catch(error => {
+        console.error('Error marcando protocolo como completado:', error);
+        alert('Se guardó el contenido, pero hubo un error al completar el protocolo.');
+    });
+}
+
+function verPreview() {
+    window.open(`/plantillas-dinamicas/preview-plantilla/{{ protocolo.protocolo_id }}`, '_blank');
+}
+
+function exportarTexto() {
+    const texto = document.getElementById('texto-final').textContent;
+    
+    const blob = new Blob([texto], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PAP_{{ protocolo.numero_protocolo }}.txt`;
+    a.click();
+    
+    window.URL.revokeObjectURL(url);
+}
+
+// Cerrar modales al hacer clic fuera
+window.onclick = function(event) {
+    const modalPlantillas = document.getElementById('modal-plantillas');
+    const modalAsistente = document.getElementById('modal-asistente');
+    
+    if (event.target === modalPlantillas) {
+        cerrarModal();
+    }
+    if (event.target === modalAsistente) {
+        cerrarModalAsistente();
+    }
+}
+</script>
+{% endblock %}

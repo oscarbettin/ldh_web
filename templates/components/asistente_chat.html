@@ -1,0 +1,251 @@
+{# TAB: CHAT CONVERSACIONAL #}
+<div id="tab-chat" class="tab-pane fade show active" data-context="auth" style="display: flex; flex-direction: column; min-height: 100%; height: 100%; margin-top: 0 !important; padding-top: 0 !important;">
+    <div class="chat-container" style="display: flex; flex-direction: column; min-height: 100%; height: auto;">
+        {# Avatar RIVE #}
+        <div id="chat-avatar-container" class="text-center" style="background: #f8f9fa; border-bottom: 1px solid #dee2e6; padding: 4px 0 8px 0; overflow: visible !important; min-height: 300px !important; height: 300px !important; flex-shrink: 0 !important; position: relative !important; z-index: 10 !important;">
+            <canvas id="chat-avatar-rive" style="max-width: 288px; max-height: 288px; width: 288px; height: 288px; background: transparent; background-color: transparent; display: block; overflow: visible;"></canvas>
+        </div>
+        
+        {# Área de entrada #}
+        <div class="chat-input-area p-3" style="border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; background: #f8f9fa; flex-shrink: 0;">
+            {# Área de imágenes seleccionadas #}
+            <div id="chat-imagenes-preview" class="mb-2" style="display: none;">
+                <div class="d-flex flex-wrap gap-2" id="chat-imagenes-container"></div>
+            </div>
+            
+            <div class="mb-2">
+                <textarea 
+                    id="chat-input" 
+                    class="form-control form-control-sm" 
+                    rows="2" 
+                    placeholder="Escribe tu mensaje o adjunta una imagen médica para análisis..." 
+                    style="resize: none;"
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); enviarMensajeChat(); }"></textarea>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-2">
+                    <input 
+                        type="file" 
+                        id="chat-input-imagenes" 
+                        accept="image/png,image/jpeg,image/jpg,image/gif"
+                        multiple
+                        style="display: none;"
+                        onchange="procesarImagenesChat(event)">
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="document.getElementById('chat-input-imagenes').click()" title="Adjuntar imágenes médicas">
+                        <i class="bi bi-image"></i> Imágenes
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="limpiarChat()">
+                        <i class="bi bi-trash"></i> Limpiar
+                    </button>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" onclick="enviarMensajeChat()">
+                    <i class="bi bi-send"></i> Enviar
+                </button>
+            </div>
+            <div id="chat-status" class="mt-2 small text-muted text-center"></div>
+        </div>
+        
+        {# Área de mensajes - Al final, donde aparecerán las respuestas #}
+        <div id="chat-mensajes" class="chat-mensajes p-3" style="flex: 1; overflow-y: auto; background: white; min-height: 0;">
+            <div id="chat-bienvenida" class="text-center text-muted" style="display: none;">
+                <p class="mb-0">Hola, ¿en qué puedo ayudarte hoy?</p>
+            </div>
+            <div id="chat-escribiendo" style="display: none; text-align: left; padding: 10px; color: #667eea; font-style: italic;">
+                <i class="bi bi-three-dots"></i> El asistente está escribiendo...
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.chat-mensajes {
+    min-height: 0;
+}
+
+.chat-mensaje {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-mensaje-usuario {
+    align-items: flex-end;
+}
+
+.chat-mensaje-asistente {
+    align-items: flex-start;
+}
+
+.chat-burbuja {
+    padding: 10px 15px;
+    border-radius: 12px;
+    max-width: 85%;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.chat-mensaje-usuario .chat-burbuja {
+    background: #667eea;
+    color: white;
+    text-align: right;
+}
+
+.chat-mensaje-asistente .chat-burbuja {
+    background: #e9ecef;
+    color: #333;
+    text-align: left;
+}
+
+.chat-avatar {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #667eea;
+    color: white;
+    text-align: center;
+    line-height: 32px;
+    margin-right: 8px;
+    margin-bottom: 5px;
+}
+
+.chat-mensaje-fecha {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 5px;
+    padding: 0 5px;
+}
+
+.chat-mensaje-usuario .chat-mensaje-fecha {
+    text-align: right;
+}
+
+.chat-mensaje-asistente .chat-mensaje-fecha {
+    text-align: left;
+}
+
+.chat-acciones {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f0f4f8;
+    border-radius: 8px;
+}
+
+.chat-acciones button {
+    margin: 5px 5px 5px 0;
+}
+
+#tab-chat {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+}
+
+.chat-container {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+}
+
+#chat-avatar-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    overflow: visible !important;
+    min-height: 300px !important;
+    height: 300px !important;
+    max-height: none !important;
+    flex-shrink: 0 !important;
+    position: relative !important;
+    z-index: 10 !important;
+    padding-bottom: 8px !important;
+}
+
+#chat-avatar-rive {
+    display: block !important;
+    object-fit: contain !important;
+    image-rendering: -webkit-optimize-contrast !important;
+    image-rendering: crisp-edges !important;
+    overflow: visible !important;
+    max-width: 288px !important;
+    max-height: 288px !important;
+    width: 288px !important;
+    height: 288px !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+.chat-input-area {
+    position: relative !important;
+    z-index: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0.75rem !important;
+}
+
+/* Asegurar que el contenedor padre no recorte el avatar */
+#asistente-panel .asistente-body #tab-chat {
+    overflow: visible !important;
+}
+
+#asistente-panel .asistente-body {
+    overflow-y: auto !important;
+    overflow-x: visible !important;
+}
+
+/* Estilos para imágenes preview */
+.chat-imagen-preview {
+    position: relative;
+    display: inline-block;
+    margin: 4px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    overflow: hidden;
+    background: white;
+}
+
+.chat-imagen-preview img {
+    max-width: 80px;
+    max-height: 80px;
+    display: block;
+    object-fit: cover;
+}
+
+.chat-imagen-preview .chat-imagen-remove {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #dc3545;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+}
+
+.chat-imagen-preview .chat-imagen-remove:hover {
+    background: #c82333;
+}
+
+.chat-mensaje-imagen {
+    max-width: 400px;
+    margin-top: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.chat-mensaje-imagen img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+</style>
+

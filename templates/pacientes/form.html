@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ 'Editar' if paciente else 'Nuevo' }} Paciente{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Barra de navegación específica para Pacientes -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Panel</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('pacientes.index') }}">Pacientes</a></li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ 'Editar' if paciente else 'Nuevo' }} Paciente
+            </li>
+        </ol>
+    </nav>
+    
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="text-primary">
+                <i class="bi bi-person-{{ 'check' if paciente else 'plus' }}"></i>
+                {{ 'Editar' if paciente else 'Nuevo' }} Paciente
+                <small class="text-muted">- Gestión de Pacientes</small>
+            </h1>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- Datos personales -->
+                        <h5 class="border-bottom pb-2 mb-3">
+                            <i class="bi bi-person"></i> Datos Personales
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="apellido" class="form-label">Apellido *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="apellido" 
+                                       name="apellido" 
+                                       value="{{ paciente.apellido if paciente else '' }}"
+                                       required 
+                                       autofocus>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="nombre" 
+                                       name="nombre" 
+                                       value="{{ paciente.nombre if paciente else '' }}"
+                                       required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="tipo_documento" class="form-label">Tipo Documento</label>
+                                <select class="form-select" id="tipo_documento" name="tipo_documento">
+                                    <option value="">Seleccione...</option>
+                                    <option value="DNI" {{ 'selected' if paciente and paciente.tipo_documento == 'DNI' else '' }}>DNI</option>
+                                    <option value="LE" {{ 'selected' if paciente and paciente.tipo_documento == 'LE' else '' }}>LE</option>
+                                    <option value="LC" {{ 'selected' if paciente and paciente.tipo_documento == 'LC' else '' }}>LC</option>
+                                    <option value="CI" {{ 'selected' if paciente and paciente.tipo_documento == 'CI' else '' }}>CI</option>
+                                    <option value="Pasaporte" {{ 'selected' if paciente and paciente.tipo_documento == 'Pasaporte' else '' }}>Pasaporte</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="numero_documento" class="form-label">Número Documento</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="numero_documento" 
+                                       name="numero_documento" 
+                                       value="{{ paciente.numero_documento if paciente else '' }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="fecha_nacimiento" class="form-label">Fecha Nacimiento</label>
+                                <input type="date" 
+                                       class="form-control" 
+                                       id="fecha_nacimiento" 
+                                       name="fecha_nacimiento" 
+                                       min="1900-01-01"
+                                       max="{{ now().strftime('%Y-%m-%d') }}"
+                                       value="{{ paciente.fecha_nacimiento.strftime('%Y-%m-%d') if paciente and paciente.fecha_nacimiento else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Obra Social -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-hospital"></i> Obra Social
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="obra_social_id" class="form-label">Obra Social</label>
+                                <select class="form-select" id="obra_social_id" name="obra_social_id">
+                                    <style>
+                                        /* Estilos para OS inactivas (seleccionables pero marcadas) */
+                                        select option {
+                                            padding: 8px 12px;
+                                        }
+                                        /* Las OS inactivas se ven diferentes pero son seleccionables */
+                                        select option[data-inactive="true"] {
+                                            background-color: #fff3cd;
+                                            color: #856404;
+                                            font-weight: 500;
+                                        }
+                                        select option[data-inactive="true"]:hover {
+                                            background-color: #ffeaa7;
+                                        }
+                                    </style>
+                                    <option value="">Sin Obra Social</option>
+                                    {% for os in obras_sociales %}
+                                    <option value="{{ os.obra_social_id }}" 
+                                            {{ 'selected' if paciente and paciente.obra_social_id == os.obra_social_id else '' }}
+                                            {% if not os.activo %}data-inactive="true"{% endif %}>
+                                        {{ os.nombre }} ({{ os.codigo }})
+                                        {% if not os.activo %} - INACTIVA{% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="numero_afiliado" class="form-label">Nº Afiliado</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="numero_afiliado" 
+                                       name="numero_afiliado" 
+                                       value="{{ paciente.numero_afiliado if paciente else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Contacto -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-telephone"></i> Contacto
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" 
+                                       class="form-control" 
+                                       id="telefono" 
+                                       name="telefono" 
+                                       value="{{ paciente.telefono if paciente else '' }}">
+                            </div>
+                            
+                            <div class="col-md-8 mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       value="{{ paciente.email if paciente else '' }}">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="localidad" class="form-label">Localidad</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="localidad" 
+                                       name="localidad" 
+                                       value="{{ paciente.localidad if paciente else '' }}">
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="codigo_postal" class="form-label">Código Postal</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="codigo_postal" 
+                                       name="codigo_postal" 
+                                       value="{{ paciente.codigo_postal if paciente else '' }}">
+                            </div>
+                        </div>
+                        
+                        <!-- Observaciones -->
+                        <div class="mb-3">
+                            <label for="observaciones" class="form-label">Observaciones</label>
+                            <textarea class="form-control" 
+                                      id="observaciones" 
+                                      name="observaciones" 
+                                      rows="3">{{ paciente.observaciones if paciente else '' }}</textarea>
+                        </div>
+                        
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('pacientes.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle"></i> Información
+                    </h6>
+                    <p class="card-text text-sm">
+                        <strong>Campos obligatorios:</strong><br>
+                        Apellido y nombre son obligatorios.
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Obra Social:</strong><br>
+                        Se puede asignar luego si no se conoce al momento del registro.
+                    </p>
+                    <hr>
+                    <p class="card-text text-sm">
+                        <strong>Edad:</strong><br>
+                        Si se ingresa fecha de nacimiento, la edad se calcula automáticamente y se actualiza siempre.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

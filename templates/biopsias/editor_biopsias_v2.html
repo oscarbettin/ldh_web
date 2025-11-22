@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block title %}Editor Biopsias v2 - {{ protocolo.numero_protocolo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.editor-container{background:#f8f9fa;min-height:100vh;padding:20px}
+.left-panel{width:300px;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);padding:16px}
+.content-area{flex:1;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1);padding:16px}
+.seccion-activa{background:#eaf4ff;border-left:3px solid #90caf9;padding:8px 12px;border-radius:4px;margin-bottom:8px}
+.btn-flat{padding:6px 12px;border-radius:6px;border:1px solid #a6c4fb;background:#bcd4ff;color:#0d47a1}
+.btn-flat.orange{border-color:#ffc88a;background:#ffd6a6;color:#8a4b08}
+.editor-seccion{width:100%;min-height:120px;font-family:'Courier New',monospace;font-size:14px}
+#texto-final{background:#fff;padding:15px;border:1px solid #ddd;border-radius:4px;min-height:200px;max-height:65vh;overflow:auto;font-family:'Courier New',monospace;font-size:14px;white-space:pre-wrap}
+.toast-message{position:fixed;top:20px;right:20px;background:#28a745;color:#fff;padding:12px 20px;border-radius:6px;box-shadow:0 4px 6px rgba(0,0,0,.2);z-index:9999;animation:slideIn 0.3s ease;min-width:300px}
+.toast-message.error{background:#dc3545}
+.toast-message.warning{background:#ffc107;color:#000}
+@keyframes slideIn{from{transform:translateX(400px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes slideOut{from{transform:translateX(0);opacity:1}to{transform:translateX(400px);opacity:0}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <div class="left-panel">
+        <div class="mb-2">
+          <h6 class="mb-2"><i class="bi bi-file-text"></i> Editor Biopsias v2</h6>
+          <div><strong>Protocolo:</strong> {{ protocolo.numero_protocolo }}</div>
+          <div><strong>Paciente:</strong> {{ protocolo.afiliado.nombre_completo }}</div>
+          <div><strong>Fecha:</strong> {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}</div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
+          <div class="btn-group btn-group-sm" role="group">
+            <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+            <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+            <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+          </div>
+        </div>
+        <div id="lista-secciones">
+          {% for s in secciones %}
+          <button class="btn btn-outline-primary btn-sm w-100 mb-2" onclick="cargarSeccion({{ s.seccion_id }})">
+            <i class="bi bi-list-ul"></i> {{ s.nombre }}
+          </button>
+          {% endfor %}
+        </div>
+        
+        <!-- Selector de Plantilla Completa -->
+        <div class="mt-3 pt-3 border-top">
+          <label class="form-label small fw-bold mb-2">
+            <i class="bi bi-file-earmark-text"></i> Plantilla Completa
+          </label>
+          <select id="select-plantilla-completa" class="form-select form-select-sm" onchange="aplicarPlantillaCompleta()">
+            <option value="">-- Seleccionar Plantilla --</option>
+          </select>
+          <small class="text-muted d-block mt-1">Aplica todas las secciones de la plantilla</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-9">
+      <div class="content-area">
+        <div id="seccion-actual" class="seccion-activa">
+          <h5><i class="bi bi-file-text"></i> Selecciona una sección</h5>
+          <p class="text-muted">Elige una sección del panel izquierdo para comenzar</p>
+        </div>
+        <div class="texto-generado">
+          <h6><i class="bi bi-file-text"></i> Texto Generado</h6>
+          <div id="texto-final">Selecciona secciones y líneas para generar el texto...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para Seleccionar Líneas -->
+<div class="modal fade" id="modalLineas" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-grid"></i> Seleccionar Líneas - <span id="modal-seccion-nombre"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4">
+            <h6><i class="bi bi-list-check"></i> Plantillas</h6>
+            <select id="select-plantilla" class="form-select form-select-sm mb-2" onchange="cargarPlantillaCompleta()">
+              <option value="">-- Seleccionar Plantilla --</option>
+            </select>
+            <div class="mb-3">
+              <h6><i class="bi bi-list-ul"></i> Líneas Disponibles</h6>
+              <div id="lista-lineas-disponibles" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;">
+                <p class="text-muted">Cargando...</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-8">
+            <h6><i class="bi bi-check-circle"></i> Líneas Seleccionadas</h6>
+            <div id="lista-lineas-seleccionadas" style="max-height:400px;overflow-y:auto;border:1px solid #ddd;padding:8px;border-radius:4px;min-height:200px;">
+              <p class="text-muted">No hay líneas seleccionadas</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="aplicarLineasSeleccionadas()">Aplicar Líneas</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% set es_medico = es_medico if es_medico is defined else rol_es_medico(current_user.rol.nombre if current_user.rol else '') %}
+{% if es_medico is undefined %}
+  {% set es_medico = false %}
+{% endif %}
+<script>
+  window.__LDH_CONTEXT__ = window.__LDH_CONTEXT__ || {};
+  window.__LDH_CONTEXT__.medicoActual = {{ (rol_usuario if rol_usuario is defined else (current_user.rol.nombre if current_user.rol else '')) | default('') | tojson }};
+</script>
+{% if es_medico is undefined %}
+  {% set es_medico = false %}
+{% endif %}
+
+<!-- Modal Guardar -->
+<div class="modal fade" id="modalGuardarProtocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalGuardarProtocoloLabel">
+          <i class="bi bi-question-circle"></i> ¿Qué desea hacer?
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Seleccione una opción para el protocolo actual.</p>
+        <ul class="small text-muted mb-0">
+          <li><strong>Guardar:</strong> guarda las secciones pero mantiene el protocolo en su estado actual.</li>
+          <li><strong>Guardar y completar:</strong> marca el protocolo como completado y registra su firma.</li>
+        </ul>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle"></i> Cancelar
+        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-primary" id="btn-guardar-solo">
+            <i class="bi bi-save"></i> Guardar
+          </button>
+          {% if es_medico %}
+          <button type="button" class="btn btn-success" id="btn-guardar-completar">
+            <i class="bi bi-check2-circle"></i> Guardar y completar
+          </button>
+          {% else %}
+          <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo los médicos pueden completar el protocolo.">
+            <i class="bi bi-check2-circle"></i> Guardar y completar
+          </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const secciones = {{ secciones|tojson }};
+let seccionActual = null; // id
+let contenidoActual = {}; // { seccionId: [lineas] }
+const esMedico = {{ es_medico | default(false) | tojson }};
+console.log('Biopsias v2 · esMedico:', esMedico, 'Rol bruto:', window.__LDH_CONTEXT__ ? window.__LDH_CONTEXT__.medicoActual : '');
+let modalGuardar = null;
+
+function getSeccionById(id){ return secciones.find(s => s.seccion_id === id); }
+
+function resolverClaveBiopsias(info){
+  if (!info || !info.codigo) return '';
+  return String(info.codigo).toUpperCase(); // ya viene con claves del backend
+}
+
+function mostrarToast(mensaje, tipo = 'success'){
+  // Eliminar toast anterior si existe
+  const toastAnterior = document.querySelector('.toast-message');
+  if(toastAnterior) toastAnterior.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast-message ${tipo}`;
+  toast.innerHTML = `<i class="bi bi-${tipo === 'success' ? 'check-circle' : tipo === 'error' ? 'x-circle' : 'exclamation-triangle'}"></i> ${mensaje}`;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+function ajustarAlturaTexto(){
+  const tf = document.getElementById('texto-final');
+  if(!tf) return; tf.style.maxHeight='';
+  const rect=tf.getBoundingClientRect();
+  const disp=window.innerHeight-rect.top-20; if(disp>200){ tf.style.maxHeight=disp+'px'; }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{ 
+  ajustarAlturaTexto(); 
+  window.addEventListener('resize', ajustarAlturaTexto); 
+  cargarContenidoPrevio(); 
+  cargarPlantillasEnSelector();
+});
+
+function cargarContenidoPrevio(){
+  const protocoloId = {{ protocolo.protocolo_id }};
+  fetch(`/plantillas-dinamicas/api/editor-moderno/cargar/${protocoloId}`)
+    .then(r=>r.json())
+    .then(data=>{
+      if(!data.success||!data.contenido) return;
+      contenidoActual = {};
+      secciones.forEach(s=>{
+        const clave = resolverClaveBiopsias(s);
+        const txt = data.contenido[clave]||'';
+        if(txt){ const arr = String(txt).split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>0); if(arr.length>0) contenidoActual[s.seccion_id]=arr; }
+      });
+      actualizarTexto(); ajustarAlturaTexto();
+    });
+}
+
+function cargarPlantillasEnSelector(){
+  fetch('/plantillas-dinamicas/api/plantillas-biopsias')
+    .then(r => r.json())
+    .then(data => {
+      const select = document.getElementById('select-plantilla-completa');
+      if(!select) return;
+      select.innerHTML = '<option value="">-- Seleccionar Plantilla --</option>';
+      if(data && data.plantillas){
+        data.plantillas.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre;
+          select.appendChild(opt);
+        });
+      }
+    })
+    .catch(err => console.error('Error cargando plantillas:', err));
+}
+
+function aplicarPlantillaCompleta(){
+  const nombrePlantilla = document.getElementById('select-plantilla-completa').value;
+  if(!nombrePlantilla) return;
+  
+  if(!confirm(`¿Aplicar la plantilla "${nombrePlantilla}" a todas las secciones? Esto reemplazará el contenido actual.`)){
+    // Resetear selector si cancela
+    document.getElementById('select-plantilla-completa').value = '';
+    return;
+  }
+  
+  fetch(`/plantillas-dinamicas/api/plantilla-biopsias/${encodeURIComponent(nombrePlantilla)}`)
+    .then(r => r.json())
+    .then(data => {
+      if(data && data.secciones){
+        // Aplicar líneas de cada sección a contenidoActual
+        secciones.forEach(s => {
+          const claveSeccion = resolverClaveBiopsias(s);
+          if(data.secciones[claveSeccion] && data.secciones[claveSeccion].length > 0){
+            const lineas = data.secciones[claveSeccion].map(l => l.texto);
+            contenidoActual[s.seccion_id] = lineas;
+          }
+        });
+        
+        // Actualizar visualización
+        actualizarTexto();
+        ajustarAlturaTexto();
+        
+        // Si hay una sección activa, recargarla para mostrar el nuevo contenido
+        if(seccionActual){
+          cargarSeccion(seccionActual);
+        }
+        
+        mostrarToast(`Plantilla "${nombrePlantilla}" aplicada correctamente`, 'success');
+      } else {
+        mostrarToast(`La plantilla "${nombrePlantilla}" no tiene contenido disponible`, 'warning');
+      }
+    })
+    .catch(err => {
+      console.error('Error cargando plantilla:', err);
+      mostrarToast('Error al cargar la plantilla', 'error');
+    });
+}
+
+function cargarSeccion(seccionId){
+  seccionActual = seccionId; const info = getSeccionById(seccionId);
+  const wrap = document.getElementById('seccion-actual');
+  wrap.innerHTML = `
+    <div class="seccion-activa">
+      <div class="d-flex justify-content-between align-items-center">
+        <h5 class="m-0"><i class="bi bi-list-ul"></i> ${info.nombre}</h5>
+        <div>
+          <button class="btn-flat" onclick="abrirModalPlantillas(${seccionId})"><i class="bi bi-grid"></i> Seleccionar Líneas</button>
+          <button class="btn-flat orange" onclick="consultarAsistente(${seccionId})"><i class="bi bi-robot"></i> Consultar Asistente</button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="toggleEditor(${seccionId})"><i class="bi bi-pencil-square"></i> Editar sección</button>
+        </div>
+      </div>
+      <div class="mt-2" id="lineas-seleccionadas-${seccionId}">${renderLineas(seccionId)}</div>
+      <div id="editor-wrap-${seccionId}" style="display:none" class="mt-2">
+        <textarea id="editor-${seccionId}" class="form-control editor-seccion" oninput="sincronizar(${seccionId})"></textarea>
+        <div class="mt-2 d-flex gap-2">
+          <button class="btn btn-success btn-sm" onclick="guardarSeccion()"><i class="bi bi-save"></i> Guardar Sección</button>
+          <small class="text-muted">Enter crea líneas • Ctrl+S guarda • Esc restaura</small>
+        </div>
+      </div>
+    </div>`;
+  const ed=document.getElementById(`editor-${seccionId}`); if(ed) ed.value=(contenidoActual[seccionId]||[]).join('\n'); ajustarAlturaTexto();
+}
+
+function renderLineas(seccionId){
+  const arr = contenidoActual[seccionId]||[]; 
+  if(arr.length===0) return '<p class="text-muted m-0">No hay líneas seleccionadas</p>';
+  return arr.map((t,i)=>{
+    const textoEscapado = String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return `<div class="border rounded p-1 mb-1 d-flex justify-content-between"><span>${textoEscapado}</span><button class="btn btn-sm btn-outline-danger" onclick="remover(${seccionId},${i})"><i class="bi bi-x"></i></button></div>`;
+  }).join('');
+}
+
+function toggleEditor(id){ const w=document.getElementById(`editor-wrap-${id}`); if(!w) return; const v=w.style.display!=='none'; w.style.display=v?'none':'block'; const ed=document.getElementById(`editor-${id}`); if(ed&&!v) ed.value=(contenidoActual[id]||[]).join('\n'); ajustarAlturaTexto(); }
+
+function sincronizar(id){ const ed=document.getElementById(`editor-${id}`); if(!ed) return; const arr=ed.value.split(/\r?\n/).map(t=>t.trim()).filter(t=>t.length>0); contenidoActual[id]=arr; document.getElementById(`lineas-seleccionadas-${id}`).innerHTML=renderLineas(id); actualizarTexto(); ajustarAlturaTexto(); }
+
+function remover(seccionId,i){ (contenidoActual[seccionId]||[]).splice(i,1); document.getElementById(`lineas-seleccionadas-${seccionId}`).innerHTML=renderLineas(seccionId); actualizarTexto(); ajustarAlturaTexto(); }
+
+function actualizarTexto(){
+  const tf=document.getElementById('texto-final');
+  let texto=`PROTOCOLO: {{ protocolo.numero_protocolo }}\n`; texto+=`PACIENTE: {{ protocolo.afiliado.nombre_completo }}\n`; texto+=`FECHA: {{ protocolo.fecha_ingreso.strftime('%d/%m/%Y') }}\n\n`;
+  const orden=secciones.map(s=>s.seccion_id);
+  orden.forEach(id=>{ const arr=contenidoActual[id]||[]; if(arr.length){ const s=getSeccionById(id); texto+=`${s.nombre}:\n`; arr.forEach(l=>texto+=`${l}\n`); texto+='\n'; }});
+  tf.textContent=texto;
+}
+
+function guardarSeccion(){
+  if(!seccionActual) return; const info=getSeccionById(seccionActual); const clave=resolverClaveBiopsias(info);
+  const lineas=(contenidoActual[seccionActual]||[]);
+  fetch('/plantillas-dinamicas/api/editor-v2/guardar',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ protocolo_id: {{ protocolo.protocolo_id }}, seccion: clave, lineas }) })
+    .then(r=>r.json()).then(data=>{ if(data&&data.success){ actualizarTexto(); ajustarAlturaTexto(); alert('Sección guardada'); } else { alert('Error al guardar'); } });
+}
+
+let lineasSeleccionadasModal = [];
+let seccionModalActual = null;
+
+function abrirModalPlantillas(seccionId){
+  seccionModalActual = seccionId;
+  const info = getSeccionById(seccionId);
+  document.getElementById('modal-seccion-nombre').textContent = info.nombre;
+  lineasSeleccionadasModal = [...(contenidoActual[seccionId] || [])];
+  
+  const modal = new bootstrap.Modal(document.getElementById('modalLineas'));
+  modal.show();
+  
+  cargarPlantillasDisponibles();
+  cargarLineasDisponibles(info);
+  actualizarListaSeleccionadasModal();
+}
+
+function cargarPlantillasDisponibles(){
+  fetch('/plantillas-dinamicas/api/plantillas-biopsias')
+    .then(r => r.json())
+    .then(data => {
+      const select = document.getElementById('select-plantilla');
+      select.innerHTML = '<option value="">-- Seleccionar Plantilla --</option>';
+      if(data && data.plantillas){
+        data.plantillas.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.nombre;
+          opt.textContent = p.nombre;
+          select.appendChild(opt);
+        });
+      }
+    })
+    .catch(err => console.error('Error cargando plantillas:', err));
+}
+
+function cargarPlantillaCompleta(){
+  const nombrePlantilla = document.getElementById('select-plantilla').value;
+  if(!nombrePlantilla || !seccionModalActual) return;
+  
+  const info = getSeccionById(seccionModalActual);
+  const seccionCodigo = resolverClaveBiopsias(info);
+  
+  fetch(`/plantillas-dinamicas/api/plantilla-biopsias/${encodeURIComponent(nombrePlantilla)}`)
+    .then(r => r.json())
+    .then(data => {
+      if(data && data.secciones && data.secciones[seccionCodigo]){
+        const lineasPlantilla = data.secciones[seccionCodigo].map(l => l.texto);
+        lineasSeleccionadasModal = [...lineasPlantilla];
+        actualizarListaSeleccionadasModal();
+      } else {
+        alert(`La plantilla "${nombrePlantilla}" no tiene líneas para esta sección.`);
+      }
+    })
+    .catch(err => {
+      console.error('Error cargando plantilla:', err);
+      alert('Error al cargar la plantilla');
+    });
+}
+
+function cargarLineasDisponibles(info){
+  const seccionCodigo = resolverClaveBiopsias(info);
+  const listaDiv = document.getElementById('lista-lineas-disponibles');
+  listaDiv.innerHTML = '<p class="text-muted">Cargando...</p>';
+  
+  fetch(`/plantillas-dinamicas/api/lineas-biopsias/${seccionCodigo}`)
+    .then(r => r.json())
+    .then(data => {
+      if(data && data.lineas && data.lineas.length > 0){
+        listaDiv.innerHTML = data.lineas.map((l, idx) => {
+          const textoEscapado = l.texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+          return `<div class="border rounded p-2 mb-1 d-flex justify-content-between align-items-center">
+            <span style="font-size:0.9em;">${textoEscapado}</span>
+            <button class="btn btn-sm btn-outline-primary" onclick="agregarLineaModal(${idx})" data-texto="${textoEscapado}" title="Agregar">
+              <i class="bi bi-plus-circle"></i>
+            </button>
+          </div>`;
+        }).join('');
+        // Guardar líneas en un array global para acceso por índice
+        window.lineasDisponiblesCache = data.lineas;
+      } else {
+        listaDiv.innerHTML = '<p class="text-muted">No hay líneas disponibles para esta sección.</p>';
+      }
+    })
+    .catch(err => {
+      console.error('Error cargando líneas:', err);
+      listaDiv.innerHTML = '<p class="text-danger">Error al cargar líneas.</p>';
+    });
+}
+
+function agregarLineaModal(index){
+  if(window.lineasDisponiblesCache && window.lineasDisponiblesCache[index]){
+    const texto = window.lineasDisponiblesCache[index].texto;
+    if(!lineasSeleccionadasModal.includes(texto)){
+      lineasSeleccionadasModal.push(texto);
+      actualizarListaSeleccionadasModal();
+    }
+  }
+}
+
+function removerLineaModal(index){
+  lineasSeleccionadasModal.splice(index, 1);
+  actualizarListaSeleccionadasModal();
+}
+
+function actualizarListaSeleccionadasModal(){
+  const listaDiv = document.getElementById('lista-lineas-seleccionadas');
+  if(lineasSeleccionadasModal.length === 0){
+    listaDiv.innerHTML = '<p class="text-muted">No hay líneas seleccionadas</p>';
+    return;
+  }
+  listaDiv.innerHTML = lineasSeleccionadasModal.map((texto, idx) => {
+    const textoEscapado = String(texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return `<div class="border rounded p-2 mb-1 d-flex justify-content-between align-items-center bg-light">
+      <span style="font-size:0.9em;">${textoEscapado}</span>
+      <button class="btn btn-sm btn-outline-danger" onclick="removerLineaModal(${idx})" title="Quitar">
+        <i class="bi bi-x-circle"></i>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function aplicarLineasSeleccionadas(){
+  if(!seccionModalActual) return;
+  contenidoActual[seccionModalActual] = [...lineasSeleccionadasModal];
+  
+  const info = getSeccionById(seccionModalActual);
+  document.getElementById(`lineas-seleccionadas-${seccionModalActual}`).innerHTML = renderLineas(seccionModalActual);
+  
+  const ed = document.getElementById(`editor-${seccionModalActual}`);
+  if(ed) ed.value = lineasSeleccionadasModal.join('\n');
+  
+  actualizarTexto();
+  ajustarAlturaTexto();
+  
+  bootstrap.Modal.getInstance(document.getElementById('modalLineas')).hide();
+}
+
+function consultarAsistente(seccionId){ 
+  alert('El asistente inteligente para Biopsias estará disponible próximamente.');
+}
+
+function tieneContenido(){
+  return secciones.some(seccion => {
+    const arr = contenidoActual[seccion.seccion_id] || [];
+    return arr.length > 0;
+  });
+}
+
+function abrirModalGuardar(){
+  if(!tieneContenido()){
+    alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+    return;
+  }
+  if(!modalGuardar){
+    modalGuardar = new bootstrap.Modal(document.getElementById('modalGuardarProtocolo'));
+  }
+  modalGuardar.show();
+}
+
+function recolectarLineas(){
+  const lineas = [];
+  secciones.forEach(seccion => {
+    const arr = contenidoActual[seccion.seccion_id] || [];
+    const clave = resolverClaveBiopsias(seccion);
+    arr.forEach((texto, idx) => {
+      lineas.push({
+        seccion: clave,
+        texto: texto,
+        orden: idx + 1
+      });
+    });
+  });
+  return lineas;
+}
+
+function guardarPlantilla(accion = 'guardar'){
+  const lineas = recolectarLineas();
+  if(lineas.length === 0){
+    alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
+    return;
+  }
+
+  fetch(`/plantillas-dinamicas/api/protocolo/{{ protocolo.protocolo_id }}/guardar-lineas`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lineas })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data && data.success){
+      if(accion === 'completar' && esMedico){
+        marcarProtocoloCompletado();
+      } else {
+        mostrarToast('Protocolo guardado correctamente.', 'success');
+      }
+    } else {
+      alert(data && data.error ? data.error : 'Error al guardar el protocolo.');
+    }
+  })
+  .catch(error => {
+    console.error('Error guardando protocolo:', error);
+    alert('Error al guardar el protocolo.');
+  });
+}
+
+function marcarProtocoloCompletado(){
+  const formData = new URLSearchParams();
+  formData.append('estado', 'COMPLETADO');
+
+  fetch(`/protocolos/{{ protocolo.protocolo_id }}/cambiar-estado`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: formData.toString()
+  })
+  .then(() => {
+    mostrarToast('Protocolo guardado y completado correctamente.', 'success');
+  })
+  .catch(error => {
+    console.error('Error marcando protocolo como completado:', error);
+    alert('Se guardó el contenido, pero hubo un error al completar el protocolo.');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  modalGuardar = new bootstrap.Modal(document.getElementById('modalGuardarProtocolo'));
+
+  const btnGuardar = document.getElementById('btn-guardar-solo');
+  if(btnGuardar){
+    btnGuardar.addEventListener('click', () => {
+      if(modalGuardar) modalGuardar.hide();
+      guardarPlantilla('guardar');
+    });
+  }
+
+  const btnCompletar = document.getElementById('btn-guardar-completar');
+  if(btnCompletar){
+    btnCompletar.addEventListener('click', () => {
+      if(!esMedico){
+        alert('Solo los usuarios con rol médico pueden completar el protocolo.');
+        return;
+      }
+      if(modalGuardar) modalGuardar.hide();
+      guardarPlantilla('completar');
+    });
+  }
+});
+
+function verPreview(){ window.open(`/plantillas-dinamicas/preview-plantilla/{{ protocolo.protocolo_id }}`,'_blank'); }
+function exportarTexto(){ const texto=document.getElementById('texto-final').textContent; const blob=new Blob([texto],{type:'text/plain'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;a.download=`BIOPSIAS_{{ protocolo.numero_protocolo }}.txt`; a.click(); URL.revokeObjectURL(url); }
+</script>
+{% endblock %}
+
+
