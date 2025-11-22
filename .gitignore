@@ -87,19 +87,6 @@ migrations/versions/*.pyc
 *.rev
 X_*
 
-# Imágenes grandes que no se usan
-imagenes/LY89s3JCNl.gif
-imagenes/gamapath_Laboratorio_patologia_16.jpg
-imagenes/lie-9200-1614679788.jpg
-imagenes/microtomo.jpg
-imagenes/vidrios.webp
-imagenes/*.gif
-imagenes/*.cdr
-imagenes/*.jpg
-!imagenes/fondo 2.png
-!imagenes/fondo.png
-!imagenes/fondo-2.png
-
 # Archivos de texto temporales (excepto requirements.txt y README)
 *.txt
 !requirements.txt
