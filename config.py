@@ -121,12 +121,8 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     
     # En producción, SECRET_KEY debe venir de variable de entorno
-    @property
-    def SECRET_KEY(self):
-        secret_key = os.environ.get('SECRET_KEY')
-        if not secret_key:
-            raise ValueError("SECRET_KEY no está configurada en producción")
-        return secret_key
+    # IMPORTANTE: No usar @property, Flask necesita un valor string directo
+    SECRET_KEY = os.environ.get('SECRET_KEY') or ''
 
 
 class DevelopmentConfig(Config):

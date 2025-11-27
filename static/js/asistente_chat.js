@@ -87,6 +87,9 @@ if (typeof window.riveInstance === 'undefined') {
 // Rutas de archivos .riv según contexto
 const RIVE_FILE_PATH_LOGIN = '/static/Asistente_masculino.riv';
 const RIVE_FILE_PATH_AUTH = '/static/Asistente_femenino.riv';
+const RIVE_EVENT_ABRIR_PANEL = 'AbrirPanel';
+let ultimoEventoAbrirPanel = 0;
+const ABRIR_PANEL_EVENT_COOLDOWN_MS = 1500;
 
 // Función para obtener la ruta correcta del archivo RIVE según el contexto
 function obtenerRutaRIVE() {
@@ -96,6 +99,77 @@ function obtenerRutaRIVE() {
     }
     // Si no está autenticado (login), usar el avatar masculino
     return RIVE_FILE_PATH_LOGIN;
+}
+
+/**
+ * Procesa eventos emitidos por RIVE (ej: AbrirPanel)
+ * Solo aplica cuando el usuario está autenticado (avatar femenino)
+ */
+function procesarEventoRIVE(evento, origen = 'desconocido') {
+    console.log(`🔍 [RIVE:${origen}] procesarEventoRIVE llamado:`, {
+        eventoCompleto: evento,
+        tipoEvento: typeof evento,
+        tieneData: !!evento?.data,
+        data: evento?.data,
+        tieneName: !!evento?.name,
+        name: evento?.name,
+        ASISTENTE_AUTH: window.ASISTENTE_AUTH
+    });
+
+    if (!window.ASISTENTE_AUTH) {
+        // Solo respondemos al evento cuando el usuario está autenticado (avatar femenino)
+        console.log(`⏭️ [RIVE:${origen}] Usuario no autenticado, ignorando evento`);
+        return;
+    }
+
+    if (!evento) {
+        console.warn(`⚠️ [RIVE:${origen}] Evento es null/undefined`);
+        return;
+    }
+
+    // Intentar extraer el nombre del evento de múltiples formas posibles
+    const nombreEvento = evento?.data?.name || 
+                        evento?.name || 
+                        evento?.type ||
+                        (evento?.data && typeof evento.data === 'string' ? evento.data : null) ||
+                        '';
+    
+    console.log(`🔍 [RIVE:${origen}] Nombre de evento extraído: "${nombreEvento}"`);
+
+    if (!nombreEvento) {
+        console.warn(`⚠️ [RIVE:${origen}] No se pudo extraer el nombre del evento. Estructura:`, {
+            evento: evento,
+            keys: Object.keys(evento || {}),
+            dataKeys: evento?.data ? Object.keys(evento.data) : null
+        });
+        return;
+    }
+
+    console.log(`🎬 [RIVE:${origen}] ✅ Evento recibido y procesado: "${nombreEvento}"`);
+
+    if (nombreEvento === RIVE_EVENT_ABRIR_PANEL || nombreEvento.toLowerCase() === 'abrirpanel') {
+        const ahora = Date.now();
+        const tiempoDesdeUltimo = ahora - ultimoEventoAbrirPanel;
+        if (tiempoDesdeUltimo < ABRIR_PANEL_EVENT_COOLDOWN_MS) {
+            console.log(`⏳ [RIVE:${origen}] Evento AbrirPanel ignorado por cooldown (${tiempoDesdeUltimo}ms < ${ABRIR_PANEL_EVENT_COOLDOWN_MS}ms)`);
+            return;
+        }
+        ultimoEventoAbrirPanel = ahora;
+
+        if (typeof asistenteAbierto !== 'undefined' && asistenteAbierto) {
+            console.log('ℹ️ [RIVE:${origen}] Panel ya está abierto, se ignora AbrirPanel');
+            return;
+        }
+
+        if (typeof window.abrirAsistente === 'function') {
+            console.log(`🟢 [RIVE:${origen}] ✅ EJECUTANDO abrirAsistente() por evento AbrirPanel`);
+            window.abrirAsistente();
+        } else {
+            console.warn('⚠️ [RIVE:${origen}] abrirAsistente no está disponible en window');
+        }
+    } else {
+        console.log(`ℹ️ [RIVE:${origen}] Evento "${nombreEvento}" no es "AbrirPanel", ignorado`);
+    }
 }
 
 // Función de inicialización que se puede llamar en cualquier momento
@@ -474,6 +548,250 @@ async function inicializarRIVEBoton() {
                     sessionStorage.setItem('rive_button_initialized', 'true');
                 } catch (e) {
                     console.warn('⚠️ No se pudo guardar en sessionStorage:', e);
+                }
+
+                // Configurar cursor dinámico basado en el estado de Rive
+                // El cursor será 'default' por defecto y cambiará a 'pointer' solo cuando el avatar esté en hover
+                const boton = document.getElementById('btn-abrir-asistente');
+                const canvasEl = document.getElementById('btn-asistente-avatar-rive');
+                if (boton) {
+                    boton.style.cursor = 'default';
+                }
+                if (canvasEl) {
+                    canvasEl.style.cursor = 'default';
+                    // IMPORTANTE: Permitir pointer-events solo cuando sea necesario
+                    canvasEl.style.pointerEvents = 'auto';
+                }
+                
+                // Variable para rastrear si el avatar está en estado de atención/hover
+                // Hacerla accesible globalmente para que el listener de click pueda usarla
+                window.avatarEnAtencion = false;
+                let avatarEnAtencion = false; // Variable local también
+                
+                // Función para actualizar el cursor basado en el estado de Rive
+                function actualizarCursorBasadoEnEstado() {
+                    try {
+                        if (!riveButtonInstance) return;
+                        
+                        // Método 1: Buscar inputs que indiquen hover/atención
+                        if (riveButtonStateMachine && Array.isArray(riveButtonStateMachine)) {
+                            const hoverInputs = ['Hover', 'hover', 'IsHover', 'isHover', 'Atencion', 'atencion', 'Atención', 'atención', 'Atencion_Estado', 'Estado_Atencion'];
+                            let hoverInput = null;
+                            
+                            for (const nombre of hoverInputs) {
+                                hoverInput = riveButtonStateMachine.find(input => input.name === nombre);
+                                if (hoverInput) {
+                                    console.log(`✅ Input de hover encontrado: ${hoverInput.name}, valor: ${hoverInput.value}`);
+                                    break;
+                                }
+                            }
+                            
+                            if (hoverInput && typeof hoverInput.value !== 'undefined') {
+                                avatarEnAtencion = hoverInput.value === true;
+                                window.avatarEnAtencion = avatarEnAtencion; // Actualizar variable global
+                            }
+                        }
+                        
+                        // Método 2: Verificar estados activos de la state machine usando diferentes APIs
+                        try {
+                            let estadosActivos = null;
+                            
+                            // Intentar obtener estados activos de diferentes formas
+                            if (riveButtonInstance.animator && typeof riveButtonInstance.animator.activeStateNames === 'function') {
+                                estadosActivos = riveButtonInstance.animator.activeStateNames();
+                            } else if (riveButtonInstance.content && riveButtonInstance.content.artboard) {
+                                // Intentar acceder a través del content
+                                const artboard = riveButtonInstance.content.artboard;
+                                if (artboard.animationControllers && artboard.animationControllers.length > 0) {
+                                    const controller = artboard.animationControllers[0];
+                                    if (controller.activeStates) {
+                                        estadosActivos = controller.activeStates.map(state => state.name);
+                                    }
+                                }
+                            }
+                            
+                            if (estadosActivos) {
+                                console.log('🔍 Estados activos en Rive:', estadosActivos);
+                                
+                                // Verificar si algún estado indica atención/hover
+                                const estadosAtencion = ['Atencion', 'Atención', 'Hover', 'Attention', 'hover', 'atencion', 'Atencion_Estado', 'Estado_Atencion'];
+                                const tieneEstadoAtencion = estadosActivos.some(estado => {
+                                    const estadoStr = String(estado).toLowerCase();
+                                    return estadosAtencion.some(nombre => estadoStr.includes(nombre.toLowerCase()));
+                                });
+                                
+                                if (tieneEstadoAtencion) {
+                                    avatarEnAtencion = true;
+                                    window.avatarEnAtencion = true; // Actualizar variable global
+                                    console.log('✅ Estado de atención detectado en la state machine');
+                                }
+                            } else {
+                                console.log('⚠️ No se pudieron obtener estados activos');
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ No se pudo verificar estados activos:', e);
+                        }
+                        
+                        // Actualizar cursor basado en el estado
+                        if (avatarEnAtencion) {
+                            if (boton) {
+                                boton.style.cursor = 'pointer';
+                                boton.style.pointerEvents = 'auto';
+                            }
+                            if (canvasEl) {
+                                canvasEl.style.cursor = 'pointer';
+                                canvasEl.style.pointerEvents = 'auto'; // Permitir clics cuando está en atención
+                            }
+                            console.log('🖱️ [CURSOR] Cambiado a pointer (avatar en atención)');
+                        } else {
+                            if (boton) {
+                                boton.style.cursor = 'default';
+                                // Mantener pointer-events para que los eventos RIVE funcionen
+                                boton.style.pointerEvents = 'auto';
+                            }
+                            if (canvasEl) {
+                                canvasEl.style.cursor = 'default';
+                                // IMPORTANTE: Mantener pointer-events auto para que RIVE pueda detectar el mouse
+                                // pero los clics solo funcionarán si el avatar está en atención (manejado por el listener de click)
+                                canvasEl.style.pointerEvents = 'auto';
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ Error al actualizar cursor:', e);
+                    }
+                }
+                
+                // Escuchar cambios en los inputs de la state machine para actualizar el cursor
+                // Usar un intervalo para verificar periódicamente (solución más compatible)
+                let intervaloCursor = null;
+                if (riveButtonInstance) {
+                    intervaloCursor = setInterval(() => {
+                        actualizarCursorBasadoEnEstado();
+                    }, 50); // Verificar cada 50ms para mejor respuesta
+                }
+                
+                // Guardar el intervalo para poder limpiarlo después
+                window.riveButtonCursorInterval = intervaloCursor;
+                
+                // También intentar usar onStateChange si está disponible
+                try {
+                    if (typeof riveButtonInstance.on === 'function') {
+                        riveButtonInstance.on('statechange', (event) => {
+                            console.log('🔄 Cambio de estado detectado:', event);
+                            actualizarCursorBasadoEnEstado();
+                        });
+                        console.log('✅ Listener de cambios de estado (statechange) registrado');
+                    }
+                    
+                    // Intentar también con otros nombres de eventos
+                    if (typeof riveButtonInstance.on === 'function') {
+                        riveButtonInstance.on('play', () => {
+                            console.log('▶️ Animación reproducida');
+                            actualizarCursorBasadoEnEstado();
+                        });
+                        console.log('✅ Listener de eventos (play) registrado');
+                    }
+                } catch (e) {
+                    console.warn('⚠️ No se pudo registrar listener de cambios de estado:', e);
+                }
+                
+                // Ejecutar verificación inicial después de un pequeño delay
+                setTimeout(() => {
+                    actualizarCursorBasadoEnEstado();
+                    console.log('🔍 Verificación inicial de cursor completada');
+                }, 500);
+                
+                // Escuchar eventos emitidos por la animación del botón (solo disponible en RIVE Runtime nuevo)
+                console.log('🔍 [BOTÓN] Intentando registrar listener de eventos RIVE para "AbrirPanel"...');
+                try {
+                    // Método 1: Usar .on('event') si está disponible
+                    if (typeof riveButtonInstance.on === 'function') {
+                        console.log('✅ [BOTÓN] Método .on() disponible, registrando listener...');
+                        riveButtonInstance.on('event', (evt) => {
+                            console.log('🎯 [BOTÓN] Evento recibido directamente del listener:', evt);
+                            console.log('🎯 [BOTÓN] Detalles del evento:', JSON.stringify(evt, null, 2));
+                            procesarEventoRIVE(evt, 'boton');
+                            // Actualizar cursor cuando hay eventos
+                            actualizarCursorBasadoEnEstado();
+                        });
+                        console.log('✅ [BOTÓN] Listener de eventos RIVE (.on("event")) registrado exitosamente');
+                    }
+                    
+                    // Método 2: Intentar con addEventListener si está disponible
+                    if (typeof riveButtonInstance.addEventListener === 'function') {
+                        console.log('🔍 [BOTÓN] Intentando también con addEventListener...');
+                        riveButtonInstance.addEventListener('riveevent', (evt) => {
+                            console.log('🎯 [BOTÓN] Evento recibido de addEventListener:', evt);
+                            procesarEventoRIVE(evt, 'boton');
+                            // Actualizar cursor cuando hay eventos
+                            actualizarCursorBasadoEnEstado();
+                        });
+                        console.log('✅ [BOTÓN] Listener addEventListener también registrado');
+                    }
+                    
+                    // Método 3: Escuchar click en el canvas como fallback
+                    // Este método abre el panel cuando se hace click Y el avatar está en atención
+                    if (canvas) {
+                        canvas.addEventListener('click', (e) => {
+                            console.log('🖱️ [BOTÓN] Click detectado en canvas');
+                            // Verificar estado actual antes de procesar el click
+                            actualizarCursorBasadoEnEstado();
+                            
+                            // Usar la variable global para tener el valor más reciente
+                            const enAtencion = window.avatarEnAtencion || avatarEnAtencion;
+                            
+                            // Si el avatar está en atención, abrir el panel
+                            if (enAtencion) {
+                                console.log('✅ [BOTÓN] Avatar en atención, abriendo panel por click');
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                // Verificar cooldown
+                                const ahora = Date.now();
+                                const tiempoDesdeUltimo = ahora - ultimoEventoAbrirPanel;
+                                if (tiempoDesdeUltimo < ABRIR_PANEL_EVENT_COOLDOWN_MS) {
+                                    console.log(`⏳ [BOTÓN] Click ignorado por cooldown`);
+                                    return;
+                                }
+                                ultimoEventoAbrirPanel = ahora;
+                                
+                                if (typeof asistenteAbierto !== 'undefined' && asistenteAbierto) {
+                                    console.log('ℹ️ [BOTÓN] Panel ya está abierto');
+                                    return;
+                                }
+                                
+                                if (typeof window.abrirAsistente === 'function') {
+                                    console.log('🟢 [BOTÓN] ✅ EJECUTANDO abrirAsistente() por click');
+                                    window.abrirAsistente();
+                                } else {
+                                    console.warn('⚠️ [BOTÓN] abrirAsistente no está disponible');
+                                }
+                            } else {
+                                console.log('ℹ️ [BOTÓN] Avatar NO está en atención, click ignorado');
+                            }
+                        });
+                        console.log('✅ [BOTÓN] Listener de click en canvas registrado como fallback');
+                    }
+                    
+                    // Método 4: Intentar escuchar eventos RIVE a través del content/artboard
+                    try {
+                        if (riveButtonInstance.content && riveButtonInstance.content.artboard) {
+                            const artboard = riveButtonInstance.content.artboard;
+                            // Los eventos RIVE pueden propagarse a través del artboard
+                            console.log('✅ [BOTÓN] Artboard disponible, eventos deberían funcionar');
+                        }
+                    } catch (e) {
+                        console.warn('⚠️ [BOTÓN] No se pudo acceder al artboard:', e);
+                    }
+                    
+                } catch (eventError) {
+                    console.error('❌ [BOTÓN] Error al registrar listener de eventos:', eventError);
+                    console.error('❌ [BOTÓN] Detalles del error:', {
+                        message: eventError.message,
+                        stack: eventError.stack,
+                        instanceType: typeof riveButtonInstance,
+                        instanceKeys: Object.keys(riveButtonInstance || {})
+                    });
                 }
                 
                 // Esperar un momento para que content y state machines estén disponibles
@@ -957,6 +1275,37 @@ async function inicializarRIVE() {
                     console.warn('⚠️ No se pudo guardar en sessionStorage:', e);
                 }
                 
+                // Escuchar eventos emitidos por la animación del panel
+                console.log('🔍 [AVATAR] Intentando registrar listener de eventos RIVE...');
+                try {
+                    if (typeof riveInstance.on === 'function') {
+                        console.log('✅ [AVATAR] Método .on() disponible, registrando listener...');
+                        riveInstance.on('event', (evt) => {
+                            console.log('🎯 [AVATAR] Evento recibido directamente del listener:', evt);
+                            procesarEventoRIVE(evt, 'panel');
+                        });
+                        console.log('✅ [AVATAR] Listener de eventos RIVE registrado exitosamente');
+                    } else {
+                        console.warn('⚠️ [AVATAR] La instancia del panel NO soporta .on("event") - método no disponible');
+                        // Intentar método alternativo si está disponible
+                        if (typeof riveInstance.addEventListener === 'function') {
+                            console.log('🔍 [AVATAR] Intentando con addEventListener...');
+                            riveInstance.addEventListener('riveevent', (evt) => {
+                                console.log('🎯 [AVATAR] Evento recibido de addEventListener:', evt);
+                                procesarEventoRIVE(evt, 'panel');
+                            });
+                        }
+                    }
+                } catch (eventError) {
+                    console.error('❌ [AVATAR] Error al registrar listener de eventos:', eventError);
+                    console.error('❌ [AVATAR] Detalles del error:', {
+                        message: eventError.message,
+                        stack: eventError.stack,
+                        instanceType: typeof riveInstance,
+                        instanceKeys: Object.keys(riveInstance || {})
+                    });
+                }
+
                 // Esperar un momento para que content y state machines estén disponibles
                 setTimeout(() => {
                                     // Guardar el content cuando esté disponible (después de un delay)
@@ -2897,12 +3246,13 @@ window.enviarMensajeChat = async function enviarMensajeChat() {
             bodyData.imagenes = imagenesParaEnviar;
         }
         
-        const response = await fetch('/asistente/chat', {
+        const response = await fetchWithTimeout('/asistente/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(bodyData)
+            body: JSON.stringify(bodyData),
+            timeout: 30000 // 30 segundos para respuestas del asistente
         });
         
         const data = await response.json();
@@ -3071,6 +3421,31 @@ function mostrarEscribiendo(mostrar) {
 }
 
 /**
+ * Nueva función para fetch con timeout
+ */
+async function fetchWithTimeout(resource, options = {}) {
+    const { timeout = 8000 } = options; // Default 8 segundos
+    
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(resource, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError') {
+            throw new Error(`La petición a ${resource} excedió el tiempo límite de ${timeout / 1000} segundos.`);
+        }
+        throw error;
+    }
+}
+
+/**
  * Cargar historial de chat
  */
 async function cargarHistorialChat() {
@@ -3080,9 +3455,15 @@ async function cargarHistorialChat() {
             url += `&protocolo_id=${protocoloIdActual}`;
         }
         
-        const response = await fetch(url);
-        if (response.status === 404 || response.status === 501) {
-            return;
+        // Usar fetchWithTimeout para evitar bloqueos
+        const response = await fetchWithTimeout(url, { timeout: 5000 });
+        
+        if (!response.ok) {
+            if (response.status === 404 || response.status === 501) {
+                console.log('⚠️ Ruta de historial no disponible, continuando sin historial');
+                return;
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
@@ -3106,7 +3487,11 @@ async function cargarHistorialChat() {
             contenedor.scrollTop = contenedor.scrollHeight;
         }
     } catch (error) {
-        console.error('Error cargando historial:', error);
+        // Solo registrar errores que no sean timeouts o 404 esperados
+        if (error.name !== 'AbortError' && !error.message.includes('404')) {
+            console.error('⚠️ Error cargando historial (no crítico):', error.message);
+        }
+        // Continuar sin bloquear la página
     }
 }
 
@@ -3154,11 +3539,16 @@ window.limpiarChat = function limpiarChat() {
  */
 async function verificarEstadoClaude() {
     try {
-        const response = await fetch('/asistente/claude/estado');
+        const response = await fetchWithTimeout('/asistente/claude/estado', {
+            timeout: 5000 // 5 segundos para verificación de estado
+        });
         const data = await response.json();
         actualizarEstadoClaude(data.claude_disponible);
     } catch (error) {
-        console.error('Error verificando estado de Claude:', error);
+        // Solo registrar errores que no sean timeouts esperados
+        if (error.name !== 'AbortError') {
+            console.error('⚠️ Error verificando estado de Claude (no crítico):', error.message);
+        }
         actualizarEstadoClaude(false);
     }
 }

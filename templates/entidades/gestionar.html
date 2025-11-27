@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestionar Prestadores - {{ entidad.nombre_completo }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>
+                <i class="bi bi-people-fill"></i> Gestionar Prestadores
+                <small class="text-muted">- {{ entidad.nombre_completo }}</small>
+            </h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <button type="button" class="btn btn-success" onclick="document.getElementById('formGestionar').submit();">
+                <i class="bi bi-save"></i> Guardar
+            </button>
+            <a href="{{ url_for('entidades.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <form id="formGestionar" method="POST">
+        <!-- Tabla de prestadores -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-badge"></i> Prestadores Disponibles</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <input type="text" 
+                           id="filtroPrestadores" 
+                           class="form-control" 
+                           placeholder="Buscar prestador por nombre...">
+                </div>
+                
+                {% if todos_prestadores %}
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-hover">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th width="50">
+                                    <input type="checkbox" id="seleccionarTodos" title="Seleccionar todos">
+                                </th>
+                                <th>Nombre</th>
+                                <th>Matrícula</th>
+                                <th>Especialidad</th>
+                                <th>Email</th>
+                                <th width="150">Ambulatorio</th>
+                                <th width="150">Internación</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyPrestadores">
+                            {% for prestador in todos_prestadores %}
+                            {% set esta_asociado = prestador.prestador_id in prestadores_asociados_ids %}
+                            {% set permisos = permisos_actuales.get(prestador.prestador_id, {'ambulatorio': False, 'internacion': True}) %}
+                            <tr data-nombre="{{ prestador.nombre_completo|lower }}" {% if esta_asociado %}class="table-info"{% endif %}>
+                                <td>
+                                    <input type="checkbox" 
+                                           name="prestadores" 
+                                           value="{{ prestador.prestador_id }}"
+                                           id="prestador_{{ prestador.prestador_id }}"
+                                           {% if esta_asociado %}checked{% endif %}
+                                           onchange="togglePermisos(this)">
+                                </td>
+                                <td>
+                                    <label for="prestador_{{ prestador.prestador_id }}" style="cursor: pointer; margin: 0;">
+                                        <strong>{{ prestador.nombre_completo }}</strong>
+                                    </label>
+                                </td>
+                                <td>
+                                    {% if prestador.numero_matricula %}
+                                        {{ prestador.tipo_matricula if prestador.tipo_matricula else '' }} {{ prestador.numero_matricula }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ prestador.nombre_especialidad }}</td>
+                                <td>
+                                    {% if prestador.email %}
+                                        <small>{{ prestador.email }}</small>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="ambulatorio_{{ prestador.prestador_id }}"
+                                               name="ambulatorio_{{ prestador.prestador_id }}"
+                                               {% if esta_asociado and permisos.ambulatorio %}checked{% endif %}
+                                               {% if not esta_asociado %}disabled{% endif %}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="internacion_{{ prestador.prestador_id }}"
+                                               name="internacion_{{ prestador.prestador_id }}"
+                                               {% if esta_asociado and permisos.internacion %}checked{% endif %}
+                                               {% if not esta_asociado %}disabled{% endif %}>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> No hay prestadores disponibles en el sistema.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Filtro de prestadores
+document.getElementById('filtroPrestadores').addEventListener('input', function(e) {
+    const filtro = e.target.value.toLowerCase();
+    const filas = document.querySelectorAll('#tbodyPrestadores tr');
+    
+    filas.forEach(function(fila) {
+        const nombre = fila.getAttribute('data-nombre');
+        if (nombre && nombre.includes(filtro)) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+});
+
+// Seleccionar todos
+document.getElementById('seleccionarTodos').addEventListener('change', function(e) {
+    const checkboxes = document.querySelectorAll('#tbodyPrestadores input[type="checkbox"][name="prestadores"]');
+    checkboxes.forEach(function(checkbox) {
+        if (checkbox.closest('tr').style.display !== 'none') {
+            checkbox.checked = e.target.checked;
+            togglePermisos(checkbox);
+        }
+    });
+});
+
+// Función para habilitar/deshabilitar permisos según selección
+function togglePermisos(checkbox) {
+    const prestadorId = checkbox.value;
+    const ambulatorio = document.getElementById('ambulatorio_' + prestadorId);
+    const internacion = document.getElementById('internacion_' + prestadorId);
+    
+    if (checkbox.checked) {
+        ambulatorio.disabled = false;
+        internacion.disabled = false;
+        // Si no estaban marcados, marcarlos por defecto
+        if (!ambulatorio.checked && !internacion.checked) {
+            ambulatorio.checked = false; // Default a False
+            internacion.checked = true;  // Default a True
+        }
+    } else {
+        ambulatorio.disabled = true;
+        internacion.disabled = true;
+        ambulatorio.checked = false;
+        internacion.checked = false;
+    }
+}
+
+// Inicializar permisos para prestadores ya seleccionados
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[name="prestadores"]:checked');
+    checkboxes.forEach(function(checkbox) {
+        togglePermisos(checkbox);
+    });
+});
+</script>
+
+<style>
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+</style>
+{% endblock %}
+

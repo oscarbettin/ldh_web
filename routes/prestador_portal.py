@@ -5,9 +5,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from models.protocolo import Protocolo
 from models.paciente import Afiliado
+from models.prestador import Prestador, prestador_entidad
 from models.auditoria import Auditoria
 from routes.plantillas_dinamicas import construir_contexto_reporte
-from sqlalchemy import or_, func
+from extensions import db
+from sqlalchemy import or_, func, and_
 from datetime import datetime
 import unicodedata
 import io
@@ -54,14 +56,49 @@ def dashboard():
         flash('Su usuario no está asociado a un prestador. Contacte al laboratorio para regularizar la situación.', 'warning')
         return render_template('prestador/dashboard.html', protocolos=[], total=0, sin_prestador=True, body_class='body-prestador-background', asistente_context='prestador')
 
+    # Obtener el prestador del usuario
+    prestador = Prestador.query.get(current_user.prestador_id)
+    if not prestador:
+        flash('El prestador asociado a su usuario no existe.', 'danger')
+        return redirect(url_for('dashboard.index'))
+
     buscar = (request.args.get('buscar') or '').strip()
     fecha_desde = request.args.get('fecha_desde') or ''
     fecha_hasta = request.args.get('fecha_hasta') or ''
     orden = request.args.get('orden') or 'fecha_desc'
 
+    # Determinar qué prestadores puede ver este usuario
+    prestadores_permitidos = [current_user.prestador_id]
+    
+    # Si es una entidad, agregar los prestadores asociados
+    if prestador.es_entidad:
+        prestadores_asociados_ids = db.session.query(prestador_entidad.c.prestador_id).filter(
+            prestador_entidad.c.entidad_id == current_user.prestador_id
+        ).all()
+        prestadores_permitidos.extend([pid[0] for pid in prestadores_asociados_ids])
+
+    # Construir condiciones de tipo_protocolo según permisos
+    condiciones_tipo = []
+    if prestador.puede_ver_ambulatorio:
+        condiciones_tipo.append(Protocolo.tipo_protocolo == 'AMBULATORIO')
+    if prestador.puede_ver_internacion:
+        condiciones_tipo.append(Protocolo.tipo_protocolo == 'INTERNACION')
+    
+    # Si no puede ver ninguno, no mostrará nada (condición imposible)
+    if not condiciones_tipo:
+        flash('Su prestador no tiene permisos para ver ningún tipo de protocolo. Contacte al laboratorio.', 'warning')
+        return render_template('prestador/dashboard.html', protocolos=[], total=0, sin_prestador=False, prestador=prestador, body_class='body-prestador-background', asistente_context='prestador')
+
+    # Construir filtro de tipo_protocolo
+    if len(condiciones_tipo) == 1:
+        filtro_tipo = condiciones_tipo[0]
+    else:
+        filtro_tipo = or_(*condiciones_tipo)
+
     query = Protocolo.query.join(Afiliado).filter(
-        Protocolo.prestador_id == current_user.prestador_id,
-        Protocolo.estado == 'COMPLETADO'
+        Protocolo.prestador_id.in_(prestadores_permitidos),
+        Protocolo.estado == 'COMPLETADO',
+        filtro_tipo  # Filtro por tipo_protocolo según permisos
     )
 
     if buscar:
@@ -144,10 +181,42 @@ def descargar_multiples():
     if not ids_limpios:
         return jsonify({'success': False, 'error': 'Listado de protocolos inválido'}), 400
 
+    # Obtener el prestador y sus permisos
+    prestador = Prestador.query.get(current_user.prestador_id)
+    if not prestador:
+        return jsonify({'success': False, 'error': 'Prestador no encontrado'}), 404
+
+    # Determinar qué prestadores puede ver este usuario
+    prestadores_permitidos = [current_user.prestador_id]
+    
+    # Si es una entidad, agregar los prestadores asociados
+    if prestador.es_entidad:
+        prestadores_asociados_ids = db.session.query(prestador_entidad.c.prestador_id).filter(
+            prestador_entidad.c.entidad_id == current_user.prestador_id
+        ).all()
+        prestadores_permitidos.extend([pid[0] for pid in prestadores_asociados_ids])
+
+    # Construir condiciones de tipo_protocolo según permisos
+    condiciones_tipo = []
+    if prestador.puede_ver_ambulatorio:
+        condiciones_tipo.append(Protocolo.tipo_protocolo == 'AMBULATORIO')
+    if prestador.puede_ver_internacion:
+        condiciones_tipo.append(Protocolo.tipo_protocolo == 'INTERNACION')
+    
+    if not condiciones_tipo:
+        return jsonify({'success': False, 'error': 'No tiene permisos para ver protocolos'}), 403
+
+    # Construir filtro de tipo_protocolo
+    if len(condiciones_tipo) == 1:
+        filtro_tipo = condiciones_tipo[0]
+    else:
+        filtro_tipo = or_(*condiciones_tipo)
+
     protocolos = Protocolo.query.filter(
         Protocolo.protocolo_id.in_(ids_limpios),
-        Protocolo.prestador_id == current_user.prestador_id,
-        Protocolo.estado == 'COMPLETADO'
+        Protocolo.prestador_id.in_(prestadores_permitidos),
+        Protocolo.estado == 'COMPLETADO',
+        filtro_tipo
     ).order_by(Protocolo.fecha_informe.desc()).all()
 
     if not protocolos:

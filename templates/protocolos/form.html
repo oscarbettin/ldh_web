@@ -90,18 +90,6 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="col-md-6 mb-3">
-                                <label for="tipo_analisis_id" class="form-label">Tipo de Análisis</label>
-                                <select class="form-select" id="tipo_analisis_id" name="tipo_analisis_id">
-                                    <option value="">Seleccione...</option>
-                                    {% for tipo in tipos_analisis %}
-                                    <option value="{{ tipo.tipo_analisis_id }}" 
-                                            {{ 'selected' if protocolo and protocolo.tipo_analisis_id == tipo.tipo_analisis_id else '' }}>
-                                        {{ tipo.nombre }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
                         </div>
                         
                         <!-- Paciente -->
@@ -167,16 +155,41 @@
                         
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="prestador_id" class="form-label">Prestador</label>
-                                <select class="form-select" id="prestador_id" name="prestador_id">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label for="prestador_id" class="form-label mb-0">Prestador / Entidad</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="filtrar_entidades" onchange="filtrarPrestadores()">
+                                        <label class="form-check-label" for="filtrar_entidades" style="font-size: 0.875rem;">
+                                            Solo Entidades
+                                        </label>
+                                    </div>
+                                </div>
+                                <select class="form-select" id="prestador_id" name="prestador_id" onchange="actualizarPrestadorMedico()">
                                     <option value="">Seleccione...</option>
                                     {% for prestador in prestadores %}
                                     <option value="{{ prestador.prestador_id }}" 
+                                            data-es-entidad="{{ '1' if prestador.es_entidad else '0' }}"
+                                            data-nombre="{{ prestador.nombre_completo }}"
+                                            data-especialidad="{{ prestador.nombre_especialidad if not prestador.es_entidad else '' }}"
+                                            class="{{ 'es-entidad' if prestador.es_entidad else 'es-prestador' }}"
                                             {{ 'selected' if protocolo and protocolo.prestador_id == prestador.prestador_id else '' }}>
-                                        {{ prestador.nombre_completo }} - {{ prestador.nombre_especialidad }}
+                                        {{ prestador.nombre_completo }}{% if prestador.es_entidad %} (Entidad){% else %} - {{ prestador.nombre_especialidad }}{% endif %}
                                     </option>
                                     {% endfor %}
                                 </select>
+                                <script id="prestadores-data" type="application/json" style="display:none;">
+                                    [{% for prestador in prestadores %}
+                                    {"id": {{ prestador.prestador_id }}, "nombre": "{{ prestador.nombre_completo }}", "especialidad": "{{ prestador.nombre_especialidad if not prestador.es_entidad else '' }}", "es_entidad": {{ 'true' if prestador.es_entidad else 'false' }}}{% if not loop.last %},{% endif %}
+                                    {% endfor %}]
+                                </script>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3" id="div_prestador_medico" style="display: none;">
+                                <label for="prestador_medico_id" class="form-label">Médico Prestador <small class="text-muted">(opcional)</small></label>
+                                <select class="form-select" id="prestador_medico_id" name="prestador_medico_id">
+                                    <option value="">Seleccione un médico...</option>
+                                </select>
+                                <small class="text-muted">Seleccione el médico prestador asociado a la entidad</small>
                             </div>
                             
                             <div class="col-md-6 mb-3">
@@ -238,6 +251,44 @@
                             </div>
                         </div>
                         
+                        <!-- Tipo de Protocolo y Estado -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-2 mb-3">
+                                    <i class="bi bi-gear"></i> Configuración
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="tipo_protocolo" class="form-label">Tipo de Protocolo *</label>
+                                <select class="form-select" id="tipo_protocolo" name="tipo_protocolo" required>
+                                    <option value="AMBULATORIO" {{ 'selected' if not protocolo or (protocolo and protocolo.tipo_protocolo == 'AMBULATORIO') else '' }}>Ambulatorio</option>
+                                    <option value="INTERNACION" {{ 'selected' if protocolo and protocolo.tipo_protocolo == 'INTERNACION' else '' }}>Internación</option>
+                                </select>
+                                <small class="text-muted">Define si el protocolo es ambulatorio o de internación</small>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Opciones</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="es_urgente" 
+                                           name="es_urgente"
+                                           {{ 'checked' if protocolo and protocolo.estado == 'URGENTE' else '' }}
+                                           {{ 'disabled' if protocolo and protocolo.estado == 'COMPLETADO' else '' }}>
+                                    <label class="form-check-label" for="es_urgente">
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-exclamation-triangle-fill"></i> Marcar como URGENTE
+                                        </span>
+                                    </label>
+                                    <small class="d-block text-muted">Los protocolos urgentes aparecen primero en el listado de pendientes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Botones -->
                         <div class="d-flex justify-content-between mt-4">
                             <a href="{{ url_for('protocolos.index') }}" class="btn btn-secondary">
@@ -271,6 +322,7 @@
                     <hr>
                     <p class="card-text text-sm">
                         <strong>Estados del protocolo:</strong><br>
+                        • <span class="badge bg-danger">Urgente</span> - Prioridad máxima<br>
                         • <span class="badge bg-warning">Pendiente</span> - Recién creado<br>
                         • <span class="badge bg-info">En Proceso</span> - En análisis<br>
                         • <span class="badge bg-success">Completado</span> - Informe listo
@@ -283,12 +335,22 @@
                         • Número: {{ protocolo.numero_protocolo }}<br>
                         • Creado: {{ protocolo.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}<br>
                         • Estado: 
-                        {% if protocolo.estado == 'PENDIENTE' %}
+                        {% if protocolo.estado == 'URGENTE' %}
+                            <span class="badge bg-danger">Urgente</span>
+                        {% elif protocolo.estado == 'PENDIENTE' %}
                             <span class="badge bg-warning">Pendiente</span>
                         {% elif protocolo.estado == 'EN_PROCESO' %}
                             <span class="badge bg-info">En Proceso</span>
                         {% elif protocolo.estado == 'COMPLETADO' %}
                             <span class="badge bg-success">Completado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ protocolo.estado }}</span>
+                        {% endif %}
+                        {% if protocolo.tipo_protocolo %}
+                        <br>• Tipo: 
+                            <span class="badge bg-info">
+                                {{ 'Internación' if protocolo.tipo_protocolo == 'INTERNACION' else 'Ambulatorio' }}
+                            </span>
                         {% endif %}
                     </p>
                     {% endif %}
@@ -333,7 +395,9 @@
                 <p>Seleccione una opción para continuar.</p>
                 <ul class="small text-muted mb-0">
                     <li><strong>Guardar:</strong> mantiene el protocolo en su estado actual.</li>
+                    {% if protocolo and es_medico %}
                     <li><strong>Guardar y completar:</strong> marca el protocolo como completado y registrará su firma.</li>
+                    {% endif %}
                 </ul>
             </div>
             <div class="modal-footer d-flex justify-content-between">
@@ -344,12 +408,8 @@
                     <button type="button" class="btn btn-primary" id="btn-guardar-solo">
                         <i class="bi bi-save"></i> Guardar
                     </button>
-                    {% if es_medico %}
+                    {% if protocolo and es_medico %}
                     <button type="button" class="btn btn-success" id="btn-guardar-completar">
-                        <i class="bi bi-check2-circle"></i> Guardar y completar
-                    </button>
-                    {% else %}
-                    <button type="button" class="btn btn-success" id="btn-guardar-completar" disabled title="Solo médicos pueden completar el protocolo.">
                         <i class="bi bi-check2-circle"></i> Guardar y completar
                     </button>
                     {% endif %}
@@ -486,6 +546,168 @@ function limpiarPaciente() {
     buscarPacienteInput.focus();
 }
 
+// Función global para actualizar el selector de prestador médico cuando se selecciona una entidad
+function actualizarPrestadorMedico() {
+    const prestadorSelect = document.getElementById('prestador_id');
+    const prestadorMedicoDiv = document.getElementById('div_prestador_medico');
+    const prestadorMedicoSelect = document.getElementById('prestador_medico_id');
+    
+    if (!prestadorSelect || !prestadorMedicoDiv || !prestadorMedicoSelect) {
+        console.error('Elementos no encontrados para actualizar prestador médico');
+        return;
+    }
+    
+    const selectedOption = prestadorSelect.options[prestadorSelect.selectedIndex];
+    // Verificar tanto dataset como getAttribute para mayor compatibilidad
+    const esEntidad = selectedOption && (selectedOption.dataset.esEntidad === '1' || selectedOption.getAttribute('data-es-entidad') === '1');
+    const prestadorId = prestadorSelect.value;
+    
+    console.log('Actualizando prestador médico:', {
+        esEntidad, 
+        prestadorId, 
+        selectedOption: !!selectedOption,
+        datasetEsEntidad: selectedOption ? selectedOption.dataset.esEntidad : null,
+        attributeEsEntidad: selectedOption ? selectedOption.getAttribute('data-es-entidad') : null
+    });
+    
+    if (esEntidad && prestadorId) {
+        // Mostrar el selector y cargar prestadores asociados
+        prestadorMedicoDiv.style.display = 'block';
+        prestadorMedicoSelect.innerHTML = '<option value="">Cargando...</option>';
+        prestadorMedicoSelect.disabled = true;
+        
+        // Hacer petición AJAX para obtener prestadores asociados
+        fetch(`/protocolos/api/prestadores-asociados/${prestadorId}`)
+            .then(response => {
+                console.log('Respuesta fetch recibida, status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Prestadores asociados recibidos:', data);
+                console.log('Tipo de data:', typeof data);
+                console.log('data.prestadores existe?', !!data.prestadores);
+                console.log('data.prestadores es array?', Array.isArray(data.prestadores));
+                console.log('data.prestadores.length:', data.prestadores ? data.prestadores.length : 'N/A');
+                
+                prestadorMedicoSelect.innerHTML = '<option value="">Seleccione un médico...</option>';
+                
+                if (data.prestadores && Array.isArray(data.prestadores) && data.prestadores.length > 0) {
+                    console.log('Agregando prestadores al selector:', data.prestadores.length);
+                    data.prestadores.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.prestador_id;
+                        option.textContent = `${p.nombre_completo} - ${p.especialidad || 'Sin especialidad'}`;
+                        {% if protocolo and protocolo.prestador_medico_id %}
+                        if (p.prestador_id == {{ protocolo.prestador_medico_id }}) {
+                            option.selected = true;
+                        }
+                        {% endif %}
+                        prestadorMedicoSelect.appendChild(option);
+                        console.log('Opción agregada:', p.nombre_completo);
+                    });
+                    prestadorMedicoSelect.disabled = false;
+                } else {
+                    console.warn('No hay prestadores asociados o el array está vacío');
+                    prestadorMedicoSelect.innerHTML = '<option value="">No hay prestadores asociados</option>';
+                    prestadorMedicoSelect.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando prestadores asociados:', error);
+                prestadorMedicoSelect.innerHTML = '<option value="">Error al cargar</option>';
+                prestadorMedicoSelect.disabled = false;
+            });
+    } else {
+        // Ocultar el selector si no es entidad
+        prestadorMedicoDiv.style.display = 'none';
+        prestadorMedicoSelect.value = '';
+    }
+}
+
+// Función global para filtrar prestadores
+function filtrarPrestadores() {
+    const checkbox = document.getElementById('filtrar_entidades');
+    const select = document.getElementById('prestador_id');
+    const dataScript = document.getElementById('prestadores-data');
+    
+    if (!checkbox || !select) {
+        console.error('Elementos no encontrados:', {checkbox: !!checkbox, select: !!select});
+        return;
+    }
+    
+    const soloEntidades = checkbox.checked;
+    const valorSeleccionado = select.value;
+    
+    console.log('Filtrando prestadores, soloEntidades:', soloEntidades);
+    
+    try {
+        let prestadoresData = [];
+        
+        // Intentar obtener datos del script JSON primero
+        if (dataScript && dataScript.textContent) {
+            prestadoresData = JSON.parse(dataScript.textContent);
+        } else {
+            // Si no hay script, obtener datos de las opciones existentes
+            Array.from(select.options).forEach((option, index) => {
+                if (index === 0) return; // Saltar opción vacía
+                prestadoresData.push({
+                    id: option.value,
+                    nombre: option.dataset.nombre || option.textContent.split(' - ')[0].replace(' (Entidad)', ''),
+                    especialidad: option.dataset.especialidad || (option.textContent.includes(' - ') ? option.textContent.split(' - ')[1] : ''),
+                    es_entidad: option.dataset.esEntidad === '1'
+                });
+            });
+        }
+        
+        console.log('Datos obtenidos:', prestadoresData.length, 'prestadores');
+        
+        // Limpiar select (mantener solo la opción vacía)
+        const opcionVacia = select.options[0];
+        while (select.options.length > 0) {
+            select.remove(0);
+        }
+        select.appendChild(opcionVacia);
+        
+            // Agregar opciones según el filtro
+            prestadoresData.forEach(p => {
+                if (!soloEntidades || p.es_entidad) {
+                    const option = document.createElement('option');
+                    option.value = p.id.toString();
+                    option.setAttribute('data-es-entidad', p.es_entidad ? '1' : '0');
+                    option.dataset.esEntidad = p.es_entidad ? '1' : '0';
+                    option.dataset.nombre = p.nombre;
+                    option.dataset.especialidad = p.especialidad || '';
+                    
+                    if (p.es_entidad) {
+                        option.textContent = p.nombre + ' (Entidad)';
+                    } else {
+                        option.textContent = p.nombre + ' - ' + (p.especialidad || 'Sin especialidad');
+                    }
+                    
+                    // Restaurar selección si coincide
+                    if (valorSeleccionado && valorSeleccionado == p.id.toString()) {
+                        option.selected = true;
+                    }
+                    
+                    select.appendChild(option);
+                }
+            });
+        
+        console.log('Opciones agregadas:', select.options.length - 1);
+        
+        // Si la opción seleccionada no está disponible, deseleccionar
+        if (valorSeleccionado && select.value !== valorSeleccionado) {
+            select.value = '';
+            actualizarPrestadorMedico();
+        } else if (valorSeleccionado && select.value === valorSeleccionado) {
+            // Si la selección se mantuvo, verificar si es entidad y actualizar
+            actualizarPrestadorMedico();
+        }
+    } catch (e) {
+        console.error('Error filtrando prestadores:', e);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const tipoPredefinido = '{{ tipo_predefinido }}';
     if (tipoPredefinido) {
@@ -533,17 +755,40 @@ document.addEventListener('DOMContentLoaded', function() {
         form.submit();
     }
 
+    // Función para abrir el modal de guardar
+    function abrirModalGuardar() {
+        if (!validarFormulario()) {
+            return;
+        }
+        if (modalGuardar) {
+            modalGuardar.show();
+        } else {
+            enviarFormulario('guardar');
+        }
+    }
+    
+    window.abrirModalGuardar = abrirModalGuardar; // Hacer disponible globalmente
+
     if (form) {
         form.addEventListener('submit', function(e) {
             if (!validarFormulario()) {
                 e.preventDefault();
                 return;
             }
-            e.preventDefault();
-            accionInput.value = 'guardar';
-            if (modalGuardar) {
+            
+            const esEdicion = {{ 'true' if protocolo else 'false' }};
+            const hayMedico = esMedico;
+            
+            // Solo mostrar modal si estamos editando Y el usuario es médico
+            // Al crear, nunca mostrar el modal
+            if (esEdicion && hayMedico && modalGuardar) {
+                e.preventDefault();
+                accionInput.value = 'guardar';
                 modalGuardar.show();
             } else {
+                // Al crear o si no es médico, guardar directamente
+                e.preventDefault();
+                accionInput.value = 'guardar';
                 enviarFormulario('guardar');
             }
         });
@@ -576,6 +821,17 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Solo los usuarios con rol médico pueden completar el protocolo.');
         });
     }
+    
+    // Inicializar el filtro al cargar la página
+    filtrarPrestadores();
+    
+    // Ejecutar al cargar la página si hay un prestador seleccionado
+    // (después de filtrar para que las opciones ya estén disponibles)
+    setTimeout(function() {
+        if (document.getElementById('prestador_id') && document.getElementById('prestador_id').value) {
+            actualizarPrestadorMedico();
+        }
+    }, 100);
 });
 </script>
 {% endblock %}

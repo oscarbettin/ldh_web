@@ -19,7 +19,14 @@ def index():
     page = request.args.get('page', 1, type=int)
     buscar = request.args.get('buscar', '')
     
-    query = Afiliado.query
+    # Excluir paciente de prueba "000 PRUEBA" de los listados
+    # Excluir si tiene "000" en apellido Y "PRUEBA" en nombre, o viceversa
+    query = Afiliado.query.filter(
+        ~db.or_(
+            db.and_(Afiliado.apellido.ilike('%000%'), Afiliado.nombre.ilike('%PRUEBA%')),
+            db.and_(Afiliado.apellido.ilike('%PRUEBA%'), Afiliado.nombre.ilike('%000%'))
+        )
+    )
     
     if buscar:
         query = query.filter(
@@ -206,6 +213,7 @@ def buscar_json():
     if len(termino) < 2:
         return jsonify([])
     
+    # Excluir paciente de prueba del autocomplete
     pacientes = Afiliado.query.filter(
         db.or_(
             Afiliado.apellido.ilike(f'%{termino}%'),
@@ -214,6 +222,11 @@ def buscar_json():
             Afiliado.numero_afiliado.ilike(f'%{termino}%')
         ),
         Afiliado.activo == True
+    ).filter(
+        ~db.or_(
+            db.and_(Afiliado.apellido.ilike('%000%'), Afiliado.nombre.ilike('%PRUEBA%')),
+            db.and_(Afiliado.apellido.ilike('%PRUEBA%'), Afiliado.nombre.ilike('%000%'))
+        )
     ).limit(20).all()
     
     resultados = [{

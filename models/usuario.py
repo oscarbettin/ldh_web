@@ -33,6 +33,13 @@ class Usuario(UserMixin, db.Model):
     firma = db.relationship('UsuarioFirma', uselist=False, backref='usuario', cascade='all, delete-orphan')
     prestador = db.relationship('Prestador', backref='usuarios')
     auditorias = db.relationship('Auditoria', backref='usuario')
+    # Para entidades: prestadores asociados a este usuario
+    prestadores_asociados = db.relationship(
+        'Prestador',
+        secondary='usuario_prestador',
+        backref='entidades_asociadas',
+        lazy='dynamic'
+    )
     
     # Flask-Login requiere get_id()
     def get_id(self):

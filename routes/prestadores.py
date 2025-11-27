@@ -80,7 +80,11 @@ def nuevo():
     if request.method == 'POST':
         apellido = request.form.get('apellido')
         nombre = request.form.get('nombre')
-        codigo = request.form.get('codigo')
+        codigo_raw = request.form.get('codigo', '')
+        codigo = codigo_raw.strip() if codigo_raw else ''
+        # Convertir strings vacíos o 'None'/'null' (case-insensitive) a None
+        if not codigo or codigo.lower() in ['none', 'null', 'undefined']:
+            codigo = None
         tipo_matricula = request.form.get('tipo_matricula')
         numero_matricula = request.form.get('numero_matricula')
         fecha_matricula = request.form.get('fecha_matricula')
@@ -133,7 +137,12 @@ def nuevo():
                 localidad=localidad,
                 provincia=provincia,
                 telefono=telefono,
-                email=email
+                email=email,
+                notificar_email=request.form.get('notificar_email') == 'on',
+                notificar_whatsapp=request.form.get('notificar_whatsapp') == 'on',
+                notificar_ambulatorio=request.form.get('notificar_ambulatorio') == 'on',
+                notificar_internacion=request.form.get('notificar_internacion') == 'on',
+                whatsapp=request.form.get('whatsapp', '').strip() or None
             )
         except Exception as e:
             flash(f'Error al crear prestador: {str(e)}', 'danger')
@@ -169,7 +178,13 @@ def editar(id):
         try:
             prestador.apellido = request.form.get('apellido')
             prestador.nombre = request.form.get('nombre')
-            prestador.codigo = request.form.get('codigo')
+            codigo_raw = request.form.get('codigo', '')
+            codigo = codigo_raw.strip() if codigo_raw else ''
+            # Convertir strings vacíos o 'None'/'null' (case-insensitive) a None
+            if not codigo or codigo.lower() in ['none', 'null', 'undefined']:
+                prestador.codigo = None
+            else:
+                prestador.codigo = codigo
             prestador.tipo_matricula = request.form.get('tipo_matricula')
             prestador.numero_matricula = request.form.get('numero_matricula')
             
@@ -200,6 +215,14 @@ def editar(id):
             prestador.provincia = request.form.get('provincia')
             prestador.telefono = request.form.get('telefono')
             prestador.email = request.form.get('email')
+            
+            # Campos de notificaciones
+            prestador.notificar_email = request.form.get('notificar_email') == 'on'
+            prestador.notificar_whatsapp = request.form.get('notificar_whatsapp') == 'on'
+            prestador.notificar_ambulatorio = request.form.get('notificar_ambulatorio') == 'on'
+            prestador.notificar_internacion = request.form.get('notificar_internacion') == 'on'
+            whatsapp = request.form.get('whatsapp', '').strip()
+            prestador.whatsapp = whatsapp if whatsapp else None
             
             db.session.commit()
         except Exception as e:

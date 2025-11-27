@@ -105,6 +105,19 @@
 
 {% block content %}
 <div class="editor-container">
+    {% if protocolo.es_prueba %}
+    <!-- Banner de advertencia para protocolos de prueba -->
+    <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert" style="border-left: 4px solid #ffc107;">
+        <h5 class="alert-heading mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i> Modo Edición de Plantillas
+        </h5>
+        <p class="mb-0">
+            Estás trabajando en un protocolo de prueba. Los cambios no se guardarán como protocolo real.
+            Usa el botón <strong>"Guardar como plantilla"</strong> para guardar tus configuraciones.
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+    {% endif %}
     <div class="row g-3">
         <!-- Panel Izquierdo -->
         <div class="col-md-3">
@@ -118,9 +131,15 @@
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
                     <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
-                        <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
-                        <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+                        <button class="btn btn-outline-primary" 
+                                {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                                onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+                        <button class="btn btn-outline-success" 
+                                {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                                onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+                        <button class="btn btn-outline-info" 
+                                {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                                onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
                     </div>
                 </div>
                 <div id="lista-secciones">
@@ -388,6 +407,10 @@ function guardarTodo() {
 }
 
 function abrirModalGuardar() {
+    {% if protocolo.es_prueba %}
+    alert('Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.');
+    return;
+    {% endif %}
     if(!seccionActual) {
         alert('Seleccione una sección para guardar.');
         return;

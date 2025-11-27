@@ -67,6 +67,9 @@ bitacoras/
 docs/BITACORA*.md
 
 # Directorio LDH_Web anidado (duplicado/sobrante)
+
+# Archivos de despliegue (mantener en repo)
+# wsgi.py está en el repo pero debe personalizarse en cada servidor
 LDH_Web/
 
 # Documentación vacía

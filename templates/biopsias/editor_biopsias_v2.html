@@ -22,6 +22,19 @@
 
 {% block content %}
 <div class="editor-container">
+  {% if protocolo.es_prueba %}
+  <!-- Banner de advertencia para protocolos de prueba -->
+  <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert" style="border-left: 4px solid #ffc107;">
+    <h5 class="alert-heading mb-2">
+      <i class="bi bi-exclamation-triangle-fill"></i> Modo Edición de Plantillas
+    </h5>
+    <p class="mb-0">
+      Estás trabajando en un protocolo de prueba. Los cambios no se guardarán como protocolo real.
+      Usa el botón <strong>"Guardar como plantilla"</strong> para guardar tus configuraciones.
+    </p>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+  </div>
+  {% endif %}
   <div class="row g-3">
     <div class="col-md-3">
       <div class="left-panel">
@@ -34,9 +47,15 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
           <div class="btn-group btn-group-sm" role="group">
-            <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
-            <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
-            <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+            <button class="btn btn-outline-primary" 
+                    {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                    onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+            <button class="btn btn-outline-success" 
+                    {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                    onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+            <button class="btn btn-outline-info" 
+                    {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                    onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
           </div>
         </div>
         <div id="lista-secciones">
@@ -46,6 +65,10 @@
           </button>
           {% endfor %}
         </div>
+        
+        <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="abrirModalGuardarPlantillaPersonalizada()">
+          <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+        </button>
         
         <!-- Selector de Plantilla Completa -->
         <div class="mt-3 pt-3 border-top">
@@ -123,6 +146,34 @@
   {% set es_medico = false %}
 {% endif %}
 
+<!-- Modal Guardar Plantilla Personalizada -->
+<div class="modal fade" id="modalGuardarPlantillaPersonalizada" tabindex="-1" aria-labelledby="modalGuardarPlantillaPersonalizadaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalGuardarPlantillaPersonalizadaLabel">
+          <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="input-nombre-plantilla-biopsias" class="form-label">Nombre o código</label>
+          <input type="text" class="form-control" id="input-nombre-plantilla-biopsias" list="lista-nombres-plantillas-biopsias" placeholder="Ej: Biopsia personalizada">
+          <datalist id="lista-nombres-plantillas-biopsias"></datalist>
+          <small class="text-muted">Si eliges un nombre existente, la plantilla se reemplazará.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btn-guardar-plantilla-personalizada-biopsias">
+          <i class="bi bi-save"></i> Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Guardar -->
 <div class="modal fade" id="modalGuardarProtocolo" tabindex="-1" aria-labelledby="modalGuardarProtocoloLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -172,6 +223,9 @@ let contenidoActual = {}; // { seccionId: [lineas] }
 const esMedico = {{ es_medico | default(false) | tojson }};
 console.log('Biopsias v2 · esMedico:', esMedico, 'Rol bruto:', window.__LDH_CONTEXT__ ? window.__LDH_CONTEXT__.medicoActual : '');
 let modalGuardar = null;
+let modalGuardarPlantillaPersonalizada = null;
+let plantillasPersonalizadas = {};
+let ultimaPlantillaCompleta = '';
 
 function getSeccionById(id){ return secciones.find(s => s.seccion_id === id); }
 
@@ -208,6 +262,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.addEventListener('resize', ajustarAlturaTexto); 
   cargarContenidoPrevio(); 
   cargarPlantillasEnSelector();
+  
+  // Permitir Enter en el input del modal para guardar
+  const inputNombre = document.getElementById('input-nombre-plantilla-biopsias');
+  if(inputNombre){
+    inputNombre.addEventListener('keypress', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        guardarPlantillaPersonalizada();
+      }
+    });
+  }
 });
 
 function cargarContenidoPrevio(){
@@ -227,12 +292,15 @@ function cargarContenidoPrevio(){
 }
 
 function cargarPlantillasEnSelector(){
+  const select = document.getElementById('select-plantilla-completa');
+  if(!select) return;
+  
+  select.innerHTML = '<option value="">-- Seleccionar Plantilla --</option>';
+  
+  // Cargar plantillas estándar
   fetch('/plantillas-dinamicas/api/plantillas-biopsias')
     .then(r => r.json())
     .then(data => {
-      const select = document.getElementById('select-plantilla-completa');
-      if(!select) return;
-      select.innerHTML = '<option value="">-- Seleccionar Plantilla --</option>';
       if(data && data.plantillas){
         data.plantillas.forEach(p => {
           const opt = document.createElement('option');
@@ -241,17 +309,129 @@ function cargarPlantillasEnSelector(){
           select.appendChild(opt);
         });
       }
+      // Después de cargar las estándar, cargar las personalizadas
+      cargarPlantillasPersonalizadas();
     })
-    .catch(err => console.error('Error cargando plantillas:', err));
+    .catch(err => {
+      console.error('Error cargando plantillas:', err);
+      cargarPlantillasPersonalizadas();
+    });
+}
+
+function cargarPlantillasPersonalizadas(){
+  fetch('/plantillas-dinamicas/api/plantillas/personalizadas/BIOPSIA')
+    .then(r => r.json())
+    .then(data => {
+      if(!data || !data.success || !Array.isArray(data.plantillas)){
+        return;
+      }
+      
+      plantillasPersonalizadas = {};
+      data.plantillas.forEach(plantilla => {
+        if(plantilla && plantilla.nombre){
+          plantillasPersonalizadas[plantilla.nombre] = plantilla.lineas || {};
+        }
+      });
+      
+      actualizarOpcionesPersonalizadas();
+    })
+    .catch(err => {
+      console.error('Error cargando plantillas personalizadas:', err);
+    });
+}
+
+function actualizarOpcionesPersonalizadas(){
+  const select = document.getElementById('select-plantilla-completa');
+  const datalist = document.getElementById('lista-nombres-plantillas-biopsias');
+  
+  if(!select) return;
+  
+  // Actualizar datalist para el modal
+  if(datalist){
+    datalist.innerHTML = '';
+    Object.keys(plantillasPersonalizadas).forEach(nombre => {
+      const option = document.createElement('option');
+      option.value = nombre;
+      datalist.appendChild(option);
+    });
+  }
+  
+  // Eliminar optgroup previo si existía
+  const optgroupId = 'optgroup-plantillas-personalizadas-biopsias';
+  const existente = document.getElementById(optgroupId);
+  if(existente){
+    existente.remove();
+  }
+  
+  const nombres = Object.keys(plantillasPersonalizadas);
+  if(nombres.length === 0){
+    return;
+  }
+  
+  const optgroup = document.createElement('optgroup');
+  optgroup.label = 'Personalizadas';
+  optgroup.id = optgroupId;
+  
+  nombres.forEach(nombre => {
+    const option = document.createElement('option');
+    option.value = `__custom__:${nombre}`;
+    option.textContent = `Personalizada: ${nombre}`;
+    optgroup.appendChild(option);
+  });
+  
+  select.appendChild(optgroup);
+  
+  // Restaurar selección si la plantilla anterior sigue disponible
+  if(ultimaPlantillaCompleta && select.querySelector(`option[value="${ultimaPlantillaCompleta}"]`)){
+    select.value = ultimaPlantillaCompleta;
+  }
 }
 
 function aplicarPlantillaCompleta(){
-  const nombrePlantilla = document.getElementById('select-plantilla-completa').value;
-  if(!nombrePlantilla) return;
+  const valor = document.getElementById('select-plantilla-completa').value;
+  if(!valor) return;
   
+  let nombrePlantilla = valor;
+  
+  // Si es una plantilla personalizada (empieza con __custom__:)
+  if(valor.startsWith('__custom__:')){
+    nombrePlantilla = valor.replace('__custom__:', '');
+    const datos = plantillasPersonalizadas[nombrePlantilla];
+    if(!datos){
+      mostrarToast('No se encontró la plantilla personalizada seleccionada.', 'error');
+      return;
+    }
+    
+    if(!confirm(`¿Aplicar la plantilla personalizada "${nombrePlantilla}" a todas las secciones? Esto reemplazará el contenido actual.`)){
+      document.getElementById('select-plantilla-completa').value = ultimaPlantillaCompleta || '';
+      return;
+    }
+    
+    // Aplicar líneas de cada sección desde la plantilla personalizada
+    secciones.forEach(s => {
+      const claveSeccion = resolverClaveBiopsias(s);
+      if(datos[claveSeccion] && Array.isArray(datos[claveSeccion]) && datos[claveSeccion].length > 0){
+        contenidoActual[s.seccion_id] = [...datos[claveSeccion]];
+      }
+    });
+    
+    // Actualizar visualización
+    actualizarTexto();
+    ajustarAlturaTexto();
+    
+    // Si hay una sección activa, recargarla para mostrar el nuevo contenido
+    if(seccionActual){
+      cargarSeccion(seccionActual);
+    }
+    
+    ultimaPlantillaCompleta = valor;
+    mostrarToast(`Plantilla personalizada "${nombrePlantilla}" aplicada correctamente`, 'success');
+    return;
+  }
+  
+  // Plantilla estándar
   if(!confirm(`¿Aplicar la plantilla "${nombrePlantilla}" a todas las secciones? Esto reemplazará el contenido actual.`)){
-    // Resetear selector si cancela
-    document.getElementById('select-plantilla-completa').value = '';
+    document.getElementById('select-plantilla-completa').value = ultimaPlantillaCompleta || '';
     return;
   }
   
@@ -277,6 +457,7 @@ function aplicarPlantillaCompleta(){
           cargarSeccion(seccionActual);
         }
         
+        ultimaPlantillaCompleta = nombrePlantilla;
         mostrarToast(`Plantilla "${nombrePlantilla}" aplicada correctamente`, 'success');
       } else {
         mostrarToast(`La plantilla "${nombrePlantilla}" no tiene contenido disponible`, 'warning');
@@ -492,6 +673,10 @@ function tieneContenido(){
 }
 
 function abrirModalGuardar(){
+  {% if protocolo.es_prueba %}
+  alert('Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.');
+  return;
+  {% endif %}
   if(!tieneContenido()){
     alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
     return;
@@ -566,8 +751,116 @@ function marcarProtocoloCompletado(){
   });
 }
 
+function obtenerLineasPorSecciones(){
+  const resultado = {};
+  secciones.forEach(seccion => {
+    const clave = resolverClaveBiopsias(seccion);
+    const lineas = contenidoActual[seccion.seccion_id] || [];
+    if(lineas.length > 0){
+      resultado[clave] = [...lineas];
+    }
+  });
+  return resultado;
+}
+
+function abrirModalGuardarPlantillaPersonalizada(){
+  if(!modalGuardarPlantillaPersonalizada && typeof bootstrap !== 'undefined'){
+    const modalEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+    if(modalEl){
+      modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalEl);
+    }
+  }
+  
+  actualizarOpcionesPersonalizadas();
+  
+  const input = document.getElementById('input-nombre-plantilla-biopsias');
+  if(input){
+    input.value = '';
+    setTimeout(() => input.focus(), 150);
+  }
+  
+  if(modalGuardarPlantillaPersonalizada){
+    modalGuardarPlantillaPersonalizada.show();
+  }
+}
+
+function guardarPlantillaPersonalizada(){
+  const input = document.getElementById('input-nombre-plantilla-biopsias');
+  if(!input) return;
+  
+  let nombre = (input.value || '').trim();
+  if(!nombre){
+    mostrarToast('Por favor ingrese un nombre o código para la plantilla.', 'warning');
+    return;
+  }
+  
+  const lineas = obtenerLineasPorSecciones();
+  if(Object.keys(lineas).length === 0){
+    mostrarToast('No hay contenido para guardar como plantilla.', 'warning');
+    return;
+  }
+  
+  const existentes = Object.keys(plantillasPersonalizadas);
+  const coincidencia = existentes.find(n => n.toLowerCase() === nombre.toLowerCase());
+  let sobrescribir = false;
+  
+  if(coincidencia){
+    const confirmar = confirm(`La plantilla "${coincidencia}" ya existe. ¿Desea reemplazarla?`);
+    if(!confirmar){
+      return;
+    }
+    nombre = coincidencia;
+    sobrescribir = true;
+  }
+  
+  fetch('/plantillas-dinamicas/api/plantillas/personalizadas/BIOPSIA', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nombre: nombre,
+      lineas: lineas,
+      sobrescribir: sobrescribir
+    })
+  })
+    .then(response => response.json()
+      .then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+      if(!ok || !data || !data.success){
+        if(data && data.error === 'exists'){
+          mostrarToast('La plantilla ya existe y no se reemplazó.', 'warning');
+        } else {
+          mostrarToast(data && data.error ? `Error al guardar: ${data.error}` : 'No se pudo guardar la plantilla.', 'error');
+        }
+        return;
+      }
+      
+      if(modalGuardarPlantillaPersonalizada){
+        modalGuardarPlantillaPersonalizada.hide();
+      }
+      
+      mostrarToast('Plantilla guardada correctamente.', 'success');
+      ultimaPlantillaCompleta = `__custom__:${nombre}`;
+      cargarPlantillasEnSelector();
+    })
+    .catch(error => {
+      console.error('Error guardando plantilla personalizada:', error);
+      mostrarToast('Ocurrió un error al guardar la plantilla.', 'error');
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   modalGuardar = new bootstrap.Modal(document.getElementById('modalGuardarProtocolo'));
+  
+  // Inicializar modal de guardar plantilla personalizada
+  const modalPersonalizadaEl = document.getElementById('modalGuardarPlantillaPersonalizada');
+  if(modalPersonalizadaEl && typeof bootstrap !== 'undefined'){
+    modalGuardarPlantillaPersonalizada = new bootstrap.Modal(modalPersonalizadaEl);
+  }
+  
+  const btnGuardarPlantillaPersonalizada = document.getElementById('btn-guardar-plantilla-personalizada-biopsias');
+  if(btnGuardarPlantillaPersonalizada){
+    btnGuardarPlantillaPersonalizada.addEventListener('click', guardarPlantillaPersonalizada);
+  }
 
   const btnGuardar = document.getElementById('btn-guardar-solo');
   if(btnGuardar){

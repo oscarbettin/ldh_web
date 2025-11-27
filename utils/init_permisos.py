@@ -19,7 +19,9 @@ def init_roles_y_permisos():
         {'nombre': 'Técnico', 'descripcion': 'Técnico de laboratorio - Procesamiento técnico', 'oculto': False},
         {'nombre': 'Secretaria', 'descripcion': 'Personal administrativo - Recepción y entrega', 'oculto': False},
         {'nombre': 'Contable', 'descripcion': 'Administración contable - Solo facturación', 'oculto': False},
-        {'nombre': 'Solo Lectura', 'descripcion': 'Consulta únicamente - Sin exportar', 'oculto': False}
+        {'nombre': 'Solo Lectura', 'descripcion': 'Consulta únicamente - Sin exportar', 'oculto': False},
+        {'nombre': 'Prestador', 'descripcion': 'Prestador externo - Acceso al portal', 'oculto': False},
+        {'nombre': 'Entidades', 'descripcion': 'Entidad externa (hospital, sanatorio, clínica) - Portal con múltiples prestadores', 'oculto': False}
     ]
     
     roles = {}
@@ -172,6 +174,20 @@ def init_roles_y_permisos():
     ]
     for codigo in permisos_lectura:
         asignar_permiso(roles['Solo Lectura'], permisos[codigo])
+    
+    # PRESTADOR - Acceso al portal para ver sus protocolos completados
+    permisos_prestador = [
+        'protocolos_ver', 'informes_ver', 'informes_pdf', 'informes_imprimir'
+    ]
+    for codigo in permisos_prestador:
+        asignar_permiso(roles['Prestador'], permisos[codigo])
+    
+    # ENTIDADES - Mismo acceso que prestador pero puede ver protocolos de múltiples prestadores asociados
+    permisos_entidades = [
+        'protocolos_ver', 'informes_ver', 'informes_pdf', 'informes_imprimir'
+    ]
+    for codigo in permisos_entidades:
+        asignar_permiso(roles['Entidades'], permisos[codigo])
     
     db.session.commit()
     print('✓ Permisos asignados a roles')

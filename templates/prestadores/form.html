@@ -1,16 +1,20 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ 'Editar' if prestador else 'Nuevo' }} Prestador{% endblock %}
+{% block title %}{{ 'Editar' if prestador else 'Nuevo' }}{{ ' Entidad' if es_entidad else ' Prestador' }}{% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- Barra de navegación específica para Prestadores -->
+    <!-- Barra de navegación específica -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Panel</a></li>
+            {% if es_entidad %}
+            <li class="breadcrumb-item"><a href="{{ url_for('entidades.index') }}">Entidades</a></li>
+            {% else %}
             <li class="breadcrumb-item"><a href="{{ url_for('prestadores.index') }}">Prestadores</a></li>
+            {% endif %}
             <li class="breadcrumb-item active" aria-current="page">
-                {{ 'Editar' if prestador else 'Nuevo' }} Prestador
+                {{ 'Editar' if prestador else 'Nuevo' }}{{ ' Entidad' if es_entidad else ' Prestador' }}
             </li>
         </ol>
     </nav>
@@ -18,9 +22,9 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="text-success">
-                <i class="bi bi-person-badge-{{ 'check' if prestador else 'fill' }}"></i>
-                {{ 'Editar' if prestador else 'Nuevo' }} Prestador
-                <small class="text-muted">- Gestión de Prestadores</small>
+                <i class="bi bi-{{ 'building' if es_entidad else 'person-badge' }}-{{ 'check' if prestador else 'fill' }}"></i>
+                {{ 'Editar' if prestador else 'Nuevo' }}{{ ' Entidad' if es_entidad else ' Prestador' }}
+                <small class="text-muted">- {{ 'Gestión de Entidades' if es_entidad else 'Gestión de Prestadores' }}</small>
             </h1>
         </div>
     </div>
@@ -65,7 +69,7 @@
                                        class="form-control" 
                                        id="codigo" 
                                        name="codigo" 
-                                       value="{{ prestador.codigo if prestador else '' }}">
+                                       value="{{ prestador.codigo if prestador and prestador.codigo and prestador.codigo != 'None' and prestador.codigo != None else '' }}">
                             </div>
                             
                             <div class="col-md-4 mb-3">
@@ -102,6 +106,7 @@
                             </div>
                         </div>
                         
+                        {% if not es_entidad %}
                         <!-- Especialidad -->
                         <h5 class="border-bottom pb-2 mb-3 mt-4">
                             <i class="bi bi-briefcase"></i> Especialidad
@@ -172,6 +177,7 @@
                                        value="{{ prestador.fecha_matricula.strftime('%Y-%m-%d') if prestador and prestador.fecha_matricula else '' }}">
                             </div>
                         </div>
+                        {% endif %}
                         
                         <!-- Domicilio -->
                         <h5 class="border-bottom pb-2 mb-3 mt-4">
@@ -239,13 +245,138 @@
                                        class="form-control" 
                                        id="email" 
                                        name="email" 
-                                       value="{{ prestador.email if prestador else '' }}">
+                                       value="{{ prestador.email if prestador else '' }}"
+                                       {{ 'required' if es_entidad else '' }}>
+                            </div>
+                        </div>
+                        
+                        {% if es_entidad %}
+                        <!-- Datos de Usuario (solo para entidades) -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-person-circle"></i> Datos de Usuario
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="username" class="form-label">Username *</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       value="{{ usuario.username if usuario else '' }}"
+                                       {{ 'readonly' if usuario else 'required' }}
+                                       autocomplete="username">
+                                {% if usuario %}
+                                <small class="text-muted">El username no puede cambiarse.</small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre_completo" class="form-label">Nombre Completo</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="nombre_completo" 
+                                       name="nombre_completo" 
+                                       value="{{ usuario.nombre_completo if usuario else '' }}"
+                                       placeholder="Se generará automáticamente si se deja vacío">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="password" class="form-label">{{ 'Nueva Contraseña (dejar vacío para mantener la actual)' if usuario else 'Contraseña *' }}</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password" 
+                                       name="password" 
+                                       {{ 'required' if not usuario else '' }}
+                                       autocomplete="{{ 'new-password' if usuario else 'new-password' }}">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="password_confirm" class="form-label">{{ 'Confirmar Nueva Contraseña' if usuario else 'Confirmar Contraseña *' }}</label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       id="password_confirm" 
+                                       name="password_confirm" 
+                                       {{ 'required' if not usuario else '' }}
+                                       autocomplete="new-password">
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Notificaciones -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="bi bi-bell"></i> Notificaciones de Protocolos Completados
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Métodos de Notificación</label>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="notificar_email" 
+                                           name="notificar_email"
+                                           {{ 'checked' if prestador and prestador.notificar_email else '' }}>
+                                    <label class="form-check-label" for="notificar_email">
+                                        <i class="bi bi-envelope"></i> Email
+                                    </label>
+                                    <small class="d-block text-muted">Se enviará notificación por email cuando se complete un protocolo.</small>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="notificar_whatsapp" 
+                                           name="notificar_whatsapp"
+                                           {{ 'checked' if prestador and prestador.notificar_whatsapp else '' }}>
+                                    <label class="form-check-label" for="notificar_whatsapp">
+                                        <i class="bi bi-whatsapp"></i> WhatsApp
+                                    </label>
+                                    <small class="d-block text-muted">Se enviará notificación por WhatsApp cuando se complete un protocolo.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="whatsapp" class="form-label">Número de WhatsApp</label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="whatsapp" 
+                                           name="whatsapp" 
+                                           placeholder="Ej: +5491123456789"
+                                           value="{{ prestador.whatsapp if prestador and prestador.whatsapp else '' }}">
+                                    <small class="text-muted">Formato internacional: +54 9 11 1234-5678</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipos de Protocolos a Notificar</label>
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="notificar_ambulatorio" 
+                                           name="notificar_ambulatorio"
+                                           {{ 'checked' if prestador and prestador.notificar_ambulatorio else '' }}>
+                                    <label class="form-check-label" for="notificar_ambulatorio">
+                                        <i class="bi bi-file-earmark-medical"></i> Ambulatorios
+                                    </label>
+                                    <small class="d-block text-muted">Recibir notificaciones de protocolos ambulatorios completados.</small>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="notificar_internacion" 
+                                           name="notificar_internacion"
+                                           {{ 'checked' if prestador and prestador.notificar_internacion else '' }}>
+                                    <label class="form-check-label" for="notificar_internacion">
+                                        <i class="bi bi-hospital"></i> Internación
+                                    </label>
+                                    <small class="d-block text-muted">Recibir notificaciones de protocolos de internación completados.</small>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- Botones -->
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ url_for('prestadores.index') }}" class="btn btn-secondary">
+                            <a href="{{ url_for('entidades.index' if es_entidad else 'prestadores.index') }}" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -267,6 +398,7 @@
                         <strong>Campos obligatorios:</strong><br>
                         Apellido y nombre son obligatorios.
                     </p>
+                    {% if not es_entidad %}
                     <hr>
                     <p class="card-text text-sm">
                         <strong>Matrícula:</strong><br>
@@ -277,6 +409,7 @@
                         <strong>Especialidad:</strong><br>
                         Seleccione de la lista o elija "Otra" para especificar una especialidad no listada.
                     </p>
+                    {% endif %}
                 </div>
             </div>
         </div>

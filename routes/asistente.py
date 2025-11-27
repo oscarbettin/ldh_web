@@ -858,3 +858,44 @@ def buscar_usuario_login():
         return jsonify({'success': True, 'mensaje': 'Encontramos tu correo. El equipo se pondrá en contacto para restablecer tus credenciales.'})
     return jsonify({'success': True, 'mensaje': 'No encontramos ese correo en la base. Revisalo o comunicate con el laboratorio.'})
 
+
+@bp.route('/chat/historial', methods=['GET'])
+@login_required
+def historial_chat():
+    """
+    Obtener historial de chat para el usuario actual o un protocolo específico.
+    """
+    limite = request.args.get('limite', 20, type=int)
+    protocolo_id = request.args.get('protocolo_id', type=int)
+
+    query = Auditoria.query.filter(
+        Auditoria.usuario_id == current_user.usuario_id,
+        Auditoria.accion == 'chat_asistente'
+    )
+
+    if protocolo_id:
+        # Filtrar por protocolo_id si se proporciona
+        query = query.filter(Auditoria.descripcion.ilike(f'%Protocolo ID: {protocolo_id}%'))
+        
+    historial_auditoria = query.order_by(desc(Auditoria.fecha_hora)).limit(limite).all()
+    
+    historial_formateado = []
+    for item in reversed(historial_auditoria): # Mostrar en orden cronológico ascendente
+        # Intentar parsear el mensaje y la respuesta del asistente desde la descripción
+        descripcion = item.descripcion or ''
+        mensaje_usuario_match = re.search(r'Mensaje: (.*?)(?=\nRespuesta:|$)', descripcion, re.DOTALL)
+        respuesta_asistente_match = re.search(r'Respuesta: (.*)', descripcion, re.DOTALL)
+
+        mensaje_usuario = mensaje_usuario_match.group(1).strip() if mensaje_usuario_match else None
+        respuesta_asistente = respuesta_asistente_match.group(1).strip() if respuesta_asistente_match else None
+
+        if mensaje_usuario and respuesta_asistente:
+            historial_formateado.append({
+                'historial_id': item.auditoria_id,
+                'mensaje': mensaje_usuario,
+                'respuesta': respuesta_asistente,
+                'fecha_hora': item.fecha_hora.isoformat()
+            })
+    
+    return jsonify({'success': True, 'historial': historial_formateado})
+

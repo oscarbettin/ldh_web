@@ -13,7 +13,8 @@ class Protocolo(db.Model):
     numero_protocolo = db.Column(db.String(20), unique=True, nullable=False, index=True)
     tipo_estudio = db.Column(db.String(20), nullable=False, index=True)  # BIOPSIA, CITOLOGIA, PAP
     afiliado_id = db.Column(db.Integer, db.ForeignKey('afiliados.afiliado_id'), nullable=False, index=True)
-    prestador_id = db.Column(db.Integer, db.ForeignKey('prestadores.prestador_id'), index=True)
+    prestador_id = db.Column(db.Integer, db.ForeignKey('prestadores.prestador_id'), index=True)  # Prestador principal (puede ser entidad o médico)
+    prestador_medico_id = db.Column(db.Integer, db.ForeignKey('prestadores.prestador_id'), index=True)  # Prestador médico asociado (si prestador_id es entidad)
     obra_social_id = db.Column(db.Integer, db.ForeignKey('obras_sociales.obra_social_id'), index=True)
     # Campos para registrar el estado de OS al momento del protocolo
     obra_social_nombre = db.Column(db.String(100))  # Nombre de OS al momento del protocolo
@@ -24,6 +25,8 @@ class Protocolo(db.Model):
     fecha_informe = db.Column(db.Date)
     datos_clinicos = db.Column(db.Text)
     estado = db.Column(db.String(20), default='EN_PROCESO', nullable=False, index=True)
+    es_prueba = db.Column(db.Boolean, default=False, nullable=False, index=True)  # Protocolos para probar/crear plantillas
+    tipo_protocolo = db.Column(db.String(20), default='AMBULATORIO', nullable=False, index=True)  # AMBULATORIO o INTERNACION
     usuario_ingreso_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'))
     usuario_informe_id = db.Column(db.Integer, db.ForeignKey('usuarios.usuario_id'))
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -34,6 +37,7 @@ class Protocolo(db.Model):
     informe_biopsia = db.relationship('BiopsiaInforme', uselist=False, backref='protocolo')
     informe_citologia = db.relationship('CitologiaInforme', uselist=False, backref='protocolo')
     informe_pap = db.relationship('PapInforme', uselist=False, backref='protocolo')
+    prestador_medico = db.relationship('Prestador', foreign_keys=[prestador_medico_id], backref='protocolos_como_medico')
     
     # Índice compuesto para búsquedas comunes
     __table_args__ = (
@@ -63,9 +67,10 @@ class Protocolo(db.Model):
         }
         prefijo = prefijos.get(tipo_estudio, 'X')
         
-        # Buscar el último número del año
+        # Buscar el último número del año (excluir protocolos de prueba)
         ultimo = Protocolo.query.filter(
-            Protocolo.numero_protocolo.like(f'{prefijo}-{año%100:02d}-%')
+            Protocolo.numero_protocolo.like(f'{prefijo}-{año%100:02d}-%'),
+            Protocolo.es_prueba == False
         ).order_by(Protocolo.numero_protocolo.desc()).first()
         
         if ultimo:
@@ -92,7 +97,7 @@ class Protocolo(db.Model):
     @property
     def dias_pendiente(self):
         """Calcula los días que lleva pendiente el estudio"""
-        if self.estado == 'PENDIENTE' or self.estado == 'EN_PROCESO':
+        if self.estado in ['PENDIENTE', 'EN_PROCESO', 'URGENTE']:
             hoy = datetime.now().date()
             delta = hoy - self.fecha_ingreso
             return delta.days

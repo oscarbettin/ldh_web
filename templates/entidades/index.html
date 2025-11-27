@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Gestión de Entidades{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-building-fill"></i> Gestión de Entidades</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('entidades.nuevo') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Nueva Entidad
+            </a>
+        </div>
+    </div>
+    
+    {% if rol_entidades %}
+    <!-- Tabla de entidades -->
+    <div class="card">
+        <div class="card-body">
+            {% if entidades %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Nombre de Entidad</th>
+                            <th>Usuario</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Prestadores Asociados</th>
+                            <th>Estado</th>
+                            <th width="200">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in entidades %}
+                        {% set entidad = item.entidad %}
+                        <tr>
+                            <td><strong>{{ entidad.nombre_completo }}</strong></td>
+                            <td>{{ entidad.username }}</td>
+                            <td>
+                                {% if entidad.email %}
+                                    <a href="mailto:{{ entidad.email }}" class="text-decoration-none" title="Enviar email">
+                                        <i class="bi bi-envelope"></i> {{ entidad.email }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ entidad.telefono if entidad.telefono else '-' }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ item.cantidad_prestadores }} prestador(es)</span>
+                                {% if item.prestadores %}
+                                <div class="mt-1">
+                                    {% for prestador in item.prestadores[:3] %}
+                                        <small class="d-block text-muted">{{ prestador.nombre_completo }}</small>
+                                    {% endfor %}
+                                    {% if item.prestadores|length > 3 %}
+                                        <small class="text-muted">... y {{ item.prestadores|length - 3 }} más</small>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if entidad.activo %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('entidades.gestionar', usuario_id=entidad.usuario_id) }}" 
+                                       class="btn btn-primary" 
+                                       title="Gestionar Prestadores">
+                                        <i class="bi bi-people"></i> Prestadores
+                                    </a>
+                                    <a href="{{ url_for('entidades.editar', usuario_id=entidad.usuario_id) }}" 
+                                       class="btn btn-info" 
+                                       title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No hay entidades registradas en el sistema.
+                                <a href="{{ url_for('entidades.nuevo') }}" class="alert-link">Crear nueva entidad</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> 
+        El rol "ENTIDAD" no existe en el sistema. Ejecute el script de inicialización.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

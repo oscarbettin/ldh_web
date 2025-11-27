@@ -104,6 +104,7 @@
                         <label for="estado" class="form-label">Estado</label>
                         <select name="estado" id="estado" class="form-select">
                             <option value="">Todos</option>
+                            <option value="URGENTE" {{ 'selected' if estado == 'URGENTE' else '' }}>Urgente</option>
                             <option value="PENDIENTE" {{ 'selected' if estado == 'PENDIENTE' else '' }}>Pendiente</option>
                             <option value="EN_PROCESO" {{ 'selected' if estado == 'EN_PROCESO' else '' }}>En Proceso</option>
                             <option value="COMPLETADO" {{ 'selected' if estado == 'COMPLETADO' else '' }}>Completado</option>
@@ -215,18 +216,24 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if protocolo.estado_normalizado == 'PENDIENTE' %}
+                                {% if protocolo.estado_normalizado == 'URGENTE' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> Urgente
+                                    </span>
+                                {% elif protocolo.estado_normalizado == 'PENDIENTE' %}
                                     <span class="badge bg-warning">Pendiente</span>
                                 {% elif protocolo.estado_normalizado == 'EN_PROCESO' %}
                                     <span class="badge bg-info">En Proceso</span>
                                 {% elif protocolo.estado_normalizado == 'COMPLETADO' %}
                                     <span class="badge bg-success">Completado</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ protocolo.estado }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if protocolo.estado_normalizado in ['PENDIENTE', 'EN_PROCESO'] %}
+                                {% if protocolo.estado_normalizado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                                     {% set dias = protocolo.dias_pendiente %}
-                                    {% if dias > 7 %}
+                                    {% if protocolo.estado_normalizado == 'URGENTE' or dias > 7 %}
                                         <span class="badge bg-danger">{{ dias }}d</span>
                                     {% elif dias > 3 %}
                                         <span class="badge bg-warning">{{ dias }}d</span>
@@ -244,7 +251,7 @@
                                        title="Ver">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    {% if protocolo.estado_normalizado == 'PENDIENTE' %}
+                                    {% if protocolo.estado_normalizado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                                     <a href="{{ url_for('protocolos.editar', id=protocolo.protocolo_id) }}" 
                                        class="btn btn-warning" 
                                        title="Editar">

@@ -14,6 +14,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Importar herramientas de base de datos
+try:
+    from services.asistente_db_tools import TOOLS, ejecutar_funcion
+    TOOLS_DISPONIBLES = True
+except ImportError as e:
+    logger.warning(f"⚠️ No se pudieron importar las herramientas de base de datos: {e}")
+    TOOLS_DISPONIBLES = False
+    TOOLS = []
+    ejecutar_funcion = None
+
 class ClaudeClient:
     """Cliente para interactuar con Claude API"""
     
@@ -118,7 +128,7 @@ class ClaudeClient:
                 'modelo': modelo_a_probar
             }
     
-    def _make_request(self, messages: List[Dict], max_tokens: int = 1000, system: str = None, timeout: int = 60) -> Dict:
+    def _make_request(self, messages: List[Dict], max_tokens: int = 1000, system: str = None, timeout: int = 60, tools: List[Dict] = None) -> Dict:
         """Hacer petición a Claude API"""
         if not self.is_configured():
             raise ValueError("Claude API key no está configurada")
@@ -131,6 +141,10 @@ class ClaudeClient:
         
         if system:
             payload["system"] = system
+        
+        # Agregar tools si están disponibles
+        if tools and len(tools) > 0:
+            payload["tools"] = tools
         
         try:
             response = requests.post(
@@ -417,6 +431,16 @@ class ClaudeClient:
             - Útiles y prácticas
             - BASADAS ÚNICAMENTE EN LA INFORMACIÓN REAL DEL SISTEMA LDH
             
+            CONSULTAS A LA BASE DE DATOS:
+            Tienes acceso a herramientas que te permiten consultar datos reales del sistema. Cuando el usuario pregunte sobre:
+            - Prestadores con más pacientes
+            - Pacientes con múltiples protocolos
+            - Estadísticas de protocolos
+            - Cualquier dato estadístico o de consulta
+            
+            DEBES usar las herramientas disponibles en lugar de decir que no tienes acceso a los datos.
+            Siempre usa las herramientas cuando el usuario pregunte por información estadística o datos específicos del sistema.
+            
             INFORMACIÓN IMPORTANTE DEL SISTEMA LDH:
             
             ESTADOS DE PROTOCOLOS (solo estos existen realmente):
@@ -453,6 +477,16 @@ class ClaudeClient:
             - Profesionales y enfocadas en gestión
             - BASADAS ÚNICAMENTE EN LA INFORMACIÓN REAL DEL SISTEMA LDH
             
+            CONSULTAS A LA BASE DE DATOS:
+            Tienes acceso a herramientas que te permiten consultar datos reales del sistema. Cuando el usuario pregunte sobre:
+            - Prestadores con más pacientes
+            - Pacientes con múltiples protocolos
+            - Estadísticas de protocolos
+            - Cualquier dato estadístico o de consulta
+            
+            DEBES usar las herramientas disponibles en lugar de decir que no tienes acceso a los datos.
+            Siempre usa las herramientas cuando el usuario pregunte por información estadística o datos específicos del sistema.
+            
             INFORMACIÓN IMPORTANTE DEL SISTEMA LDH:
             
             ESTADOS DE PROTOCOLOS (solo estos existen realmente):
@@ -478,6 +512,16 @@ class ClaudeClient:
             TUS RESPUESTAS DEBEN SER:
             - Claras y prácticas
             - BASADAS ÚNICAMENTE EN LA INFORMACIÓN REAL DEL SISTEMA LDH
+            
+            CONSULTAS A LA BASE DE DATOS:
+            Tienes acceso a herramientas que te permiten consultar datos reales del sistema. Cuando el usuario pregunte sobre:
+            - Prestadores con más pacientes
+            - Pacientes con múltiples protocolos
+            - Estadísticas de protocolos
+            - Cualquier dato estadístico o de consulta
+            
+            DEBES usar las herramientas disponibles en lugar de decir que no tienes acceso a los datos.
+            Siempre usa las herramientas cuando el usuario pregunte por información estadística o datos específicos del sistema.
             
             INFORMACIÓN IMPORTANTE DEL SISTEMA LDH:
             
@@ -589,22 +633,103 @@ class ClaudeClient:
                             elif elem.get('type') == 'image':
                                 logger.info(f"  [{i}] Imagen: {elem.get('source', {}).get('media_type', 'unknown')}")
             
-            response = self._make_request(
-                messages=messages,
-                max_tokens=max_tokens,
-                system=system_prompt,
-                timeout=timeout
-            )
+            # Preparar tools si están disponibles
+            tools_a_usar = []
+            if TOOLS_DISPONIBLES and TOOLS:
+                tools_a_usar = TOOLS
             
-            contenido = response.get('content', [{}])[0].get('text', '')
+            # Iterar hasta obtener respuesta final (manejando tool calls)
+            max_iteraciones = 5  # Máximo de iteraciones para evitar loops infinitos
+            iteracion = 0
+            contenido_final = ""
+            
+            while iteracion < max_iteraciones:
+                response = self._make_request(
+                    messages=messages,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    timeout=timeout,
+                    tools=tools_a_usar if iteracion == 0 else None  # Solo enviar tools en primera iteración
+                )
+                
+                # Verificar si Claude quiere usar una herramienta
+                content_items = response.get('content', [])
+                stop_reason = response.get('stop_reason', '')
+                
+                if stop_reason == 'tool_use' and content_items:
+                    # Claude quiere usar una herramienta
+                    tool_use_item = None
+                    text_content = ""
+                    
+                    for item in content_items:
+                        if item.get('type') == 'tool_use':
+                            tool_use_item = item
+                        elif item.get('type') == 'text':
+                            text_content += item.get('text', '')
+                    
+                    if tool_use_item:
+                        tool_name = tool_use_item.get('name')
+                        tool_input = tool_use_item.get('input', {})
+                        tool_id = tool_use_item.get('id')
+                        
+                        logger.info(f"🔧 Claude quiere usar herramienta: {tool_name} con input: {tool_input}")
+                        
+                        # Ejecutar la función
+                        if ejecutar_funcion:
+                            resultado = ejecutar_funcion(tool_name, tool_input)
+                            
+                            # Agregar mensaje del asistente con tool_use
+                            messages.append({
+                                "role": "assistant",
+                                "content": content_items
+                            })
+                            
+                            # Convertir resultado a JSON string para que Claude pueda procesarlo
+                            import json
+                            try:
+                                resultado_json = json.dumps(resultado, ensure_ascii=False, indent=2, default=str)
+                            except Exception as e:
+                                logger.warning(f"⚠️ Error serializando resultado a JSON: {e}, usando str()")
+                                resultado_json = str(resultado)
+                            
+                            # Agregar resultado de la herramienta
+                            messages.append({
+                                "role": "user",
+                                "content": [{
+                                    "type": "tool_result",
+                                    "tool_use_id": tool_id,
+                                    "content": resultado_json
+                                }]
+                            })
+                            
+                            iteracion += 1
+                            continue  # Continuar loop para obtener respuesta final de Claude
+                        else:
+                            logger.error("⚠️ ejecutar_funcion no está disponible")
+                    
+                # Si llegamos aquí, Claude no quiere usar herramientas o ya terminó
+                # Extraer texto de la respuesta
+                for item in content_items:
+                    if item.get('type') == 'text':
+                        contenido_final += item.get('text', '')
+                
+                if contenido_final:
+                    break  # Tenemos respuesta final
+                
+                iteracion += 1
+            
+            # Si no hay contenido final después de todas las iteraciones, usar último contenido
+            if not contenido_final:
+                contenido_final = "No se pudo obtener una respuesta válida."
+                logger.warning("⚠️ No se obtuvo contenido final después de todas las iteraciones")
             
             # Detectar intenciones en el mensaje del usuario
-            intencion = self._detectar_intencion(mensaje, contenido)
+            intencion = self._detectar_intencion(mensaje, contenido_final)
             
             return {
-                "respuesta": contenido,
+                "respuesta": contenido_final,
                 "intencion": intencion,
-                "acciones": self._extraer_acciones(mensaje, contenido, intencion),
+                "acciones": self._extraer_acciones(mensaje, contenido_final, intencion),
                 "claude_disponible": True
             }
         

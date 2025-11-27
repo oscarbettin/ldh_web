@@ -42,7 +42,7 @@ def create_app(config_name='development'):
     # Registrar blueprints (rutas)
     from routes import auth, dashboard, pacientes, prestadores, obras_sociales
     from routes import protocolos, biopsias, citologia, pap, reportes, admin, asistente, plantillas_dinamicas, editor_avanzado, selector_plantillas, usuarios
-    from routes import prestador_portal
+    from routes import prestador_portal, entidades
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -61,6 +61,7 @@ def create_app(config_name='development'):
     app.register_blueprint(selector_plantillas.bp)
     app.register_blueprint(usuarios.bp)
     app.register_blueprint(prestador_portal.bp)
+    app.register_blueprint(entidades.bp)
     
     # Ruta principal
     @app.route('/')
@@ -157,11 +158,22 @@ def create_app(config_name='development'):
                 return False
             return rol_es_prestador(getattr(current_user.rol, 'nombre', ''))
 
+        def rol_es_entidad(rol_nombre: str) -> bool:
+            normalizado = _normalizar_texto(rol_nombre)
+            return normalizado == 'entidades' if normalizado else False
+
+        def usuario_es_entidad() -> bool:
+            if not current_user.is_authenticated or not getattr(current_user, 'rol', None):
+                return False
+            return rol_es_entidad(getattr(current_user.rol, 'nombre', ''))
+        
         return dict(
             rol_es_medico=rol_es_medico,
             usuario_es_medico=usuario_es_medico,
             rol_es_prestador=rol_es_prestador,
-            usuario_es_prestador=usuario_es_prestador
+            usuario_es_prestador=usuario_es_prestador,
+            rol_es_entidad=rol_es_entidad,
+            usuario_es_entidad=usuario_es_entidad
         )
     
     @app.context_processor

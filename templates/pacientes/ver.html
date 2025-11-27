@@ -170,7 +170,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for protocolo in paciente.protocolos %}
+                                {% for protocolo in paciente.protocolos if not protocolo.es_prueba %}
                                 <tr>
                                     <td><strong>{{ protocolo.numero_protocolo }}</strong></td>
                                     <td>{{ protocolo.tipo_estudio }}</td>
@@ -243,6 +243,21 @@
                         <i class="bi bi-gear"></i> Acciones
                     </h6>
                     <div class="d-grid gap-2">
+                        {% if '000 PRUEBA' in paciente.nombre_completo.upper() or 'PRUEBA' in paciente.nombre_completo.upper() %}
+                        <div class="alert alert-info mb-2">
+                            <i class="bi bi-info-circle"></i> <small>Paciente de prueba - Editores de plantillas</small>
+                        </div>
+                        <a href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='PAP') }}" class="btn btn-success">
+                            <i class="bi bi-file-text"></i> Editor Análisis PAP
+                        </a>
+                        <a href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='BIOPSIA') }}" class="btn btn-success">
+                            <i class="bi bi-file-text"></i> Editor Análisis Biopsias
+                        </a>
+                        <a href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='CITOLOGÍA') }}" class="btn btn-info">
+                            <i class="bi bi-file-text"></i> Editor Análisis Citología
+                        </a>
+                        <hr>
+                        {% endif %}
                         <a href="{{ url_for('pacientes.editar', id=paciente.afiliado_id) }}" class="btn btn-warning">
                             <i class="bi bi-pencil"></i> Editar Datos
                         </a>

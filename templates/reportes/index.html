@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">
+                <i class="bi bi-file-earmark-text"></i> Reportes
+            </h1>
+            <p class="text-muted mb-4">
+                Genere informes y reportes del sistema de gestión del laboratorio
+            </p>
+        </div>
+    </div>
+    
+    <!-- REPORTES DISPONIBLES -->
+    <div class="row g-4">
+        <!-- Reportes de Protocolos -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-folder text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-primary mb-3">Reportes de Protocolos</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Informes sobre protocolos de biopsias, citologías y PAP
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.protocolos_por_tipo') }}" class="btn btn-primary btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Por Tipo
+                        </a>
+                        <a href="{{ url_for('reportes.protocolos_por_estado') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-bar-chart"></i> Por Estado
+                        </a>
+                        <a href="{{ url_for('reportes.protocolos_por_periodo') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-calendar"></i> Por Período
+                        </a>
+                        <a href="{{ url_for('reportes.protocolos_por_prestador') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-person-badge"></i> Por Prestador
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes de Pacientes -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-success shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-people text-success" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-success mb-3">Reportes de Pacientes</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Informes sobre pacientes y afiliados del sistema
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.pacientes') }}" class="btn btn-success btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes de Prestadores -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-person-badge text-info" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-info mb-3">Reportes de Prestadores</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Informes sobre médicos y prestadores del sistema
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.prestadores') }}" class="btn btn-info btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes de Obras Sociales -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-warning shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-hospital text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-warning mb-3">Reportes de Obras Sociales</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Informes sobre obras sociales y facturación
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.obras_sociales') }}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes Estadísticos -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-secondary shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-bar-chart text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-secondary mb-3">Reportes Estadísticos</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Estadísticas generales y análisis del sistema
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.estadisticas_contables') }}" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Ver Reporte
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reportes de Facturación -->
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 border-danger shadow-sm">
+                <div class="card-body text-center p-4">
+                    <div class="mb-3">
+                        <i class="bi bi-receipt text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="card-title text-danger mb-3">Reportes de Facturación</h5>
+                    <p class="card-text text-muted small mb-4">
+                        Informes de facturación y cobranzas
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('reportes.facturacion_obra_social') }}" class="btn btn-danger btn-sm">
+                            <i class="bi bi-file-earmark-text"></i> Por Obra Social
+                        </a>
+                        <a href="{{ url_for('reportes.facturacion_periodo') }}" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-calendar"></i> Por Período
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}
+

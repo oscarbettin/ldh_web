@@ -82,6 +82,11 @@
                                 <li><a class="dropdown-item" href="{{ url_for('prestadores.index') }}">
                                     <i class="bi bi-person-badge"></i> Prestadores
                                 </a></li>
+                                {% if tiene_permiso('prestadores_ver') or current_user.rol.nombre in ['Administrador', 'OSCAR', 'ENTIDAD', 'Entidades'] %}
+                                <li><a class="dropdown-item" href="{{ url_for('entidades.index') }}">
+                                    <i class="bi bi-building"></i> Entidades
+                                </a></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{{ url_for('obras_sociales.index') }}">
                                     <i class="bi bi-hospital"></i> Obras Sociales
                                 </a></li>
@@ -93,6 +98,26 @@
                                 <i class="bi bi-bar-chart-fill"></i> Reportes
                             </a>
                         </li>
+                        
+                        {% if (tiene_permiso('admin_acceso') or current_user.rol.nombre == 'Administrador') or usuario_es_medico() %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-bookmark-plus"></i> Crear Plantilla
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><h6 class="dropdown-header">Editor de Plantillas</h6></li>
+                                <li><a class="dropdown-item" href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='PAP') }}">
+                                    <i class="bi bi-clipboard2-pulse"></i> Plantilla PAP
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='BIOPSIA') }}">
+                                    <i class="bi bi-file-medical"></i> Plantilla Biopsias
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('plantillas_dinamicas.editor_prueba', tipo_estudio='CITOLOGÍA') }}">
+                                    <i class="bi bi-file-text"></i> Plantilla Citologías
+                                </a></li>
+                            </ul>
+                        </li>
+                        {% endif %}
                         
                         {% if tiene_permiso('admin_acceso') or current_user.rol.nombre == 'Administrador' %}
                         <li class="nav-item">
@@ -180,8 +205,10 @@
     {% endif %}
     
     <!-- Asistente Inteligente -->
-    {# Incluir siempre el botón flotante, incluso en login #}
-    {% include 'components/asistente_panel.html' %}
+    {# Ocultar el asistente para prestadores en su portal #}
+    {% if not (usuario_es_prestador() and request.endpoint and 'portal_prestador' in request.endpoint) %}
+        {% include 'components/asistente_panel.html' %}
+    {% endif %}
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -200,6 +227,47 @@
     </script>
     
     {% block extra_js %}{% endblock %}
+    
+    <!-- Script global para limpiar overlays bloqueados y cerrar modales con Escape -->
+    <script>
+    // Global Escape key listener to close modals and clear overlays
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            // Close any open Bootstrap modal
+            const openModal = document.querySelector('.modal.show');
+            if (openModal) {
+                const modalInstance = bootstrap.Modal.getInstance(openModal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+            // Remove any lingering modal backdrops
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            backdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            console.log('✅ Escape key pressed: Modals and overlays cleared.');
+        }
+    });
+
+    // Function to clean up orphaned Bootstrap backdrops
+    window.limpiarOverlaysBloqueados = function() {
+        const openModals = document.querySelectorAll('.modal.show');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+
+        if (openModals.length === 0 && backdrops.length > 0) {
+            console.warn('⚠️ Detectados backdrops huérfanos sin modales abiertos. Limpiando...');
+            backdrops.forEach(backdrop => backdrop.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            return true;
+        }
+        return false;
+    };
+
+    // Periodically check for and clean up orphaned backdrops
+    setInterval(window.limpiarOverlaysBloqueados, 5000); // Check every 5 seconds
+    </script>
     
     <!-- Script para detectar mensajes flash y activar input "Mensaje" en RIVE -->
     <script>

@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte de Obras Sociales{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .navbar, footer { display: none !important; }
+        .asistente-panel, .btn-abrir-asistente, #asistente-panel, #btn-abrir-asistente {
+            display: none !important;
+        }
+        body { background: white !important; }
+        .container-fluid { padding: 0 !important; }
+        .card { border: none !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-hospital"></i> Reporte de Obras Sociales</h1>
+            <p class="text-muted">Obras sociales ordenadas por cantidad de protocolos</p>
+        </div>
+        <div class="col-md-4 text-end no-print">
+            <button onclick="imprimirReporte()" class="btn btn-outline-primary">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button onclick="exportarPDF('Obras_Sociales')" class="btn btn-outline-danger" id="btnPDF">
+                <i class="bi bi-file-pdf"></i> PDF
+            </button>
+            <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <!-- Buscador -->
+    <div class="row mb-3 no-print">
+        <div class="col-md-6">
+            <form method="GET" action="{{ url_for('reportes.obras_sociales') }}" class="input-group">
+                <input type="text" 
+                       name="buscar" 
+                       class="form-control" 
+                       placeholder="Buscar obra social..."
+                       value="{{ buscar }}"
+                       autofocus>
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                {% if buscar %}
+                <a href="{{ url_for('reportes.obras_sociales') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x"></i>
+                </a>
+                {% endif %}
+            </form>
+        </div>
+        <div class="col-md-6 text-end">
+            <span class="text-muted">Total: {{ resultados.total }} obra(s) social(es)</span>
+        </div>
+    </div>
+    
+    <!-- Tabla de resultados -->
+    <div class="card">
+        <div class="card-body">
+            {% if resultados.items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Obra Social</th>
+                            <th>Código</th>
+                            <th class="text-center">Protocolos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for obra_social, cantidad_protocolos in resultados.items %}
+                        <tr>
+                            <td><strong>{{ obra_social.nombre }}</strong></td>
+                            <td>
+                                {% if obra_social.codigo %}
+                                    {{ obra_social.codigo }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ cantidad_protocolos }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginación -->
+            {% if resultados.pages > 1 %}
+            <nav aria-label="Paginación">
+                <ul class="pagination justify-content-center">
+                    {% if resultados.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('reportes.obras_sociales', page=resultados.prev_num, buscar=buscar) }}">Anterior</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in resultados.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            <li class="page-item {% if page_num == resultados.page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('reportes.obras_sociales', page=page_num, buscar=buscar) }}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if resultados.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('reportes.obras_sociales', page=resultados.next_num, buscar=buscar) }}">Siguiente</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No se encontraron obras sociales.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    function imprimirReporte() { window.print(); }
+    function exportarPDF(nombre) {
+        const elemento = document.querySelector('.card');
+        if (!elemento) { alert('Error: No se encontró el contenido del reporte'); return; }
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_${nombre}_${fecha}.pdf`;
+        const noPrintElements = document.querySelectorAll('.no-print');
+        const originalDisplay = [];
+        noPrintElements.forEach(el => { originalDisplay.push(el.style.display); el.style.display = 'none'; });
+        const botonPDF = document.getElementById('btnPDF');
+        const textoOriginal = botonPDF ? botonPDF.innerHTML : '';
+        if (botonPDF) { botonPDF.disabled = true; botonPDF.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...'; }
+        html2pdf().set({
+            margin: [10, 10, 10, 10],
+            filename: nombreArchivo,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: ['img', 'table'] }
+        }).from(elemento).save().then(() => {
+            noPrintElements.forEach((el, index) => { el.style.display = originalDisplay[index]; });
+            if (botonPDF) { botonPDF.disabled = false; botonPDF.innerHTML = textoOriginal; }
+        }).catch((error) => {
+            console.error('Error al generar PDF:', error);
+            alert('Error al generar el PDF. Por favor, intente nuevamente.');
+            noPrintElements.forEach((el, index) => { el.style.display = originalDisplay[index]; });
+            if (botonPDF) { botonPDF.disabled = false; botonPDF.innerHTML = textoOriginal; }
+        });
+    }
+</script>
+{% endblock %}
+

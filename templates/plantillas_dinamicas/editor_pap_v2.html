@@ -224,6 +224,19 @@
 
 {% block content %}
 <div class="editor-container">
+    {% if protocolo.es_prueba %}
+    <!-- Banner de advertencia para protocolos de prueba -->
+    <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert" style="border-left: 4px solid #ffc107;">
+        <h5 class="alert-heading mb-2">
+            <i class="bi bi-exclamation-triangle-fill"></i> Modo Edición de Plantillas
+        </h5>
+        <p class="mb-0">
+            Estás trabajando en un protocolo de prueba. Los cambios no se guardarán como protocolo real.
+            Usa el botón <strong>"Guardar como plantilla"</strong> para guardar tus configuraciones.
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+    </div>
+    {% endif %}
     <!-- Header con info del protocolo (movido al panel izquierdo para compactar) -->
 
     <div class="main-content">
@@ -238,19 +251,30 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="m-0"><i class="bi bi-list-check"></i> Secciones</h5>
                 <div class="btn-group btn-group-sm" role="group" aria-label="toolbar">
-                    <button class="btn btn-outline-primary" onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
-                    <button class="btn btn-outline-success" onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
-                    <button class="btn btn-outline-info" onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
+                    <button class="btn btn-outline-primary" 
+                            {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                            onclick="abrirModalGuardar()" title="Guardar"><i class="bi bi-save"></i></button>
+                    <button class="btn btn-outline-success" 
+                            {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                            onclick="verPreview()" title="Imprimir"><i class="bi bi-printer"></i></button>
+                    <button class="btn btn-outline-info" 
+                            {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                            onclick="exportarTexto()" title="Exportar"><i class="bi bi-download"></i></button>
                 </div>
             </div>
             <button class="btn btn-outline-warning btn-sm w-100 mb-2" onclick="abrirModalGuardarPlantillaPersonalizada()">
                 <i class="bi bi-bookmark-plus"></i> Guardar como plantilla
             </button>
-            <button class="btn btn-outline-danger btn-sm w-100 mb-2" onclick="limpiarTodasLasSecciones()" title="Limpiar todas las secciones">
+            <button class="btn btn-outline-danger btn-sm w-100 mb-2" 
+                    {% if protocolo.es_prueba %}disabled title="No disponible para protocolos de prueba"{% endif %}
+                    onclick="limpiarTodasLasSecciones()" title="Limpiar todas las secciones">
                 <i class="bi bi-x-circle"></i> Limpiar todo
             </button>
             <a href="{{ url_for('plantillas_dinamicas.editor_pap', protocolo_id=protocolo.protocolo_id) }}"
-               class="btn btn-outline-secondary btn-sm w-100 mb-3">
+               {% if protocolo.es_prueba %}class="btn btn-outline-secondary btn-sm w-100 mb-3 disabled" 
+               onclick="return false;"
+               title="No disponible para protocolos de prueba"
+               {% else %}class="btn btn-outline-secondary btn-sm w-100 mb-3"{% endif %}>
                 <i class="bi bi-arrow-left-right"></i> Ir al editor clásico
             </a>
             
@@ -1230,6 +1254,10 @@ function removerLinea(seccion, index) {
 }
 
 function abrirModalGuardar() {
+    {% if protocolo.es_prueba %}
+    alert('Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.');
+    return;
+    {% endif %}
     if (!tieneContenido()) {
         alert('No hay contenido para guardar. Agregue líneas en al menos una sección.');
         return;

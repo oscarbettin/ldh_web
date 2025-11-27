@@ -29,10 +29,30 @@ class Prestador(db.Model):
     email = db.Column(db.String(100))
     activo = db.Column(db.Boolean, default=True, nullable=False)
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    es_entidad = db.Column(db.Boolean, default=False, nullable=False, index=True)  # True si es hospital/sanatorio/clínica
+    puede_ver_ambulatorio = db.Column(db.Boolean, default=True, nullable=False)  # Puede ver protocolos ambulatorios
+    puede_ver_internacion = db.Column(db.Boolean, default=True, nullable=False)  # Puede ver protocolos de internación
+    
+    # Campos de notificaciones
+    notificar_email = db.Column(db.Boolean, default=False, nullable=False)  # Notificar por email cuando se complete un protocolo
+    notificar_whatsapp = db.Column(db.Boolean, default=False, nullable=False)  # Notificar por WhatsApp cuando se complete un protocolo
+    notificar_ambulatorio = db.Column(db.Boolean, default=False, nullable=False)  # Recibir notificaciones de protocolos ambulatorios
+    notificar_internacion = db.Column(db.Boolean, default=False, nullable=False)  # Recibir notificaciones de protocolos de internación
+    whatsapp = db.Column(db.String(20))  # Número de WhatsApp para notificaciones
     
     # Relaciones
     especialidad = db.relationship('Especialidad', backref='prestadores')
-    protocolos = db.relationship('Protocolo', backref='prestador')
+    protocolos = db.relationship('Protocolo', foreign_keys='Protocolo.prestador_id', backref='prestador')
+    # Relación many-to-many: prestadores profesionales asociados a esta entidad
+    # NOTA: backref cambiado a 'entidades_legacy' para evitar conflicto con Usuario.prestadores_asociados
+    prestadores_asociados = db.relationship(
+        'Prestador',
+        secondary='prestador_entidad',
+        primaryjoin='Prestador.prestador_id == prestador_entidad.c.entidad_id',
+        secondaryjoin='Prestador.prestador_id == prestador_entidad.c.prestador_id',
+        backref=db.backref('entidades_legacy', lazy='dynamic'),
+        lazy='dynamic'
+    )
     
     @property
     def nombre_completo(self):
@@ -55,6 +75,16 @@ class Prestador(db.Model):
     
     def __repr__(self):
         return f'<Prestador {self.nombre_completo}>'
+
+
+# Tabla intermedia para relación many-to-many entre entidades y prestadores
+prestador_entidad = db.Table(
+    'prestador_entidad',
+    db.Column('entidad_id', db.Integer, db.ForeignKey('prestadores.prestador_id'), primary_key=True),
+    db.Column('prestador_id', db.Integer, db.ForeignKey('prestadores.prestador_id'), primary_key=True),
+    db.Column('fecha_asociacion', db.DateTime, default=datetime.utcnow, nullable=False),
+    db.Index('idx_prestador_entidad', 'entidad_id', 'prestador_id')
+)
 
 
 class Especialidad(db.Model):

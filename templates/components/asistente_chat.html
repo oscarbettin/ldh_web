@@ -82,6 +82,7 @@
     max-width: 85%;
     word-wrap: break-word;
     white-space: pre-wrap;
+    font-size: 0.875rem; /* 14px - tamaño más pequeño para el ancho del chat */
 }
 
 .chat-mensaje-usuario .chat-burbuja {
@@ -140,6 +141,20 @@
     flex-direction: column !important;
     min-height: 100% !important;
     overflow: visible !important;
+}
+
+/* Solo cuando tab-chat está activo */
+#tab-chat.show,
+#tab-chat.active {
+    display: flex !important;
+    min-height: 100% !important;
+}
+
+/* Cuando tab-chat está oculto, no reservar espacio */
+#tab-chat:not(.show):not(.active) {
+    display: none !important;
+    min-height: 0 !important;
+    height: 0 !important;
 }
 
 .chat-container {

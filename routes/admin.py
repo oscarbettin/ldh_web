@@ -9,7 +9,7 @@ from models.prestador import Prestador
 from models.auditoria import Auditoria
 from utils.decorators import admin_required
 import unicodedata
-from sqlalchemy import func
+from sqlalchemy import func, update
 def _normalizar_texto(valor: str) -> str:
     if not valor:
         return ''
@@ -172,6 +172,25 @@ def usuarios_nuevo():
             usuario.set_password(password)
             
             db.session.add(usuario)
+            db.session.flush()  # Para obtener el usuario_id antes del commit
+            
+            # Si el rol es ENTIDAD y tiene prestador asociado, actualizar notificaciones del prestador
+            rol_normalizado = _normalizar_texto(rol.nombre)
+            if rol_normalizado in ['entidad', 'entidades'] and prestador_id:
+                # Usar update directo para evitar modificar otros campos del prestador
+                update_data = {
+                    'notificar_email': request.form.get('notificar_email') == 'on',
+                    'notificar_whatsapp': request.form.get('notificar_whatsapp') == 'on',
+                    'notificar_ambulatorio': request.form.get('notificar_ambulatorio') == 'on',
+                    'notificar_internacion': request.form.get('notificar_internacion') == 'on'
+                }
+                whatsapp = request.form.get('whatsapp', '').strip()
+                update_data['whatsapp'] = whatsapp if whatsapp else None
+                
+                db.session.execute(
+                    update(Prestador).where(Prestador.prestador_id == prestador_id).values(**update_data)
+                )
+            
             db.session.commit()
             
             Auditoria.registrar(
@@ -184,6 +203,11 @@ def usuarios_nuevo():
             )
             
             flash(f'Usuario {usuario.username} creado correctamente.', 'success')
+            
+            # Si el rol es ENTIDAD, redirigir al gestor de entidades
+            if rol_normalizado in ['entidad', 'entidades']:
+                return redirect(url_for('entidades.index'))
+            
             return redirect(url_for('admin.usuarios'))
             
         except Exception as e:
@@ -193,7 +217,9 @@ def usuarios_nuevo():
             return render_template('admin/usuarios_form.html', roles=roles, prestadores=prestadores)
     
     roles = Rol.query.filter_by(oculto=False).order_by(Rol.nombre).all()
-    return render_template('admin/usuarios_form.html', roles=roles, prestadores=prestadores)
+    # Si viene desde entidades, preseleccionar el rol ENTIDAD
+    rol_entidad_id = request.args.get('rol_entidad', type=int)
+    return render_template('admin/usuarios_form.html', roles=roles, prestadores=prestadores, rol_entidad_id=rol_entidad_id)
 
 
 @bp.route('/usuarios/<int:id>/editar', methods=['GET', 'POST'])
@@ -255,6 +281,23 @@ def usuarios_editar(id):
                     return render_template('admin/usuarios_form.html', usuario=usuario, roles=roles, prestadores=prestadores)
                 usuario.set_password(password)
             
+            # Si el rol es ENTIDAD y tiene prestador asociado, actualizar notificaciones del prestador
+            rol_normalizado = _normalizar_texto(nuevo_rol.nombre)
+            if rol_normalizado in ['entidad', 'entidades'] and prestador_id:
+                # Usar update directo para evitar modificar otros campos del prestador
+                update_data = {
+                    'notificar_email': request.form.get('notificar_email') == 'on',
+                    'notificar_whatsapp': request.form.get('notificar_whatsapp') == 'on',
+                    'notificar_ambulatorio': request.form.get('notificar_ambulatorio') == 'on',
+                    'notificar_internacion': request.form.get('notificar_internacion') == 'on'
+                }
+                whatsapp = request.form.get('whatsapp', '').strip()
+                update_data['whatsapp'] = whatsapp if whatsapp else None
+                
+                db.session.execute(
+                    update(Prestador).where(Prestador.prestador_id == prestador_id).values(**update_data)
+                )
+            
             db.session.commit()
             
             Auditoria.registrar(
@@ -267,6 +310,11 @@ def usuarios_editar(id):
             )
             
             flash(f'Usuario {usuario.username} actualizado correctamente.', 'success')
+            
+            # Si el rol es ENTIDAD, redirigir al gestor de entidades
+            if rol_normalizado in ['entidad', 'entidades']:
+                return redirect(url_for('entidades.index'))
+            
             return redirect(url_for('admin.usuarios'))
             
         except Exception as e:

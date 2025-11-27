@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte de Protocolos por Período{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .no-print { display: none !important; }
+        .navbar, footer { display: none !important; }
+        .asistente-panel, .btn-abrir-asistente, #asistente-panel, #btn-abrir-asistente {
+            display: none !important;
+        }
+        body { background: white !important; }
+        .container-fluid { padding: 0 !important; }
+        .card { border: none !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1><i class="bi bi-calendar"></i> Reporte de Protocolos por Período</h1>
+            <p class="text-muted">Protocolos agrupados por fecha de ingreso (últimos 90 días)</p>
+        </div>
+        <div class="col-md-4 text-end no-print">
+            <button onclick="imprimirReporte()" class="btn btn-outline-primary">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+            <button onclick="exportarPDF('Protocolos_Por_Periodo')" class="btn btn-outline-danger" id="btnPDF">
+                <i class="bi bi-file-pdf"></i> PDF
+            </button>
+            <a href="{{ url_for('reportes.index') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filtros -->
+    <div class="row mb-3 no-print">
+        <div class="col-md-12">
+            <form method="GET" action="{{ url_for('reportes.protocolos_por_periodo') }}" class="card p-3">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Desde:</label>
+                        <input type="date" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Hasta:</label>
+                        <input type="date" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-search"></i> Filtrar
+                        </button>
+                        <a href="{{ url_for('reportes.protocolos_por_periodo') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x"></i> Limpiar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Tabla de resultados -->
+    <div class="card">
+        <div class="card-body">
+            {% if resultados %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th class="text-center">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fecha, cantidad in resultados %}
+                        <tr>
+                            <td><strong>
+                                {% if fecha %}
+                                    {% if fecha.__class__.__name__ == 'date' or hasattr(fecha, 'strftime') %}
+                                        {{ fecha.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        {{ fecha }}
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </strong></td>
+                            <td class="text-center">
+                                <span class="badge bg-primary">{{ cantidad }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-secondary">
+                            <td><strong>Total</strong></td>
+                            <td class="text-center"><strong>{{ total }}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> No hay protocolos registrados en el período seleccionado.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+    function imprimirReporte() { window.print(); }
+    function exportarPDF(nombre) {
+        const elemento = document.querySelector('.card');
+        if (!elemento) { alert('Error: No se encontró el contenido del reporte'); return; }
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Reporte_${nombre}_${fecha}.pdf`;
+        const noPrintElements = document.querySelectorAll('.no-print');
+        const originalDisplay = [];
+        noPrintElements.forEach(el => { originalDisplay.push(el.style.display); el.style.display = 'none'; });
+        const botonPDF = document.getElementById('btnPDF');
+        const textoOriginal = botonPDF ? botonPDF.innerHTML : '';
+        if (botonPDF) { botonPDF.disabled = true; botonPDF.innerHTML = '<i class="bi bi-hourglass-split"></i> Generando...'; }
+        html2pdf().set({
+            margin: [10, 10, 10, 10],
+            filename: nombreArchivo,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: ['img', 'table'] }
+        }).from(elemento).save().then(() => {
+            noPrintElements.forEach((el, index) => { el.style.display = originalDisplay[index]; });
+            if (botonPDF) { botonPDF.disabled = false; botonPDF.innerHTML = textoOriginal; }
+        }).catch((error) => {
+            console.error('Error al generar PDF:', error);
+            alert('Error al generar el PDF. Por favor, intente nuevamente.');
+            noPrintElements.forEach((el, index) => { el.style.display = originalDisplay[index]; });
+            if (botonPDF) { botonPDF.disabled = false; botonPDF.innerHTML = textoOriginal; }
+        });
+    }
+</script>
+{% endblock %}
+

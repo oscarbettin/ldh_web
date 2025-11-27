@@ -1,13 +1,17 @@
 """
 Rutas para el sistema de plantillas dinámicas con secciones y líneas
 """
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, redirect, url_for, flash
 from flask_login import login_required, current_user
 from extensions import db
 from models.plantilla_dinamica import SeccionPlantilla, LineaPlantilla, ConfiguracionBotones, PlantillaGenerada
 from models.protocolo import Protocolo
+from models.paciente import Afiliado
+from datetime import date
+from sqlalchemy import or_, and_
 import json
 import unicodedata
+
 def _normalizar_texto(texto: str) -> str:
     if not texto:
         return ''
@@ -22,7 +26,98 @@ def _usuario_es_medico() -> bool:
     normalizado = _normalizar_texto(nombre)
     return 'medico' in normalizado if normalizado else False
 
+
+def _obtener_o_crear_protocolo_prueba(tipo_estudio: str):
+    """
+    Obtiene o crea un protocolo de prueba para el paciente "000 PRUEBA"
+    Los protocolos de prueba no generan números de protocolo reales y se marcan con es_prueba=True
+    """
+    # Buscar paciente "000 PRUEBA" (nombre_completo es una @property, buscar por columnas reales)
+    # Intentar varias combinaciones posibles: "000" en apellido y "PRUEBA" en nombre, o viceversa
+    paciente_prueba = Afiliado.query.filter(
+        or_(
+            and_(Afiliado.apellido.ilike('%000%'), Afiliado.nombre.ilike('%PRUEBA%')),
+            and_(Afiliado.apellido.ilike('%PRUEBA%'), Afiliado.nombre.ilike('%000%')),
+            Afiliado.apellido.ilike('%000 PRUEBA%'),
+            Afiliado.nombre.ilike('%000 PRUEBA%')
+        )
+    ).first()
+    
+    if not paciente_prueba:
+        flash('No se encontró el paciente "000 PRUEBA". Por favor créelo primero.', 'error')
+        return None
+    
+    # Normalizar tipo de estudio
+    tipo_normalizado = tipo_estudio.upper().strip()
+    if tipo_normalizado == 'CITOLOGIA':
+        tipo_normalizado = 'CITOLOGÍA'
+    
+    # Buscar protocolo de prueba existente para este tipo
+    protocolo_prueba = Protocolo.query.filter_by(
+        afiliado_id=paciente_prueba.afiliado_id,
+        tipo_estudio=tipo_normalizado,
+        es_prueba=True
+    ).first()
+    
+    if protocolo_prueba:
+        return protocolo_prueba
+    
+    # Crear nuevo protocolo de prueba
+    # Número especial para protocolos de prueba: PRUEBA-TIPO-0001
+    numero_prueba = f'PRUEBA-{tipo_normalizado[:3]}-0001'
+    
+    protocolo_prueba = Protocolo(
+        numero_protocolo=numero_prueba,
+        tipo_estudio=tipo_normalizado,
+        afiliado_id=paciente_prueba.afiliado_id,
+        prestador_id=None,
+        obra_social_id=None,
+        fecha_ingreso=date.today(),
+        estado='EN_PROCESO',
+        es_prueba=True,  # Marcar como protocolo de prueba
+        usuario_ingreso_id=current_user.usuario_id
+    )
+    
+    db.session.add(protocolo_prueba)
+    db.session.commit()
+    
+    return protocolo_prueba
+
 bp = Blueprint('plantillas_dinamicas', __name__, url_prefix='/plantillas-dinamicas')
+
+
+@bp.route('/editor-prueba/<tipo_estudio>')
+@login_required
+def editor_prueba(tipo_estudio):
+    """
+    Abre el editor de análisis directamente desde el paciente "000 PRUEBA"
+    Crea o reutiliza un protocolo de prueba según el tipo de estudio
+    """
+    tipos_validos = ['PAP', 'BIOPSIA', 'CITOLOGÍA', 'CITOLOGIA']
+    tipo_normalizado = tipo_estudio.upper().strip()
+    
+    if tipo_normalizado == 'CITOLOGIA':
+        tipo_normalizado = 'CITOLOGÍA'
+    
+    if tipo_normalizado not in tipos_validos:
+        flash('Tipo de estudio no válido.', 'error')
+        return redirect(url_for('dashboard.index'))
+    
+    protocolo_prueba = _obtener_o_crear_protocolo_prueba(tipo_normalizado)
+    
+    if not protocolo_prueba:
+        return redirect(url_for('dashboard.index'))
+    
+    # Redirigir al editor correspondiente
+    if tipo_normalizado == 'PAP':
+        return redirect(url_for('editor_avanzado.editor_pap_avanzado', protocolo_id=protocolo_prueba.protocolo_id))
+    elif tipo_normalizado == 'BIOPSIA':
+        return redirect(url_for('plantillas_dinamicas.editor_biopsias_v2', protocolo_id=protocolo_prueba.protocolo_id))
+    elif tipo_normalizado == 'CITOLOGÍA':
+        return redirect(url_for('plantillas_dinamicas.editor_citologia', protocolo_id=protocolo_prueba.protocolo_id))
+    else:
+        flash('Tipo de estudio no soportado.', 'error')
+        return redirect(url_for('dashboard.index'))
 
 
 @bp.route('/pap/<int:protocolo_id>')
@@ -1050,6 +1145,14 @@ def api_guardar_lineas_protocolo(protocolo_id):
     try:
         from models.informe import ProtocoloLinea
         
+        # Verificar si es protocolo de prueba
+        protocolo = Protocolo.query.get_or_404(protocolo_id)
+        if protocolo.es_prueba:
+            return jsonify({
+                'success': False,
+                'error': 'Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.'
+            }), 400
+        
         data = request.get_json()
         lineas = data.get('lineas', [])
         
@@ -1103,6 +1206,14 @@ def api_guardar_editor_moderno():
         
         if not protocolo_id:
             return jsonify({'success': False, 'error': 'ID de protocolo requerido'}), 400
+        
+        # Verificar si es protocolo de prueba
+        protocolo = Protocolo.query.get(protocolo_id)
+        if protocolo and protocolo.es_prueba:
+            return jsonify({
+                'success': False,
+                'error': 'Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.'
+            }), 400
         
         # Eliminar líneas existentes de esta sección
         ProtocoloLinea.query.filter_by(
@@ -1277,6 +1388,14 @@ def api_guardar_editor_v2():
 
         if not protocolo_id or not seccion:
             return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
+        
+        # Verificar si es protocolo de prueba
+        protocolo = Protocolo.query.get(protocolo_id)
+        if protocolo and protocolo.es_prueba:
+            return jsonify({
+                'success': False,
+                'error': 'Los protocolos de prueba no se pueden guardar. Use "Guardar como plantilla" en su lugar.'
+            }), 400
 
         # Normalizar
         lineas_limpias = []

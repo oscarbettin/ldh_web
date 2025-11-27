@@ -11,8 +11,8 @@
     <div class="row mb-4">
         <div class="col">
             <h1>
-                <i class="bi bi-person-{{ 'check' if usuario else 'plus' }}-fill"></i>
-                {{ 'Editar' if usuario else 'Nuevo' }} Usuario
+                <i class="bi bi-{{ 'building-fill' if es_entidad else ('person-check' if usuario else 'person-plus') }}-fill"></i>
+                {{ 'Editar' if usuario else 'Nuevo' }} {{ 'Entidad' if es_entidad else 'Usuario' }}
             </h1>
         </div>
     </div>
@@ -136,12 +136,27 @@
                         <div class="row">
                             <div class="col-md-12 mb-3">
                                 <label for="rol_id" class="form-label">Rol *</label>
+                                {% if es_entidad %}
+                                <select class="form-select" id="rol_id" name="rol_id" required disabled>
+                                    {% for rol in roles %}
+                                    <option value="{{ rol.rol_id }}" 
+                                            data-nombre="{{ rol.nombre }}"
+                                            selected>
+                                        {{ rol.nombre }} - {{ rol.descripcion }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <input type="hidden" name="rol_id" value="{{ roles[0].rol_id if roles else '' }}">
+                                <small class="text-muted">
+                                    El rol es fijo para las entidades.
+                                </small>
+                                {% else %}
                                 <select class="form-select" id="rol_id" name="rol_id" required>
                                     <option value="">Seleccione un rol...</option>
                                     {% for rol in roles %}
                                     <option value="{{ rol.rol_id }}" 
                                             data-nombre="{{ rol.nombre }}"
-                                            {{ 'selected' if usuario and usuario.rol_id == rol.rol_id else ( 'selected' if request.form.get('rol_id') and request.form.get('rol_id')|int == rol.rol_id else '' ) }}>
+                                            {{ 'selected' if (usuario and usuario.rol_id == rol.rol_id) or (not usuario and rol_entidad_id and rol_entidad_id == rol.rol_id) or (request.form.get('rol_id') and request.form.get('rol_id')|int == rol.rol_id) else '' }}>
                                         {{ rol.nombre }} - {{ rol.descripcion }}
                                     </option>
                                     {% endfor %}
@@ -149,6 +164,7 @@
                                 <small class="text-muted">
                                     El rol determina qué puede hacer el usuario en el sistema
                                 </small>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -190,13 +206,85 @@
                                     </option>
                                     {% endfor %}
                                 </select>
-                                <small class="text-muted">Determina qué protocolos verá este usuario en el portal de prestadores.</small>
+                                <small class="text-muted">{{ 'Prestador asociado directamente a la entidad. Las configuraciones de notificaciones de la entidad se guardan en este prestador.' if es_entidad else 'Determina qué protocolos verá este usuario en el portal de prestadores.' }}</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Notificaciones (solo para rol ENTIDAD) -->
+                        {% set es_entidad_template = es_entidad or (usuario and usuario.rol and (usuario.rol.nombre|upper in ['ENTIDAD', 'ENTIDADES'])) %}
+                        <div id="bloque-notificaciones" style="display: {{ 'block' if es_entidad_template else 'none' }};">
+                            <h5 class="border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-bell"></i> Notificaciones de Protocolos Completados
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Métodos de Notificación</label>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="notificar_email" 
+                                               name="notificar_email"
+                                               {{ 'checked' if usuario and usuario.prestador and usuario.prestador.notificar_email else '' }}>
+                                        <label class="form-check-label" for="notificar_email">
+                                            <i class="bi bi-envelope"></i> Email
+                                        </label>
+                                        <small class="d-block text-muted">Se enviará notificación por email cuando se complete un protocolo.</small>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="notificar_whatsapp" 
+                                               name="notificar_whatsapp"
+                                               {{ 'checked' if usuario and usuario.prestador and usuario.prestador.notificar_whatsapp else '' }}>
+                                        <label class="form-check-label" for="notificar_whatsapp">
+                                            <i class="bi bi-whatsapp"></i> WhatsApp
+                                        </label>
+                                        <small class="d-block text-muted">Se enviará notificación por WhatsApp cuando se complete un protocolo.</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="whatsapp" class="form-label">Número de WhatsApp</label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="whatsapp" 
+                                               name="whatsapp" 
+                                               placeholder="Ej: +5491123456789"
+                                               value="{{ usuario.prestador.whatsapp if usuario and usuario.prestador and usuario.prestador.whatsapp else '' }}">
+                                        <small class="text-muted">Formato internacional: +54 9 11 1234-5678</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Tipos de Protocolos a Notificar</label>
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="notificar_ambulatorio" 
+                                               name="notificar_ambulatorio"
+                                               {{ 'checked' if usuario and usuario.prestador and usuario.prestador.notificar_ambulatorio else '' }}>
+                                        <label class="form-check-label" for="notificar_ambulatorio">
+                                            <i class="bi bi-file-earmark-medical"></i> Ambulatorios
+                                        </label>
+                                        <small class="d-block text-muted">Recibir notificaciones de protocolos ambulatorios completados.</small>
+                                    </div>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               id="notificar_internacion" 
+                                               name="notificar_internacion"
+                                               {{ 'checked' if usuario and usuario.prestador and usuario.prestador.notificar_internacion else '' }}>
+                                        <label class="form-check-label" for="notificar_internacion">
+                                            <i class="bi bi-hospital"></i> Internación
+                                        </label>
+                                        <small class="d-block text-muted">Recibir notificaciones de protocolos de internación completados.</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
                         <!-- Botones -->
                         <div class="d-flex justify-content-between mt-4">
-                            <a href="{{ url_for('admin.usuarios') }}" class="btn btn-secondary">
+                            <a href="{{ url_for('entidades.index' if es_entidad else 'admin.usuarios') }}" class="btn btn-secondary">
                                 <i class="bi bi-arrow-left"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -281,6 +369,7 @@ const campoTipo = document.getElementById('matricula_tipo');
 const campoNumero = document.getElementById('matricula_numero');
 const campoEspecialidad = document.getElementById('especialidad');
 const selectPrestador = document.getElementById('prestador_id');
+const bloqueNotificaciones = document.getElementById('bloque-notificaciones');
 
 function normalizarTexto(valor) {
     if (!valor) return '';
@@ -292,10 +381,18 @@ function debeMostrarMatricula(nombreRol) {
     return ['medico', 'prestador'].includes(normalizado);
 }
 
+function debeMostrarNotificaciones(nombreRol) {
+    const normalizado = normalizarTexto(nombreRol);
+    return ['entidad', 'entidades'].includes(normalizado);
+}
+
 function actualizarSeccionMatricula() {
     const opcion = rolSelect.options[rolSelect.selectedIndex];
-    const mostrar = opcion ? debeMostrarMatricula(opcion.dataset.nombre || opcion.textContent) : false;
-    if (mostrar) {
+    const nombreRol = opcion ? (opcion.dataset.nombre || opcion.textContent) : '';
+    const mostrarMatricula = nombreRol ? debeMostrarMatricula(nombreRol) : false;
+    const mostrarNotificaciones = nombreRol ? debeMostrarNotificaciones(nombreRol) : false;
+    
+    if (mostrarMatricula) {
         bloqueMatricula.style.display = '';
         campoTipo.disabled = false;
         campoNumero.disabled = false;
@@ -308,10 +405,38 @@ function actualizarSeccionMatricula() {
         campoEspecialidad.disabled = true;
         if (selectPrestador) selectPrestador.disabled = true;
     }
+    
+    // Mostrar notificaciones si el rol es ENTIDAD (siempre visible para entidades, incluso sin prestador)
+    if (mostrarNotificaciones) {
+        bloqueNotificaciones.style.display = '';
+    } else {
+        bloqueNotificaciones.style.display = 'none';
+    }
+}
+
+// Actualizar notificaciones cuando cambia el prestador
+if (selectPrestador) {
+    selectPrestador.addEventListener('change', actualizarSeccionMatricula);
 }
 
 rolSelect.addEventListener('change', actualizarSeccionMatricula);
-actualizarSeccionMatricula();
+
+// Inicializar al cargar la página para mostrar notificaciones si es una entidad
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarSeccionMatricula();
+    
+    // Si es una entidad, asegurar que las notificaciones se muestren siempre
+    {% if es_entidad %}
+    // Mostrar notificaciones inmediatamente para entidades
+    if (bloqueNotificaciones) {
+        bloqueNotificaciones.style.display = '';
+    }
+    // Forzar actualización de la sección
+    if (rolSelect && rolSelect.options.length > 0) {
+        actualizarSeccionMatricula();
+    }
+    {% endif %}
+});
 </script>
 {% endblock %}
 {% endblock %}

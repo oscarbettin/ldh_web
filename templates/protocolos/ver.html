@@ -22,7 +22,7 @@
         </div>
         <div class="col-md-4 text-end">
             <div class="btn-group">
-                {% if protocolo.estado == 'PENDIENTE' %}
+                {% if protocolo.estado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                 <a href="{{ url_for('protocolos.editar', id=protocolo.protocolo_id) }}" class="btn btn-warning">
                     <i class="bi bi-pencil"></i> Editar
                 </a>
@@ -40,20 +40,29 @@
     <!-- Estado del protocolo -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="alert alert-{{ 'warning' if protocolo.estado == 'PENDIENTE' else 'info' if protocolo.estado == 'EN_PROCESO' else 'success' }} d-flex align-items-center" role="alert">
-                <i class="bi bi-{{ 'clock' if protocolo.estado == 'PENDIENTE' else 'gear' if protocolo.estado == 'EN_PROCESO' else 'check-circle' }}" style="font-size: 1.5rem; margin-right: 15px;"></i>
+            <div class="alert alert-{{ 'danger' if protocolo.estado == 'URGENTE' else 'warning' if protocolo.estado == 'PENDIENTE' else 'info' if protocolo.estado == 'EN_PROCESO' else 'success' }} d-flex align-items-center" role="alert">
+                <i class="bi bi-{{ 'exclamation-triangle-fill' if protocolo.estado == 'URGENTE' else 'clock' if protocolo.estado == 'PENDIENTE' else 'gear' if protocolo.estado == 'EN_PROCESO' else 'check-circle' }}" style="font-size: 1.5rem; margin-right: 15px;"></i>
                 <div>
                     <h5 class="mb-1">
-                        {% if protocolo.estado == 'PENDIENTE' %}
+                        {% if protocolo.estado == 'URGENTE' %}
+                            Protocolo Urgente
+                        {% elif protocolo.estado == 'PENDIENTE' %}
                             Protocolo Pendiente
                         {% elif protocolo.estado == 'EN_PROCESO' %}
                             En Proceso
                         {% elif protocolo.estado == 'COMPLETADO' %}
                             Completado
+                        {% else %}
+                            {{ protocolo.estado }}
                         {% endif %}
                     </h5>
                     <p class="mb-0">
-                        {% if protocolo.estado == 'PENDIENTE' %}
+                        {% if protocolo.estado == 'URGENTE' %}
+                            Este protocolo está marcado como URGENTE y tiene prioridad máxima. 
+                            {% if protocolo.dias_pendiente > 0 %}
+                                Lleva {{ protocolo.dias_pendiente }} día(s) pendiente.
+                            {% endif %}
+                        {% elif protocolo.estado == 'PENDIENTE' %}
                             El protocolo está esperando ser procesado. 
                             {% if protocolo.dias_pendiente > 0 %}
                                 Lleva {{ protocolo.dias_pendiente }} día(s) pendiente.
@@ -123,6 +132,16 @@
                                             <td>{{ protocolo.fecha_informe.strftime('%d/%m/%Y') }}</td>
                                         </tr>
                                         {% endif %}
+                                        {% if protocolo.tipo_protocolo %}
+                                        <tr>
+                                            <td><strong>Tipo:</strong></td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ 'Internación' if protocolo.tipo_protocolo == 'INTERNACION' else 'Ambulatorio' }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endif %}
                                     </table>
                                 </div>
                                 <div class="col-md-6">
@@ -136,11 +155,13 @@
                                         <tr>
                                             <td><strong>Estado:</strong></td>
                                             <td>
-                                                <span class="badge bg-{{ 'warning' if protocolo.estado == 'PENDIENTE' else 'info' if protocolo.estado == 'EN_PROCESO' else 'success' if protocolo.estado == 'COMPLETADO' else 'danger' }} clickable-badge" 
+                                                <span class="badge bg-{{ 'danger' if protocolo.estado == 'URGENTE' else 'warning' if protocolo.estado == 'PENDIENTE' else 'info' if protocolo.estado == 'EN_PROCESO' else 'success' if protocolo.estado == 'COMPLETADO' else 'secondary' }} clickable-badge" 
                                                       onclick="toggleEstadoForm()" 
                                                       style="cursor: pointer;" 
                                                       title="Click para cambiar estado">
-                                                    {% if protocolo.estado == 'PENDIENTE' %}
+                                                    {% if protocolo.estado == 'URGENTE' %}
+                                                        <i class="bi bi-exclamation-triangle-fill"></i> Urgente
+                                                    {% elif protocolo.estado == 'PENDIENTE' %}
                                                         Pendiente
                                                     {% elif protocolo.estado == 'EN_PROCESO' %}
                                                         En Proceso
@@ -153,7 +174,7 @@
                                                 </span>
                                             </td>
                                         </tr>
-                                        {% if protocolo.dias_pendiente > 0 and protocolo.estado in ['PENDIENTE', 'EN_PROCESO'] %}
+                                        {% if protocolo.dias_pendiente > 0 and protocolo.estado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                                         <tr>
                                             <td><strong>Días:</strong></td>
                                             <td>
@@ -247,6 +268,93 @@
                                 </small>
                             {% endif %}
                             {% endif %}
+                            
+                            <!-- Información de Entidades -->
+                            {% if entidades_asociadas %}
+                            <hr>
+                            <h6>
+                                <i class="bi bi-building"></i> Entidades Asociadas
+                            </h6>
+                            <p class="text-muted small mb-2">
+                                Este prestador está asociado a las siguientes entidades:
+                            </p>
+                            <ul class="list-unstyled mb-0">
+                                {% for item in entidades_asociadas %}
+                                <li class="mb-2">
+                                    <strong>{{ item.prestador.nombre_completo }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Usuario: {{ item.usuario.username }}
+                                        {% if item.usuario.email %}
+                                        • <a href="mailto:{{ item.usuario.email }}" class="text-decoration-none">{{ item.usuario.email }}</a>
+                                        {% endif %}
+                                    </small>
+                                    <br>
+                                    <small>
+                                        <span class="badge bg-{{ 'success' if item.permisos.ambulatorio else 'secondary' }}">Ambulatorio</span>
+                                        <span class="badge bg-{{ 'success' if item.permisos.internacion else 'secondary' }}">Internación</span>
+                                    </small>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estado del Protocolo (Orden, Entregado, Cobrado) -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-info text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-clipboard-check"></i> Estado del Protocolo
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-borderless table-sm">
+                                <tr>
+                                    <td><strong>Orden:</strong></td>
+                                    <td>
+                                        {% if protocolo.con_orden %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Con Orden
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle"></i> Sin Orden
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Entregado:</strong></td>
+                                    <td>
+                                        {% if protocolo.entregado %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Sí
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-x-circle"></i> No
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Cobrado:</strong></td>
+                                    <td>
+                                        {% if protocolo.cobrado %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Sí
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="bi bi-x-circle"></i> No
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -263,9 +371,11 @@
                                 <button type="button" class="btn btn-outline-light btn-sm" onclick="toggleClinicalData()">
                                     <i class="bi bi-eye" id="toggleIcon"></i> <span id="toggleText">Expandir</span>
                                 </button>
+                                {% if protocolo.estado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                                 <a href="{{ url_for('protocolos.editar', id=protocolo.protocolo_id) }}" class="btn btn-outline-light btn-sm">
                                     <i class="bi bi-pencil"></i> Editar
                                 </a>
+                                {% endif %}
                             </div>
                         </div>
                         <div class="card-body">
@@ -308,6 +418,7 @@
                                     <div class="col-md-6">
                                         <label for="estado" class="form-label">Nuevo Estado:</label>
                                         <select class="form-select" id="estado" name="estado" required>
+                                            <option value="URGENTE" {{ 'selected' if protocolo.estado == 'URGENTE' else '' }}>Urgente</option>
                                             <option value="PENDIENTE" {{ 'selected' if protocolo.estado == 'PENDIENTE' else '' }}>Pendiente</option>
                                             <option value="EN_PROCESO" {{ 'selected' if protocolo.estado == 'EN_PROCESO' else '' }}>En Proceso</option>
                                             <option value="COMPLETADO" {{ 'selected' if protocolo.estado == 'COMPLETADO' else '' }}>Completado</option>
@@ -346,25 +457,25 @@
                         {% if protocolo.tipo_estudio == 'PAP' %}
                         <a href="{{ url_for('editor_avanzado.editor_pap_avanzado', protocolo_id=protocolo.protocolo_id) }}" 
                            class="btn btn-success">
-                            <i class="bi bi-file-text"></i> Editor de Análisis PAP v2
+                            <i class="bi bi-file-text"></i> Editor Análisis PAP v2
                         </a>
                         <a href="{{ url_for('plantillas_dinamicas.editor_pap', protocolo_id=protocolo.protocolo_id) }}" 
                            class="btn btn-outline-success">
-                            <i class="bi bi-file-text"></i> Editor de Análisis PAP (Clásico)
+                            <i class="bi bi-file-text"></i> Editor Análisis PAP (Clásico)
                         </a>
                         {% elif protocolo.tipo_estudio == 'BIOPSIA' %}
                         <a href="{{ url_for('plantillas_dinamicas.editor_biopsias_v2', protocolo_id=protocolo.protocolo_id) }}" 
                            class="btn btn-success">
-                            <i class="bi bi-file-text"></i> Editor Plantillas Biopsias v2
+                            <i class="bi bi-file-text"></i> Editor Análisis Biopsias
                         </a>
                         {% elif protocolo.tipo_estudio == 'CITOLOGÍA' %}
                         <a href="{{ url_for('plantillas_dinamicas.editor_citologia', protocolo_id=protocolo.protocolo_id) }}" 
                            class="btn btn-info">
-                            <i class="bi bi-file-text"></i> Editor Citologías
+                            <i class="bi bi-file-text"></i> Editor Análisis Citología
                         </a>
                         {% endif %}
                         
-                        {% if protocolo.estado in ['PENDIENTE', 'EN_PROCESO'] %}
+                        {% if protocolo.estado in ['URGENTE', 'PENDIENTE', 'EN_PROCESO'] %}
                         <a href="{{ url_for('protocolos.editar', id=protocolo.protocolo_id) }}" class="btn btn-warning">
                             <i class="bi bi-pencil"></i> Editar Protocolo
                         </a>

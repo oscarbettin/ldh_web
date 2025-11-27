@@ -101,6 +101,9 @@
                         <div class="btn-group" role="group">
                             <a href="{{ url_for('pacientes.index') }}" class="btn btn-outline-success btn-sm">Pacientes</a>
                             <a href="{{ url_for('prestadores.index') }}" class="btn btn-outline-success btn-sm">Prestadores</a>
+                            {% if tiene_permiso('prestadores_ver') or current_user.rol.nombre in ['Administrador', 'OSCAR', 'ENTIDAD', 'Entidades'] %}
+                            <a href="{{ url_for('entidades.index') }}" class="btn btn-outline-success btn-sm">Entidades</a>
+                            {% endif %}
                             <a href="{{ url_for('obras_sociales.index') }}" class="btn btn-outline-success btn-sm">Obras Sociales</a>
                         </div>
                     </div>
@@ -334,7 +337,7 @@
             
             <div class="card mt-3">
                 <div class="card-header bg-warning">
-                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Protocolos Antiguos</h5>
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Protocolos Pendientes</h5>
                 </div>
                 <div class="card-header bg-light">
                     <!-- FILTROS -->
@@ -352,7 +355,7 @@
                             <label class="form-label small"><strong>Filtrar por Antigüedad:</strong></label>
                             <select id="filtroAntiguedad" class="form-select form-select-sm">
                                 <option value="">Todas las antigüedades</option>
-                                <option value="urgente">🔴 URGENTE (14+ días)</option>
+                                <option value="urgente">🔴 URGENTE (marcado como urgente)</option>
                                 <option value="atencion">🟠 ATENCIÓN (7+ días)</option>
                                 <option value="revisar">🔵 REVISAR (3+ días)</option>
                                 <option value="pendiente">⚫ PENDIENTE (< 3 días)</option>
@@ -407,21 +410,25 @@
                                 </small>
                             </div>
                             <div>
-                                {% if item.color == 'danger' %}
+                                {% if item.es_urgente or (item.color == 'danger' and item.protocolo.estado == 'URGENTE') %}
                                     <span class="badge bg-danger">
                                         <i class="bi bi-exclamation-triangle-fill"></i> URGENTE
                                     </span>
+                                {% elif item.color == 'danger' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-exclamation-triangle-fill"></i> 14+ días
+                                    </span>
                                 {% elif item.color == 'warning' %}
                                     <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-exclamation-triangle"></i> ATENCIÓN
+                                        <i class="bi bi-exclamation-triangle"></i> 7+ días
                                     </span>
                                 {% elif item.color == 'info' %}
                                     <span class="badge bg-info">
-                                        <i class="bi bi-info-circle"></i> REVISAR
+                                        <i class="bi bi-info-circle"></i> 3+ días
                                     </span>
                                 {% else %}
                                     <span class="badge bg-secondary">
-                                        <i class="bi bi-clock"></i> PENDIENTE
+                                        <i class="bi bi-clock"></i> < 3 días
                                     </span>
                                 {% endif %}
                             </div>
@@ -429,7 +436,7 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="text-muted text-center mb-0">No hay protocolos antiguos</p>
+                    <p class="text-muted text-center mb-0">No hay protocolos pendientes</p>
                     {% endif %}
                 </div>
             </div>

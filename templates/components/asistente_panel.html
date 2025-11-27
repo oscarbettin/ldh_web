@@ -183,7 +183,8 @@
 
 {# Botón flotante para abrir el asistente #}
 <button id="btn-abrir-asistente" class="btn-abrir-asistente">
-    <canvas id="btn-asistente-avatar-rive" style="display: none;" onclick="abrirAsistente()"></canvas>
+    {# El canvas NO debe tener onclick directo - solo debe abrirse mediante eventos de RIVE cuando el usuario está autenticado #}
+    <canvas id="btn-asistente-avatar-rive" style="display: none; cursor: default !important; pointer-events: auto;"></canvas>
     <i class="bi bi-robot btn-asistente-icono-fallback" style="display: none;"></i>
 </button>
 
@@ -265,11 +266,14 @@
 
 .asistente-body .tab-pane,
 .asistente-body .tab-pane.fade {
-    display: block;
+    display: none !important; /* Ocultar por defecto, solo mostrar cuando esté activo */
     padding: 0 !important;
     margin: 0 !important;
     margin-top: 0 !important;
     padding-top: 0 !important;
+    min-height: 0 !important; /* No reservar altura mínima cuando está oculto */
+    height: 0 !important; /* Altura 0 cuando está oculto para no reservar espacio */
+    overflow: hidden !important; /* Ocultar overflow cuando está oculto */
 }
 
 .asistente-body .tab-pane.show,
@@ -277,6 +281,16 @@
     display: block !important;
     padding: 0 !important;
     margin: 0 !important;
+    min-height: 0 !important;
+    height: auto !important; /* Restaurar altura automática cuando está visible */
+    overflow: visible !important;
+}
+
+/* Tab-chat necesita flex cuando está activo */
+#tab-chat.show,
+#tab-chat.active {
+    display: flex !important;
+    flex-direction: column !important;
 }
 
 .asistente-body .tab-pane > div:first-child,
@@ -298,6 +312,7 @@
     bottom: 20px !important;
     width: 312px;
     height: 312px;
+    cursor: default !important; /* Cursor por defecto, cambiará dinámicamente cuando el avatar esté en hover */
     border-radius: 50%;
     background: transparent !important;
     color: white;
